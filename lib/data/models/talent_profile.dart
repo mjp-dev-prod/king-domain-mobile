@@ -22,6 +22,13 @@ class TalentProfile {
       bio.trim().isNotEmpty &&
       skillCategories.isNotEmpty;
 
+  /// Milestone 03: a talent must hold Verified status in a category —
+  /// approved by human review, not just "submitted" — before applying to
+  /// jobs in it. This is the actual anti-spam gate from Milestone 01.
+  bool isVerifiedIn(String category) => proofItems.any(
+    (p) => p.category == category && p.status == ProofReviewStatus.verified,
+  );
+
   TalentProfile copyWith({
     String? fullName,
     String? headline,

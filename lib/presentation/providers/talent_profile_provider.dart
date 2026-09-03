@@ -22,6 +22,28 @@ class TalentProfileNotifier extends Notifier<TalentProfile> {
       proofItems: state.proofItems.where((p) => p.id != id).toList(),
     );
   }
+
+  /// There's no reviewer-facing screen yet, so this simulates a King Domain
+  /// reviewer approving a submission — the only way to reach the "verified,
+  /// can apply" state in this mock. Real approval happens on the admin side
+  /// once that flow exists (out of scope for the talent app).
+  void simulateReviewApproval(String proofItemId) {
+    state = state.copyWith(
+      proofItems: [
+        for (final item in state.proofItems)
+          if (item.id == proofItemId)
+            ProofItem(
+              id: item.id,
+              category: item.category,
+              title: item.title,
+              filePath: item.filePath,
+              status: ProofReviewStatus.verified,
+            )
+          else
+            item,
+      ],
+    );
+  }
 }
 
 final talentProfileProvider =

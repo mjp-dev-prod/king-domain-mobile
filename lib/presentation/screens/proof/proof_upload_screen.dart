@@ -145,6 +145,9 @@ class _ProofUploadScreenState extends ConsumerState<ProofUploadScreen> {
                 onRemove: (id) => ref
                     .read(talentProfileProvider.notifier)
                     .removeProofItem(id),
+                onSimulateApprove: (id) => ref
+                    .read(talentProfileProvider.notifier)
+                    .simulateReviewApproval(id),
               ),
               const SizedBox(height: AppDimensions.lg),
             ],
@@ -174,12 +177,14 @@ class _CategoryProofSection extends StatelessWidget {
   final List<ProofItem> items;
   final VoidCallback onAdd;
   final ValueChanged<String> onRemove;
+  final ValueChanged<String> onSimulateApprove;
 
   const _CategoryProofSection({
     required this.category,
     required this.items,
     required this.onAdd,
     required this.onRemove,
+    required this.onSimulateApprove,
   });
 
   @override
@@ -216,7 +221,11 @@ class _CategoryProofSection extends StatelessWidget {
               )
             else
               ...items.map(
-                (item) => _ProofItemTile(item: item, onRemove: onRemove),
+                (item) => _ProofItemTile(
+                  item: item,
+                  onRemove: onRemove,
+                  onSimulateApprove: onSimulateApprove,
+                ),
               ),
           ],
         ),
@@ -228,14 +237,19 @@ class _CategoryProofSection extends StatelessWidget {
 class _ProofItemTile extends StatelessWidget {
   final ProofItem item;
   final ValueChanged<String> onRemove;
+  final ValueChanged<String> onSimulateApprove;
 
-  const _ProofItemTile({required this.item, required this.onRemove});
+  const _ProofItemTile({
+    required this.item,
+    required this.onRemove,
+    required this.onSimulateApprove,
+  });
 
   @override
   Widget build(BuildContext context) {
     final isVerified = item.status == ProofReviewStatus.verified;
     final statusColor = isVerified ? AppColors.settled : AppColors.openPending;
-    final statusText = isVerified ? 'Verified' : 'Pending review';
+    final statusText = isVerified ? 'Verified' : 'Pending review · tap to simulate approval';
 
     return Padding(
       padding: const EdgeInsets.only(top: AppDimensions.sm),
@@ -244,19 +258,22 @@ class _ProofItemTile extends StatelessWidget {
           Expanded(
             child: Text(item.title, style: AppTextStyles.bodyMedium),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppDimensions.sm,
-              vertical: 2,
-            ),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.12),
-              border: Border.all(color: statusColor.withValues(alpha: 0.4)),
-              borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
-            ),
-            child: Text(
-              statusText,
-              style: AppTextStyles.bodySmall.copyWith(color: statusColor),
+          GestureDetector(
+            onTap: isVerified ? null : () => onSimulateApprove(item.id),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimensions.sm,
+                vertical: 2,
+              ),
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.12),
+                border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
+              ),
+              child: Text(
+                statusText,
+                style: AppTextStyles.bodySmall.copyWith(color: statusColor),
+              ),
             ),
           ),
           IconButton(
