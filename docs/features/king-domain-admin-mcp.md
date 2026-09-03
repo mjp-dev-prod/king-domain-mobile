@@ -33,8 +33,7 @@ Two pieces:
 - **Tier 1** — read-only (list decisions, get waitlist stats, list admins). No audit log
   needed beyond normal request logs.
 - **Tier 2** — mutating but reversible/low-risk (post a comment, cast a stance, create a
-  decision). Every call appended to a local `audit.log` (tool name, args, response
-  status, timestamp) so there's a trail of what was done from an agent session.
+  decision). Logged — see "Audit logging" below for where.
 - **Tier 3** — mutating with real, harder-to-reverse impact (closing a decision, revoking
   an admin, deleting data). Requires the caller to pass a literal `confirmed: true` —
   enforced at the Zod schema level, so the call fails validation before it even reaches
@@ -58,7 +57,13 @@ object rather than re-declaring every filter, matching pendu-admin-mcp's approac
 **Waitlist**
 - `list_waitlist_entries` (tier 1)
 - `get_waitlist_stats` (tier 1)
-- `export_waitlist_csv` (tier 1)
+- `get_waitlist_export_summary` (tier 1) — **not** a raw CSV dump over the tool response.
+  MCP's stdio JSON-RPC channel isn't a file-transfer mechanism, and a growing waitlist
+  would eventually blow past reasonable tool-output size. Returns structured JSON
+  instead: `total_count`, `count_by_category`, `latest_signups` (small capped list). The
+  actual CSV file download stays exactly where it already is — the dashboard's existing
+  `/admin/waitlist/export.csv` HTTP endpoint, used by its download button — which is the
+  correct mechanism for a real file, not something MCP needs to replicate.
 
 **Admin management**
 - `list_admins` (tier 1)
@@ -68,6 +73,25 @@ object rather than re-declaring every filter, matching pendu-admin-mcp's approac
 This list grows as the product does (once Milestone 06 domain objects exist — jobs,
 applications, contracts — those get their own read/write tools too). Not designing that
 now; this MCP is scoped to what already exists plus the decisions feature.
+
+## Audit logging
+
+`pendu-admin-mcp`'s local `audit.log` file lives on **the machine running the MCP
+server** (Claude Code's own machine, since this is a stdio server the client launches
+locally) — it is never deployed to Render, so the "ephemeral filesystem loses the log on
+restart" concern doesn't actually apply to it as originally built. That said, a
+local-only file is still the wrong home for King Domain's tier-2/3 audit trail for a
+different, real reason: it's invisible to other shareholders, disappears if Samuel
+switches machines, and tier-2/3 actions here (creating a decision on someone's behalf,
+revoking an admin) deserve a durable record everyone with dashboard access can see, not
+just a file on one laptop.
+
+**Decision**: write tier-2/3 audit entries through the backend, into Postgres —
+`McpAuditLog` (tool name, args, response status, actor, timestamp) — via a dedicated
+`POST /api/mcp-admin/_audit` call the MCP server makes alongside (or the backend can do
+this itself, inside each mcp-admin route handler, which avoids a second network call per
+action and is the simpler option). Keep a local `audit.log` too as a cheap secondary
+trail for offline debugging, but the database table is the source of truth.
 
 ## Security notes carried over deliberately
 
@@ -86,7 +110,7 @@ now; this MCP is scoped to what already exists plus the decisions feature.
    `mcp-admin.routes.js`, mounted at `/api/mcp-admin`, wrapping the same underlying
    logic the session-authenticated `/admin/*` routes already use (don't duplicate
    business logic — the MCP routes call the same service functions, just behind
-   different auth).
+   different auth). Include the `McpAuditLog` table in this pass's migration.
 2. New sibling directory `king-domain-admin-mcp` — `server.js` + `tools.js`, same
    dependencies as pendu-admin-mcp (`@modelcontextprotocol/sdk`, `zod`, `dotenv`).
 3. Register it in Claude Code's MCP config so it's available in future sessions here,
@@ -100,3 +124,14 @@ This MCP server is genuinely more useful *after* the shareholder decisions featu
 exists — most of its value is decisions + waitlist/admin tools together. Recommend
 building the decisions feature's backend first, then adding this MCP layer on top of
 the same routes, rather than building the MCP shell first with nothing real behind it.
+
+## Reviewed
+
+External review (2026-09-03) prompted two changes, both folded in above:
+`export_waitlist_csv` was replaced with `get_waitlist_export_summary` (structured JSON,
+not a raw file blob over stdio — the real CSV download stays on the existing HTTP
+endpoint), and tier-2/3 audit logging moves from a local-only file to a `McpAuditLog`
+Postgres table, since the local file is invisible to other shareholders regardless of
+whether it's technically ephemeral-storage-safe (it runs on Samuel's machine, not
+Render, so that specific risk didn't apply, but the durability/visibility problem is
+real for a different reason).

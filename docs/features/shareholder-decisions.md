@@ -42,6 +42,10 @@ timestamp.
   the record stays, but voting/commenting locks). Closing a decision is not the same as
   "everyone agreed" — it just means discussion is done and the call has been made,
   consistent with "most decisions will be made on my own depending on the scale of it."
+  **Reopenable**: closing is an owner action, not final. Mis-closes happen, and real
+  decisions sometimes get revisited — reopening sets `status` back to `open` and clears
+  `closedAt`, logged the same as any other owner action (who reopened it, when). This
+  resolves the open question that was originally left for later in this doc.
 - Decisions are **owner-only to create**. This isn't a democratic proposal system —
   shareholders respond to decisions, they don't open their own. That was an explicit
   choice: keeps the record clean, avoids decision-sprawl, matches how authority actually
@@ -83,14 +87,24 @@ to look at.
 
 Two triggers, both real signal rather than noise:
 
-1. **New decision posted** → every admin gets notified.
+1. **New decision posted** → every admin gets notified immediately. This one's rare
+   enough (owner-only, not high-frequency) that instant delivery is fine.
 2. **New comment on a decision they haven't cast a stance on yet** → nudges the people
    who haven't weighed in, specifically. Someone who already voted doesn't get pinged
-   for every reply in a thread they're already following — that's the fast path to the
-   feature getting muted.
+   for every reply in a thread they're already following.
+
+   **Batched, not instant**: a burst of several comments on one thread within a short
+   window shouldn't fire one email per comment to the same still-silent person — that's
+   the fast path to the feature getting muted. Comments are collected into a queue per
+   (decision, recipient) pair and flushed as a single digest email after a delay window
+   (start at 4 hours; tune once there's real usage to look at) — "N new comments on
+   *[decision title]* since you last checked," not a blow-by-blow.
 
 Delivered via the existing Brevo mailer (`src/admin/mailer.js`) — same pattern as
 invite/reset emails, same graceful fallback (logs instead of sending if unconfigured).
+The batching queue can be a simple table (`pending_notification`, decision + recipient +
+first-queued-at) drained by a scheduled job, rather than anything more elaborate — this
+doesn't need a real task queue for a handful of shareholders.
 
 ## Why this isn't a public voting/governance system
 
@@ -166,17 +180,20 @@ model DecisionComment {
 ## Build order
 
 1. Schema + migration (`npm run db:push`, per the existing Prisma-on-Supabase gotchas
-   documented in `king-domain-backend`).
+   documented in `king-domain-backend`), including the notification queue table.
 2. Backend routes: `POST/GET /admin/decisions`, `POST /admin/decisions/:id/stance`,
-   `POST /admin/decisions/:id/comments`, `POST /admin/decisions/:id/close`.
-3. Notification wiring into the existing mailer.
+   `POST /admin/decisions/:id/comments`, `POST /admin/decisions/:id/close`,
+   `POST /admin/decisions/:id/reopen`.
+3. Notification wiring into the existing mailer: instant send for new decisions, queue
+   insert for comments, plus a scheduled job that drains the queue into digest emails.
 4. Admin frontend: Decisions list + detail + New Decision form.
 5. Real end-to-end test with at least two admin accounts (Samuel + one real shareholder)
    before calling it done — a feature whose entire point is multi-person use needs to
    actually be tested with more than one person.
 
-## Open question carried forward
+## Reviewed
 
-Should a `closed` decision be reopenable, or is closing final? Leaning toward
-reopenable (an owner action, logged) since real decisions do get revisited — but not
-deciding this now; flag it when we actually build the close/reopen action.
+External review (2026-09-03) confirmed the shape and prompted two changes, both folded
+in above: closing a decision is reversible (owner-only, logged), and comment
+notifications are batched into a delay-window digest per (decision, recipient) rather
+than sent instantly per comment.
