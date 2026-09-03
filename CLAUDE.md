@@ -40,6 +40,13 @@ than a generic gradient SaaS startup. Warm, confident, restrained.
 | Green-soft | `#4FA37F` | Same cues on dark |
 | Slate | `#5B6178` | Secondary text on light |
 | Slate-dim | `#8A90A3` | Secondary text on dark |
+| Open/pending | `#E2896C` | Status badges only — a decision, application, etc. still awaiting resolution |
+| Settled | `#6FBBA2` | Status badges only — resolved/closed, same semantic family as Signal Green |
+
+Open/pending and Settled are a status-badge pair, added for the admin dashboard's shareholder
+decisions feature and reused wherever else a record needs an open-vs-resolved status (never as
+general decoration, same rule as Signal Green). Values match the Marketplace Decision Ledger
+artifact's own dark-mode tokens so both surfaces agree.
 
 **Gold is the single bold move.** Primary CTA, the KD mark, italic emphasis in a headline, one
 or two key highlights — nothing else. It must never become a dominant fill or a background.
