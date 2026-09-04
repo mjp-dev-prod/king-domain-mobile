@@ -1,0 +1,134 @@
+workflows:
+  king-domain-internal:
+    name: King Domain - Internal Testing (Android)
+    max_build_duration: 60
+
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: "master"
+          include: true
+      cancel_previous_builds: true
+
+    environment:
+      flutter: stable
+      groups:
+        - king_domain_backend
+
+    cache:
+      cache_paths:
+        - $HOME/.gradle/caches
+        - $FLUTTER_ROOT/.pub-cache
+        - $HOME/.pub-cache
+
+    scripts:
+      - name: Install Flutter dependencies
+        script: |
+          flutter pub get
+
+      - name: Run Flutter analyze
+        script: |
+          flutter analyze
+          if [ $? -ne 0 ]; then
+            echo "Flutter analyze failed. Build stopped."
+            exit 1
+          fi
+
+      - name: Run Flutter tests
+        script: |
+          flutter test
+          if [ $? -ne 0 ]; then
+            echo "Flutter tests failed. Build stopped."
+            exit 1
+          fi
+
+      - name: Fetch pending release (version + changelog)
+        script: |
+          set -e
+
+          # An admin must have already authored a draft release in the admin
+          # dashboard (POST /admin/app-releases) before CI can build it. CI
+          # has no authority to invent a version number or changelog — this
+          # is intentional so nothing ships without real, human-written
+          # release notes.
+          #
+          # Not using curl -f here: it discards the response body on HTTP
+          # error, leaving no way to tell "no draft exists" (404) apart from
+          # "wrong/missing CI token" (401) or a transient backend issue (5xx).
+          HTTP_RESPONSE=$(curl -s -w "\n%{http_code}" -H "Authorization: Bearer $CI_API_TOKEN" \
+            "$KING_DOMAIN_BACKEND_URL/app/release/pending")
+          HTTP_STATUS=$(echo "$HTTP_RESPONSE" | tail -n1)
+          RESPONSE=$(echo "$HTTP_RESPONSE" | sed '$d')
+
+          echo "GET /app/release/pending -> HTTP $HTTP_STATUS"
+          echo "Response body: $RESPONSE"
+
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "ERROR: Fetching pending release failed (HTTP $HTTP_STATUS)."
+            if [ "$HTTP_STATUS" == "404" ]; then
+              echo "No pending draft release found. Author one in the admin dashboard (App Releases) before pushing to master."
+            elif [ "$HTTP_STATUS" == "401" ]; then
+              echo "Unauthorized — check the CI_API_TOKEN environment variable matches the backend's CI_API_TOKEN."
+            fi
+            exit 1
+          fi
+
+          VERSION_NAME=$(echo "$RESPONSE" | jq -r '.version')
+
+          if [ -z "$VERSION_NAME" ] || [ "$VERSION_NAME" == "null" ]; then
+            echo "ERROR: Pending release response missing a version. Aborting."
+            exit 1
+          fi
+
+          echo "Building pending draft release: $VERSION_NAME"
+
+          # Update pubspec.yaml so PackageInfo.fromPlatform() reports the admin-authored version
+          sed -i.bak "s/^version: .*/version: ${VERSION_NAME}+${PROJECT_BUILD_NUMBER}/" pubspec.yaml
+          rm pubspec.yaml.bak
+          cat pubspec.yaml | grep "^version:"
+
+          echo "VERSION_NAME=$VERSION_NAME" >> $CM_ENV
+
+      - name: Build APK
+        script: |
+          # Debug signing for now — internal-testing distribution only, no
+          # Play Store yet. Set up a real release keystore before that
+          # changes; a debug-signed APK cannot later become the Play Store
+          # upload without re-signing under a proper release key.
+          flutter build apk --release --build-number=$PROJECT_BUILD_NUMBER
+
+      - name: Upload APK to backend
+        script: |
+          set -e
+
+          APK_PATH="build/app/outputs/flutter-apk/app-release.apk"
+
+          HTTP_RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -H "Authorization: Bearer $CI_API_TOKEN" \
+            -F "apk=@$APK_PATH;type=application/vnd.android.package-archive" \
+            "$KING_DOMAIN_BACKEND_URL/app/release/$VERSION_NAME/upload")
+          HTTP_STATUS=$(echo "$HTTP_RESPONSE" | tail -n1)
+          RESPONSE=$(echo "$HTTP_RESPONSE" | sed '$d')
+
+          echo "POST /app/release/$VERSION_NAME/upload -> HTTP $HTTP_STATUS"
+          echo "Response body: $RESPONSE"
+
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "ERROR: APK upload failed (HTTP $HTTP_STATUS)."
+            exit 1
+          fi
+
+          echo "Uploaded. The release is still a DRAFT — publish it from the admin dashboard (App Releases) after confirming the APK installs and runs correctly."
+
+    artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk
+      - flutter_drive.log
+
+    publishing:
+      email:
+        recipients:
+          - devsamuel0611@gmail.com
+        notify:
+          success: false
+          failure: true
