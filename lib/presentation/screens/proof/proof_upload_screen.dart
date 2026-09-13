@@ -254,26 +254,33 @@ class _ProofItemTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: AppDimensions.sm),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Text(item.title, style: AppTextStyles.bodyMedium),
-          ),
-          GestureDetector(
-            onTap: isVerified ? null : () => onSimulateApprove(item.id),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppDimensions.sm,
-                vertical: 2,
-              ),
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.12),
-                border: Border.all(color: statusColor.withValues(alpha: 0.4)),
-                borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
-              ),
-              child: Text(
-                statusText,
-                style: AppTextStyles.bodySmall.copyWith(color: statusColor),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.title, style: AppTextStyles.bodyMedium),
+                const SizedBox(height: AppDimensions.xs),
+                GestureDetector(
+                  onTap: isVerified ? null : () => onSimulateApprove(item.id),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppDimensions.sm,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.12),
+                      border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
+                    ),
+                    child: Text(
+                      statusText,
+                      style: AppTextStyles.bodySmall.copyWith(color: statusColor),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           IconButton(

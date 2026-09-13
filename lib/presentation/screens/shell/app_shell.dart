@@ -6,6 +6,7 @@ import '../../../core/constants/app_text_styles.dart';
 import '../../../data/models/job.dart';
 import '../../providers/jobs_provider.dart';
 import '../../providers/talent_profile_provider.dart';
+import '../contracts/contract_detail_screen.dart';
 import '../jobs/job_feed_screen.dart';
 
 /// Post-onboarding app shell — bottom tab nav. Jobs and Profile show real
@@ -56,9 +57,11 @@ class _AppShellState extends State<AppShell> {
   }
 }
 
-/// T7 — My Applications (partial). Tracks proposals submitted via T6; the
-/// rest of T7's scope (pre-hire messaging with interested clients) waits on
-/// the real-time-chat hosting migration decided in Milestone 03.
+/// T7 — My Applications. Tracks proposals submitted via T6; once a job is
+/// accepted, tapping it opens the contract flow (ContractDetailScreen) —
+/// the wedge's actual test (see docs/core/vision-vs-research-reconciliation.md
+/// §2). Pre-hire messaging with interested clients waits on the real-time-chat
+/// hosting migration decided in Milestone 03.
 class _ApplicationsTab extends ConsumerWidget {
   const _ApplicationsTab();
 
@@ -103,34 +106,80 @@ class _ApplicationsTab extends ConsumerWidget {
       padding: const EdgeInsets.all(AppDimensions.lg),
       children: [
         for (final job in applied) ...[
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(AppDimensions.md),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          job.title,
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(job.clientName, style: AppTextStyles.bodySmall),
-                      ],
-                    ),
-                  ),
-                  _StatusBadge(status: job.applicationStatus),
-                ],
-              ),
-            ),
-          ),
+          _ApplicationTile(job: job),
           const SizedBox(height: AppDimensions.md),
         ],
       ],
+    );
+  }
+}
+
+class _ApplicationTile extends ConsumerWidget {
+  final Job job;
+
+  const _ApplicationTile({required this.job});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isAccepted = job.applicationStatus == JobApplicationStatus.accepted;
+
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+        onTap: () {
+          if (isAccepted) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ContractDetailScreen(jobId: job.id),
+              ),
+            );
+          } else if (job.applicationStatus == JobApplicationStatus.pending) {
+            // No client app exists yet — this simulates the founding team
+            // manually matching and funding the job (see jobs_provider.dart).
+            ref.read(jobsProvider.notifier).simulateAcceptAndFund(job.id);
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimensions.md),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      job.title,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(job.clientName, style: AppTextStyles.bodySmall),
+                    if (job.applicationStatus == JobApplicationStatus.pending) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Tap to simulate client acceptance',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.slateDim,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              _StatusBadge(status: job.applicationStatus),
+              if (isAccepted) ...[
+                const SizedBox(width: AppDimensions.sm),
+                Icon(
+                  Icons.chevron_right,
+                  size: AppDimensions.iconSm,
+                  color: AppColors.slateDim,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

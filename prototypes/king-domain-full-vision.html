@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>King Domain — Full Vision Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,600&family=JetBrains+Mono:wght@400;500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   KING DOMAIN — Full Vision Prototype
+   Brand v0 tokens per CLAUDE.md. Screens assembled from the 2026-09-13 Stitch
+   export, with corrections applied (see docs/core/*.md).
+   ========================================================================== */
+:root{
+  --ink:#151A2E; --ink-2:#1E2438; --ink-3:#2A3149;
+  --paper:#FAF8F3; --paper-2:#F1EEE6; --paper-3:#E8E4DA;
+  --gold:#C9A227; --gold-soft:#E0BE4A;
+  --green:#2F7A5E; --green-soft:#4FA37F;
+  --slate:#5B6178; --slate-dim:#8A90A3;
+  --pending:#E2896C; --settled:#6FBBA2;
+  --hair:rgba(138,144,163,.22); --hair-strong:rgba(138,144,163,.42);
+  --f-display:'Fraunces',Georgia,serif;
+  --f-body:'Public Sans',system-ui,sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,monospace;
+  --r-sm:3px; --r:4px; --r-lg:6px;
+  --shell:400px;
+  --ease:cubic-bezier(.2,.8,.2,1);
+  --snap:180ms;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;font-family:var(--f-body);font-size:14px;line-height:20px;
+  background:var(--ink);color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px 16px;min-height:100vh;overscroll-behavior:none;
+}
+button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input,textarea{font-family:inherit}
+::selection{background:rgba(201,162,39,.28)}
+.scroll::-webkit-scrollbar{display:none}
+.scroll{scrollbar-width:none}
+
+/* ---------- type ---------- */
+.t-hero{font-family:var(--f-display);font-size:22px;line-height:27px;font-weight:700;letter-spacing:-.01em}
+.t-h2{font-family:var(--f-display);font-size:18px;line-height:23px;font-weight:700;letter-spacing:-.01em}
+.t-h3{font-size:15px;line-height:20px;font-weight:700;letter-spacing:-.005em}
+.t-body{font-size:13px;line-height:19px}
+.t-small{font-size:12px;line-height:17px;color:var(--slate)}
+.t-mono{font-family:var(--f-mono);font-size:10px;line-height:14px;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+.t-mono-sm{font-family:var(--f-mono);font-size:9px;line-height:12px;font-weight:600;letter-spacing:.11em;text-transform:uppercase}
+.t-num{font-family:var(--f-mono);font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+
+/* ---------- device shell ---------- */
+.device{
+  width:100%;max-width:var(--shell);
+  height:min(880px,calc(100vh - 40px));
+  background:var(--paper);
+  border:1px solid var(--ink-3);border-radius:var(--r-lg);
+  display:flex;flex-direction:column;overflow:hidden;position:relative;
+}
+
+/* ---------- screen switcher ---------- */
+.switcher{
+  flex:0 0 auto;background:var(--ink);border-bottom:1px solid var(--ink-3);
+  position:relative;
+}
+.switcher-row{display:flex;gap:6px;overflow-x:auto;padding:9px 12px;scroll-behavior:smooth}
+/* Edge fades hint that the row scrolls — .switcher-row alone gave no visual cue
+   that screens were cut off past the frame edge. */
+.switcher::before,.switcher::after{
+  content:'';position:absolute;top:0;width:22px;height:calc(100% - 30px);
+  pointer-events:none;z-index:2;
+}
+.switcher::before{left:0;background:linear-gradient(to right,var(--ink),transparent)}
+.switcher::after{right:0;background:linear-gradient(to left,var(--ink),transparent)}
+.chip{
+  flex:0 0 auto;display:flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:var(--r);
+  background:var(--ink-2);border:1px solid var(--ink-3);
+  transition:border-color var(--snap) var(--ease),background var(--snap) var(--ease);
+  white-space:nowrap;
+}
+.chip:hover{border-color:var(--slate)}
+.chip-n{
+  width:15px;height:15px;flex:0 0 auto;display:grid;place-items:center;border-radius:2px;
+  font-family:var(--f-mono);font-size:8px;font-weight:700;
+  background:var(--ink);color:var(--slate-dim);
+}
+.chip-t{font-family:var(--f-mono);font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--slate-dim)}
+.chip.on{background:rgba(201,162,39,.14);border-color:var(--gold)}
+.chip.on .chip-n{background:var(--gold);color:var(--ink)}
+.chip.on .chip-t{color:var(--gold)}
+.actor{display:flex;align-items:center;gap:6px;padding:0 12px 9px}
+.actor-tag{
+  font-family:var(--f-mono);font-size:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  padding:2px 6px;border-radius:2px;border:1px solid var(--ink-3);color:var(--slate-dim);
+}
+.actor-tag.on-talent{border-color:var(--gold);color:var(--gold)}
+.actor-tag.on-client{border-color:var(--green-soft);color:var(--green-soft)}
+
+/* ---------- app header ---------- */
+.appbar{
+  flex:0 0 auto;height:50px;padding:0 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--paper);border-bottom:1px solid var(--hair);
+}
+.wordmark{font-family:var(--f-display);font-size:16px;font-weight:700;letter-spacing:-.01em;text-transform:uppercase;color:var(--ink)}
+.vtag{
+  font-family:var(--f-mono);font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--slate);padding:2px 7px;border:1px solid var(--hair-strong);
+  border-radius:var(--r);background:var(--paper-2);
+}
+
+/* ---------- viewport ---------- */
+.viewport{flex:1 1 auto;position:relative;overflow:hidden;background:var(--paper)}
+.screen{
+  position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
+  padding:14px 16px 78px;
+  opacity:0;visibility:hidden;transform:translateX(10px);
+  transition:opacity var(--snap) var(--ease),transform var(--snap) var(--ease),visibility var(--snap);
+}
+.screen.on{opacity:1;visibility:visible;transform:none}
+.stack{display:flex;flex-direction:column;gap:12px}
+
+/* ---------- cards ---------- */
+.card{background:var(--paper-2);border:1px solid var(--hair);border-radius:var(--r-lg);padding:14px}
+.card-ink{background:var(--ink);border:1px solid var(--ink);border-radius:var(--r-lg);padding:16px;color:var(--paper)}
+.card-ink .t-small{color:var(--slate-dim)}
+.well{background:#fff;border:1px solid var(--hair);border-radius:var(--r);padding:10px}
+.eyebrow{display:flex;align-items:center;gap:6px;color:var(--gold)}
+.eyebrow-sq{width:6px;height:6px;background:var(--gold);flex:0 0 auto}
+.divide{height:1px;background:var(--hair);margin:10px 0}
+.divide-dark{height:1px;background:rgba(255,255,255,.1);margin:10px 0}
+.row{display:flex;align-items:center;gap:8px}
+.row-b{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sect-label{font-family:var(--f-mono);font-size:9px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--slate)}
+
+/* ---------- badges ---------- */
+.badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 7px;border-radius:var(--r-sm);
+  font-family:var(--f-mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  border:1px solid;white-space:nowrap;
+}
+.badge-green{color:var(--green);border-color:rgba(47,122,94,.45);background:rgba(47,122,94,.09)}
+.badge-pending{color:#B35A3A;border-color:rgba(226,137,108,.5);background:rgba(226,137,108,.13)}
+.badge-gold{color:var(--gold);border-color:rgba(201,162,39,.5);background:rgba(201,162,39,.1)}
+.badge-mute{color:var(--slate-dim);border-color:var(--hair-strong);background:transparent}
+.badge-ondark{color:var(--green-soft);border-color:rgba(79,163,127,.45);background:rgba(79,163,127,.14)}
+.dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex:0 0 auto}
+
+/* ---------- buttons ---------- */
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:7px;width:100%;
+  height:44px;padding:0 14px;border-radius:var(--r);
+  font-size:13px;font-weight:700;letter-spacing:-.005em;
+  transition:background var(--snap) var(--ease),border-color var(--snap) var(--ease),transform var(--snap) var(--ease);
+}
+.btn:active:not(:disabled){transform:scale(.99)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-gold{background:var(--gold);color:var(--ink)}
+.btn-gold:hover:not(:disabled){background:#B8931F}
+.btn-green{background:var(--green);color:var(--paper)}
+.btn-green:hover:not(:disabled){background:#276849}
+.btn-ghost{background:transparent;border:1px solid var(--hair-strong);color:var(--ink)}
+.btn-ghost:hover:not(:disabled){border-color:var(--ink)}
+.btn-sm{height:38px;font-size:12px}
+
+/* ---------- inputs ---------- */
+.field{display:flex;flex-direction:column;gap:5px}
+.field-l{font-family:var(--f-mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--slate)}
+.input,.textarea{
+  width:100%;background:#fff;border:1px solid var(--hair-strong);border-radius:var(--r);
+  padding:9px 10px;font-size:13px;color:var(--ink);
+  transition:border-color var(--snap) var(--ease);
+}
+.input:focus,.textarea:focus{outline:none;border-color:var(--gold)}
+.input-mono{font-family:var(--f-mono);font-size:11px}
+.textarea{resize:none;line-height:18px}
+
+/* ---------- media ---------- */
+.media{
+  position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;
+  border-radius:var(--r);border:1px solid var(--hair);background:var(--ink);
+}
+.media img{width:100%;height:100%;object-fit:cover;display:block}
+.media-scrim{position:absolute;inset:0;background:linear-gradient(to top,rgba(21,26,46,.72),rgba(21,26,46,.05) 55%)}
+/* Source photo has garbled AI-generated text baked into the stage backdrop and
+   presenter's hoodie (mid-frame). Crops tighter on the crowd, where the text
+   problem doesn't reach, and masks the remaining mid-band with a solid caption
+   instead of leaving broken text visible. Placeholder until a real campus photo
+   replaces it (see docs/README.md). */
+.media.crop-crowd img{object-position:50% 78%;transform:scale(1.35)}
+.media-mask{
+  position:absolute;left:0;right:0;top:34%;height:30%;
+  background:var(--ink);
+  display:flex;align-items:center;justify-content:center;text-align:center;
+  padding:0 14px;
+}
+.media-mask span{font-family:var(--f-mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}
+.media-top{position:absolute;top:8px;left:8px;right:8px;display:flex;justify-content:space-between;gap:6px}
+.media-bot{position:absolute;bottom:8px;left:8px;right:8px;display:flex;justify-content:space-between;align-items:flex-end;gap:6px}
+.media-tag{
+  font-family:var(--f-mono);font-size:8px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  padding:3px 6px;border-radius:2px;background:rgba(21,26,46,.86);color:var(--paper);border:1px solid rgba(255,255,255,.14);
+}
+.media-tag.gold{color:var(--gold);border-color:rgba(201,162,39,.45)}
+.play{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:40px;height:40px;border-radius:50%;background:var(--gold);color:var(--ink);
+  display:grid;place-items:center;transition:transform var(--snap) var(--ease);
+}
+.play:hover{transform:translate(-50%,-50%) scale(1.06)}
+.play svg{width:17px;height:17px;margin-left:2px}
+
+/* ---------- avatar ---------- */
+.av{
+  width:38px;height:38px;flex:0 0 auto;border-radius:var(--r);
+  background:var(--ink);color:var(--gold);
+  display:grid;place-items:center;
+  font-family:var(--f-display);font-size:14px;font-weight:700;
+}
+.av-sm{width:28px;height:28px;font-size:11px}
+
+/* ---------- matte lock mark (replaces the 3D render: dimensional, flat-shaded,
+     no gradient / sheen / shadow — per CLAUDE.md "Imagery and dimension") ---------- */
+.lockmark{width:38px;height:38px;flex:0 0 auto;display:block}
+
+/* ---------- progress ---------- */
+.track{height:5px;border-radius:2px;background:var(--paper-3);overflow:hidden}
+.track-f{height:100%;background:var(--green);border-radius:2px;transition:width .5s var(--ease)}
+
+/* ---------- state machine ---------- */
+.states{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.state{
+  border-radius:var(--r-sm);padding:6px 2px;text-align:center;
+  border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);
+  font-family:var(--f-mono);font-size:8px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--slate-dim);line-height:11px;
+}
+.state.done{border-color:rgba(79,163,127,.6);color:var(--green-soft)}
+.state.now{background:var(--gold);border-color:var(--gold);color:var(--ink)}
+.state small{display:block;font-size:7px;opacity:.75;margin-bottom:2px}
+
+/* ---------- ledger rows ---------- */
+.lrow{display:flex;align-items:center;justify-content:space-between;padding:7px 0;font-size:13px}
+.lrow + .lrow{border-top:1px solid var(--hair)}
+.lrow-total{border-top:1px solid var(--hair-strong);margin-top:3px;padding-top:10px}
+
+/* ---------- checkbox ---------- */
+.check{
+  width:16px;height:16px;flex:0 0 auto;border-radius:var(--r-sm);
+  border:1px solid var(--green);background:var(--green);color:#fff;
+  display:grid;place-items:center;
+}
+.check svg{width:11px;height:11px}
+.check.off{background:#fff;border-color:var(--hair-strong);color:transparent}
+
+/* ---------- toggle list ---------- */
+.tog{
+  width:100%;text-align:left;padding:9px 10px;border-radius:var(--r);
+  border:1px solid var(--hair-strong);background:#fff;
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  transition:border-color var(--snap) var(--ease),background var(--snap) var(--ease);
+}
+.tog.on{border-color:var(--green);background:rgba(47,122,94,.07)}
+
+/* ---------- notice ---------- */
+.notice{border-radius:var(--r);padding:10px 11px;display:flex;gap:9px;align-items:flex-start}
+.notice-green{background:rgba(47,122,94,.08);border:1px solid rgba(47,122,94,.3)}
+.notice-pending{background:rgba(226,137,108,.1);border:1px solid rgba(226,137,108,.35)}
+.notice p{margin:0;font-size:12px;line-height:17px}
+
+/* ---------- annotation ---------- */
+.annot{
+  text-align:center;padding:10px 0 2px;
+  font-family:var(--f-mono);font-size:8px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--slate-dim);
+}
+.annot b{color:var(--pending);font-weight:700}
+
+/* ---------- bottom nav ---------- */
+.nav{
+  position:absolute;bottom:0;left:0;right:0;height:62px;
+  background:var(--ink);border-top:1px solid var(--ink-3);
+  display:flex;align-items:center;justify-content:space-around;padding:0 6px;z-index:20;
+}
+.nav-i{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 8px;color:var(--slate-dim);text-decoration:none;transition:color var(--snap) var(--ease)}
+.nav-i:hover{color:var(--paper)}
+.nav-i.on{color:var(--gold)}
+.nav-i svg{width:19px;height:19px}
+.nav-i span{font-family:var(--f-mono);font-size:8px;font-weight:600;letter-spacing:.09em;text-transform:uppercase}
+
+/* ---------- inline flash ---------- */
+.flash{
+  border-radius:var(--r);padding:10px 11px;display:flex;align-items:center;gap:8px;
+  background:rgba(47,122,94,.1);border:1px solid rgba(47,122,94,.35);color:var(--green);
+  font-size:12px;font-weight:600;
+}
+.hidden{display:none!important}
+svg{flex:0 0 auto}
+</style>
+</head>
+<body>
+<div class="device">
+
+  <!-- ===================== SCREEN SWITCHER ===================== -->
+  <div class="switcher">
+    <div class="switcher-row scroll" id="switcher"></div>
+    <div class="actor">
+      <span class="actor-tag" id="tag-talent">Talent journey</span>
+      <span class="actor-tag" id="tag-client">Client journey</span>
+    </div>
+  </div>
+
+  <!-- ===================== APP HEADER ===================== -->
+  <div class="appbar">
+    <span class="wordmark">King Domain</span>
+    <span class="vtag">v0.1 vision</span>
+  </div>
+
+  <!-- ===================== VIEWPORT ===================== -->
+  <div class="viewport">
+
+    <!-- ============ 1. STUDENT VERIFICATION (TALENT) ============ -->
+    <section class="screen scroll on" data-screen="0">
+      <div class="stack">
+        <div class="card-ink">
+          <div class="eyebrow"><span class="eyebrow-sq"></span><span class="t-mono">Student talent marketplace</span></div>
+          <h1 class="t-hero" style="margin:8px 0 6px;color:var(--paper)">Verified Identity &amp; Protected Work</h1>
+          <p class="t-body" style="margin:0;color:#C0C4D0">Verify your student status, build a verified portfolio, and get paid safely for every completed contract.</p>
+        </div>
+
+        <div class="notice notice-green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#2F7A5E" stroke-width="2" width="16" height="16"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 10.6 4.6-1.2 8-5.6 8-10.6V5l-8-3z"/></svg>
+          <div>
+            <div class="t-mono" style="color:var(--green);margin-bottom:4px">How payment protection works</div>
+            <p style="color:#1E4B38"><b>1.</b> Client deposits job funds → <b>2.</b> Student completes the work → <b>3.</b> Funds released on approval.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row-b" style="padding-bottom:9px;border-bottom:1px solid var(--hair)">
+            <span class="row" style="gap:6px"><span class="dot" style="color:var(--green)"></span><span class="t-mono" style="color:var(--ink)">Step 1: Student verification</span></span>
+            <span class="t-mono-sm" style="color:var(--green)">Secure entry</span>
+          </div>
+          <div class="stack" style="gap:11px;margin-top:11px">
+            <div class="field">
+              <span class="field-l row-b"><span>University / campus</span><span style="color:var(--green)">NUC accredited</span></span>
+              <div style="position:relative">
+                <input class="input" value="University of Lagos (UNILAG)" readonly>
+                <svg style="position:absolute;right:10px;top:10px" viewBox="0 0 24 24" fill="none" stroke="#2F7A5E" stroke-width="2.5" width="16" height="16"><path d="m5 13 4 4L19 7"/></svg>
+              </div>
+            </div>
+            <div class="field">
+              <span class="field-l row-b"><span>Student institutional email</span><span style="color:var(--slate-dim)">SSO ready</span></span>
+              <input class="input" value="o.adebayo@live.unilag.edu.ng" readonly>
+            </div>
+            <div class="notice notice-green" style="padding:8px 10px">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#2F7A5E" stroke-width="2.5" width="14" height="14"><path d="m5 13 4 4L19 7"/></svg>
+              <p style="color:#1F6B4F;font-weight:600">Institutional domain detected — eligible for instant verification</p>
+            </div>
+            <button class="btn btn-gold" data-verify>Verify student status &amp; continue</button>
+            <button class="btn btn-ghost btn-sm">Switch to client entry</button>
+          </div>
+        </div>
+
+        <p class="annot">[Illustrative — verification mechanic, stage 1 (§8)]</p>
+      </div>
+    </section>
+
+    <!-- ============ 2. CATEGORY VERIFICATION & PROOF (TALENT) ============ -->
+    <section class="screen scroll" data-screen="1">
+      <div class="stack">
+        <div class="card-ink">
+          <span class="t-mono" style="color:var(--gold)">Talent profile • skill evidence</span>
+          <h1 class="t-hero" style="margin:8px 0 6px;color:var(--paper)">Category Verification &amp; Proof</h1>
+          <p class="t-body" style="margin:0;color:var(--slate-dim)">Applications in a skill category require at least one verified work sample. Submit real past work, repositories, or portfolio links for human review.</p>
+        </div>
+
+        <div class="card">
+          <div class="row-b">
+            <h2 class="t-h3">Short-Form Video (TikTok / Reels)</h2>
+            <span class="badge badge-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="9" height="9"><path d="m5 13 4 4L19 7"/></svg>Verified</span>
+          </div>
+          <div class="well" style="margin-top:10px">
+            <div class="t-h3" style="font-size:13px">Brand Campaign Reel — UNILAG Socials</div>
+            <div class="t-mono-sm" style="color:var(--slate);margin-top:3px;letter-spacing:.04em">Google Drive video • Submitted Aug 12</div>
+            <div class="row" style="gap:5px;margin-top:7px;color:var(--green);font-size:11px;font-weight:600">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="11" height="11"><path d="m5 13 4 4L19 7"/></svg>
+              Verified by human reviewer — high quality match
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row-b">
+            <h2 class="t-h3">Mobile App Development (Flutter)</h2>
+            <span class="badge badge-pending"><span class="dot"></span>Pending review</span>
+          </div>
+          <div class="well" style="margin-top:10px">
+            <div class="t-h3" style="font-size:13px">Campus Event Tracker Repository</div>
+            <div class="t-mono-sm" style="color:var(--slate);margin-top:3px;letter-spacing:.04em">github.com/adebayo-dev/campus-events</div>
+            <div class="t-small" style="margin-top:5px">Under review by the platform team (est. 24 hours)</div>
+          </div>
+        </div>
+
+        <div class="card" style="border-style:dashed;border-color:var(--slate-dim)">
+          <div class="row-b">
+            <h2 class="t-h3">Graphic Design &amp; Branding</h2>
+            <span class="badge badge-mute">Unverified</span>
+          </div>
+          <p class="t-small" style="margin:8px 0 11px">No evidence submitted yet. Applications for graphic design jobs are paused until a sample is added and verified.</p>
+          <div class="stack" style="gap:10px">
+            <div class="field">
+              <span class="field-l">Work sample link or file</span>
+              <input class="input input-mono" value="https://behance.net/gallery/unilag-tech-fest-branding">
+            </div>
+            <div class="field">
+              <span class="field-l">Work context / description</span>
+              <textarea class="textarea" rows="2">Designed complete brand system, posters, and digital assets for a 2,000+ attendee campus conference.</textarea>
+            </div>
+            <button class="btn btn-gold btn-sm" data-submit-proof>Submit sample for verification</button>
+          </div>
+        </div>
+
+        <p class="annot">[Illustrative — human review verification mechanic (§5/§13)]</p>
+      </div>
+    </section>
+
+    <!-- ============ 3. JOB DISCOVERY FEED (TALENT) ============ -->
+    <section class="screen scroll" data-screen="2">
+      <div class="stack">
+        <div class="card" style="padding:12px">
+          <div style="position:relative">
+            <svg style="position:absolute;left:9px;top:9px" viewBox="0 0 24 24" fill="none" stroke="#8A90A3" stroke-width="2" width="15" height="15"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input class="input" style="padding-left:30px" placeholder="Search by skill, campus, or client...">
+          </div>
+          <div class="row scroll" style="gap:6px;margin-top:9px;overflow-x:auto">
+            <button class="badge" style="background:var(--ink);color:var(--gold);border-color:var(--ink)">All verified (2)</button>
+            <button class="badge badge-mute">Short-form video</button>
+            <button class="badge badge-mute">Mobile app dev</button>
+            <button class="badge badge-mute" style="border-style:dashed;opacity:.7;cursor:not-allowed">Graphic design — unverified</button>
+          </div>
+        </div>
+
+        <div class="row-b" style="padding:0 2px">
+          <span class="row" style="gap:6px"><span class="dot" style="color:var(--green)"></span><span class="sect-label">Available contracts (14)</span></span>
+          <span class="t-small">Latest posted</span>
+        </div>
+
+        <!-- job card 1 -->
+        <div class="card">
+          <div class="row-b">
+            <div class="row">
+              <span class="av av-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 11v2a1 1 0 0 0 1 1h2l4 4V6L6 10H4a1 1 0 0 0-1 1z"/></svg></span>
+              <div>
+                <div class="row" style="gap:5px"><span class="t-h3" style="font-size:13px">FinTech Launch Campaign</span><span class="badge badge-green">Verified</span></div>
+                <div class="t-mono-sm" style="color:var(--slate-dim);margin-top:2px">Campus influencer network</div>
+              </div>
+            </div>
+            <span class="t-num" style="font-size:15px;color:var(--gold)">₦45,000</span>
+          </div>
+
+          <h3 class="t-h3" style="margin:10px 0 4px">3x TikTok Reels for Campus Launch</h3>
+          <div class="t-mono-sm" style="color:var(--slate)">Est. 3 days • 3 MP4 files</div>
+
+          <div class="media crop-crowd" style="margin-top:10px">
+            <img src="../assets/prototype/techfest-reel-thumb.png" alt="Campus tech festival reel moodboard">
+            <div class="media-mask"><span>Sample delivered work — placeholder</span></div>
+            <div class="media-scrim"></div>
+            <div class="media-top"><span class="media-tag gold">Format: 9:16 reel</span><span class="media-tag">Visual brief</span></div>
+          </div>
+
+          <div class="row" style="gap:5px;margin-top:9px;flex-wrap:wrap">
+            <span class="badge badge-mute">3x MP4 reels</span>
+            <span class="badge badge-mute">Trending audio</span>
+            <span class="badge badge-mute">Brand kit attached</span>
+          </div>
+
+          <div class="notice notice-green" style="margin-top:9px;padding:7px 9px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#2F7A5E" stroke-width="2.5" width="13" height="13"><path d="m5 13 4 4L19 7"/></svg>
+            <p style="color:var(--green);font-weight:600">Your short-form video proof is verified</p>
+          </div>
+
+          <div class="row-b well" style="margin-top:8px;padding:7px 9px">
+            <span class="row" style="gap:6px"><span class="dot" style="color:var(--green)"></span><span class="t-mono-sm" style="color:var(--slate)">Protected: 100% funded in advance</span></span>
+          </div>
+
+          <div class="divide"></div>
+          <div class="row-b" style="margin-bottom:9px">
+            <span class="t-small">3 applicants</span>
+            <span class="t-small" style="color:var(--ink);font-weight:600">Closes in 24h</span>
+          </div>
+          <button class="btn btn-gold btn-sm" data-goto="3">Apply with verified profile</button>
+        </div>
+
+        <!-- job card 2 -->
+        <div class="card">
+          <div class="row-b">
+            <div class="row">
+              <span class="av av-sm" style="color:var(--green-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="m8 9 3 3-3 3M13 15h3"/><rect x="3" y="4" width="18" height="16" rx="2"/></svg></span>
+              <div>
+                <div class="row" style="gap:5px"><span class="t-h3" style="font-size:13px">UNILAG Tech Society</span><span class="badge badge-green">Verified</span></div>
+                <div class="t-mono-sm" style="color:var(--slate-dim);margin-top:2px">Campus chapter #04</div>
+              </div>
+            </div>
+            <span class="t-num" style="font-size:15px;color:var(--gold)">₦110,000</span>
+          </div>
+
+          <h3 class="t-h3" style="margin:10px 0 4px">Flutter Event Ticketing Module Fixes</h3>
+          <div class="t-mono-sm" style="color:var(--slate)">Est. 1 week • GitHub PR</div>
+
+          <!-- Plain-language summary: what the job actually needs, in words a
+               non-developer can follow at a glance -->
+          <p class="t-body" style="margin:9px 0 0;color:var(--ink)">Fix two bugs in an existing event-ticketing app: the QR scanner lags when checking people in, and a customer's wallet balance sometimes shows the wrong amount after a purchase.</p>
+
+          <div class="field" style="margin-top:10px">
+            <span class="field-l" style="color:var(--slate-dim)">Scope preview — what the client attached</span>
+            <div class="card-ink" style="margin-top:5px;padding:11px;border-radius:var(--r)">
+              <div class="row-b" style="padding-bottom:7px;border-bottom:1px solid rgba(255,255,255,.1)">
+                <span class="t-mono-sm" style="color:var(--gold)">lib/modules/ticketing_flow.dart</span>
+                <span class="t-mono-sm" style="color:var(--slate-dim)">GitHub PR</span>
+              </div>
+              <div class="t-mono-sm" style="color:var(--slate-dim);margin-top:8px;letter-spacing:.02em;text-transform:none">// Issue #42: QR scanner lag &amp; wallet state mismatch</div>
+              <div class="row-b" style="margin-top:7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:var(--r-sm);padding:7px 8px">
+                <span style="font-size:11px;font-weight:600;color:var(--paper)">TicketValidationService.verifyToken()</span>
+                <span class="badge badge-gold">2 fixes</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="notice notice-pending" style="margin-top:9px;padding:7px 9px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#B35A3A" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+            <p style="color:#B35A3A;font-weight:600">You can't apply yet: your Mobile App Development proof is still pending human review</p>
+          </div>
+
+          <div class="divide"></div>
+          <div class="row-b" style="margin-bottom:9px">
+            <span class="t-small">1 other applicant already verified in this category</span>
+            <span class="t-small">Closes in 3 days</span>
+          </div>
+          <button class="btn btn-ghost btn-sm" disabled>Apply — locked until your proof is verified</button>
+        </div>
+
+        <p class="annot">[Illustrative — marketplace model, hybrid (§7/§13)]</p>
+      </div>
+    </section>
+
+    <!-- ============ 4. APPLICATION & SCOPE (TALENT) ============ -->
+    <section class="screen scroll" data-screen="3">
+      <div class="stack">
+        <div class="card-ink">
+          <div class="row-b">
+            <span class="eyebrow"><span class="eyebrow-sq"></span><span class="t-mono">Expressing interest</span></span>
+            <span class="badge badge-ondark">Campus brand campaign</span>
+          </div>
+          <h1 class="t-h2" style="margin:9px 0 8px;color:var(--paper)">3x TikTok Reels for Campus Launch</h1>
+          <div class="row" style="gap:5px;flex-wrap:wrap">
+            <span class="badge badge-gold">Format: 9:16 vertical</span>
+            <span class="badge badge-ondark" style="color:var(--paper);border-color:rgba(255,255,255,.18);background:rgba(255,255,255,.07)">Fintech launch</span>
+          </div>
+          <div class="divide-dark"></div>
+          <div class="row-b">
+            <span class="t-small">FinTech Launch Campaign</span>
+            <span class="t-num" style="font-size:14px;color:var(--gold)">₦45,000</span>
+          </div>
+        </div>
+
+        <div class="card row" style="gap:10px;align-items:flex-start">
+          <span class="av">AO</span>
+          <div style="min-width:0">
+            <div class="row" style="gap:6px"><span class="t-h3" style="font-size:13px">University of Lagos</span><span class="badge badge-green">Verified</span></div>
+            <div class="t-small" style="margin-top:3px">Short-form video — proof verified by human review</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row-b" style="padding-bottom:8px;border-bottom:1px solid var(--hair)">
+            <span class="sect-label">Project asset package &amp; visual brief</span>
+            <span class="badge badge-green">3 files</span>
+          </div>
+          <div class="stack" style="gap:6px;margin-top:10px">
+            <div class="row-b well" style="padding:8px 9px">
+              <div class="row" style="gap:8px;min-width:0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#151A2E" stroke-width="1.8" width="15" height="15"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+                <div style="min-width:0"><div style="font-size:12px;font-weight:600">Brand Guide &amp; Palette Spec</div><div class="t-mono-sm" style="color:var(--slate);letter-spacing:.03em">PDF • 4.2 MB</div></div>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="#8A90A3" stroke-width="1.8" width="14" height="14"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 19h16"/></svg>
+            </div>
+            <div class="row-b well" style="padding:8px 9px">
+              <div class="row" style="gap:8px;min-width:0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#151A2E" stroke-width="1.8" width="15" height="15"><rect x="2" y="5" width="14" height="14" rx="2"/><path d="m16 10 6-3v10l-6-3"/></svg>
+                <div style="min-width:0"><div style="font-size:12px;font-weight:600">Raw B-Roll Video Archive</div><div class="t-mono-sm" style="color:var(--slate);letter-spacing:.03em">1080p ProRes • 1.8 GB</div></div>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="#8A90A3" stroke-width="1.8" width="14" height="14"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 19h16"/></svg>
+            </div>
+          </div>
+          <div class="divide"></div>
+          <div class="row-b">
+            <span class="t-mono-sm" style="color:var(--slate)">Moodboard palette</span>
+            <div class="row" style="gap:5px">
+              <span style="width:15px;height:15px;border-radius:2px;background:var(--ink);border:1px solid rgba(0,0,0,.2)"></span>
+              <span style="width:15px;height:15px;border-radius:2px;background:var(--gold)"></span>
+              <span style="width:15px;height:15px;border-radius:2px;background:var(--green)"></span>
+              <span style="width:15px;height:15px;border-radius:2px;background:var(--paper);border:1px solid var(--hair-strong)"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row-b" style="padding-bottom:8px;border-bottom:1px solid var(--hair)">
+            <span class="sect-label">Proposed scope &amp; terms</span>
+          </div>
+          <div class="stack" style="gap:11px;margin-top:11px">
+            <div class="field">
+              <span class="field-l">Proposed payout amount</span>
+              <input class="input input-mono" value="₦45,000">
+            </div>
+            <div class="field">
+              <span class="field-l">Delivery timeline</span>
+              <input class="input" value="3 days from deposit">
+            </div>
+            <div class="field">
+              <span class="field-l row-b"><span>Deliverable specifications</span><span style="color:var(--green)">Required standard</span></span>
+              <div class="row" style="gap:5px;flex-wrap:wrap;margin-bottom:3px">
+                <span class="badge" style="background:var(--ink);color:var(--paper);border-color:var(--ink)">3x MP4 (9:16)</span>
+                <span class="badge badge-mute">Subtitles</span>
+                <span class="badge badge-mute">Colour graded</span>
+              </div>
+              <textarea class="textarea" rows="3">3x MP4 reels (9:16 vertical), formatted with captions, synced brand audio tracks, and fully colour graded to the client visual brief.</textarea>
+            </div>
+            <div class="notice notice-green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#2F7A5E" stroke-width="2" width="15" height="15"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3"/></svg>
+              <p><b style="color:var(--green)">Protected transaction:</b> on agreement, ₦45,000 is funded in advance by the client. Funds are held and released on approval of the deliverable.</p>
+            </div>
+            <button class="btn btn-gold" data-submit-proposal>Submit proposal &amp; agree terms</button>
+            <button class="btn btn-ghost btn-sm">Save as draft</button>
+          </div>
+        </div>
+
+        <p class="annot">[Illustrative — scope negotiation step (§4)]</p>
+      </div>
+    </section>
+
+    <!-- ============ 5. CLIENT: POST A NEED ============ -->
+    <section class="screen scroll" data-screen="4">
+      <div class="stack">
+        <div class="card-ink">
+          <div class="eyebrow"><span class="eyebrow-sq"></span><span class="t-mono">Client workspace • post a need</span></div>
+          <h1 class="t-hero" style="margin:8px 0 6px;color:var(--paper)">Describe Need &amp; Define Scope</h1>
+          <p class="t-body" style="margin:0;color:#C0C4D0">Set clear deliverable requirements, choose the verified skill category, and specify protected contract terms.</p>
+        </div>
+
+        <div class="card">
+          <div class="row-b" style="padding-bottom:8px;border-bottom:1px solid var(--hair)">
+            <span class="sect-label">Project specifications</span>
+            <span class="t-mono-sm" style="color:var(--slate-dim)">Step 1 / 4</span>
+          </div>
+          <div class="stack" style="gap:12px;margin-top:12px">
+            <div class="field">
+              <span class="field-l">Project title</span>
+              <input class="input" value="Campus Brand Ambassador Launch Videos">
+            </div>
+            <div class="field">
+              <span class="field-l">Required talent skill category</span>
+              <div class="well">
+                <div class="row-b">
+                  <span style="font-size:13px;font-weight:600">Short-Form Video (TikTok / Reels)</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#5B6178" stroke-width="2" width="14" height="14"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+                <span class="badge badge-green" style="margin-top:7px">Requires human-verified proof</span>
+              </div>
+            </div>
+            <div class="field">
+              <span class="field-l">Deliverable requirements</span>
+              <textarea class="textarea" rows="3">Need 3x short-form promotional videos targeting university students. Must include campus footage, trending audio, and 9:16 vertical formatting.</textarea>
+            </div>
+            <div class="row" style="gap:9px">
+              <div class="well" style="flex:1">
+                <div class="t-mono-sm" style="color:var(--slate)">Contract budget</div>
+                <div class="t-num" style="font-size:15px;margin-top:4px">₦45,000</div>
+              </div>
+              <div class="well" style="flex:1">
+                <div class="t-mono-sm" style="color:var(--slate)">Est. timeline</div>
+                <div class="t-num" style="font-size:15px;margin-top:4px">3 days</div>
+              </div>
+            </div>
+
+            <div class="divide"></div>
+
+            <div class="field">
+              <span class="field-l row-b"><span>Visual brief &amp; moodboard</span><span class="badge badge-green">Attached</span></span>
+              <div class="media crop-crowd">
+                <img src="../assets/prototype/techfest-reel-thumb.png" alt="Campus launch reference moodboard">
+            <div class="media-mask"><span>Sample delivered work — placeholder</span></div>
+                <div class="media-scrim"></div>
+                <div class="media-bot">
+                  <span class="media-tag">Campus launch reference</span>
+                  <span class="media-tag gold">9:16 vertical</span>
+                </div>
+              </div>
+              <div class="row" style="gap:5px;flex-wrap:wrap;margin-top:7px">
+                <span class="badge badge-mute">Style guide (PDF)</span>
+                <span class="badge badge-mute">Audio reference</span>
+                <span class="badge badge-mute">Raw B-roll</span>
+              </div>
+            </div>
+
+            <div class="notice notice-green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#2F7A5E" stroke-width="2" width="15" height="15"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3"/></svg>
+              <p><b style="color:var(--green)">Payment protection:</b> the job publishes once funded. ₦45,000 is held in protected status and released only when you approve the final deliverables.</p>
+            </div>
+
+            <button class="btn btn-gold" data-goto="5">Continue to deposit &amp; publish</button>
+            <button class="btn btn-ghost btn-sm">Save project draft</button>
+          </div>
+        </div>
+
+        <p class="annot">[Illustrative — client need definition step (§4)]</p>
+      </div>
+    </section>
+
+    <!-- ============ 6. CLIENT: TALENT DISCOVERY ============ -->
+    <section class="screen scroll" data-screen="5">
+      <div class="stack">
+        <div class="card-ink">
+          <div class="eyebrow"><span class="eyebrow-sq"></span><span class="t-mono">Applicants for: campus brand ambassador launch videos</span></div>
+          <p class="t-body" style="margin:8px 0 0;color:var(--slate-dim)">3 category-verified applicants • Required skill: Short-Form Video • Budget: ₦45,000</p>
+        </div>
+
+        <div class="row-b" style="padding:0 2px">
+          <span class="sect-label">Order: most recently verified</span>
+          <span class="badge badge-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="9" height="9"><path d="m5 13 4 4L19 7"/></svg>Category verified only</span>
+        </div>
+
+        <!-- applicant 1 -->
+        <div class="card" id="applicant-ao" data-applicant>
+          <div class="row" style="gap:10px">
+            <span class="av">AO</span>
+            <div style="min-width:0;flex:1">
+              <div class="row" style="gap:6px;flex-wrap:wrap"><span class="t-h2" style="font-size:16px">Adebayo O.</span><span class="badge badge-green">UNILAG verified</span></div>
+              <div class="t-mono-sm" style="color:var(--slate);margin-top:3px;letter-spacing:.04em">Short-form video • 4 completed contracts</div>
+            </div>
+            <span class="badge badge-mute award-status" hidden>Not selected</span>
+          </div>
+
+          <div class="field" style="margin-top:11px">
+            <span class="field-l" style="color:var(--slate-dim)">Existing portfolio — not made for this job</span>
+            <div class="well" style="margin-top:5px">
+              <div class="media crop-crowd">
+                <img src="../assets/prototype/techfest-reel-thumb.png" alt="UNILAG Tech Fest promotional reel">
+              <div class="media-mask"><span>Sample delivered work — placeholder</span></div>
+                <div class="media-scrim"></div>
+                <button class="play" data-play><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+              </div>
+              <div class="t-h3" style="font-size:13px;margin-top:9px">UNILAG Tech Fest Promotional Reel</div>
+              <div class="notice" style="background:var(--paper-2);border:1px solid var(--hair);margin-top:7px;padding:8px 9px">
+                <p style="font-style:italic">Human reviewer: excellent pacing, clean audio mixing, 4K render.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="row-b well" style="margin-top:9px;padding:8px 10px">
+            <span class="t-mono-sm" style="color:var(--ink)">Rate for this job: ₦45,000</span>
+            <span class="t-mono-sm" style="color:var(--ink)">Timeline: 3 days</span>
+          </div>
+
+          <div class="stack" style="gap:7px;margin-top:10px">
+            <button class="btn btn-gold btn-sm" data-award="applicant-ao" data-goto="6">Select &amp; fund this student</button>
+            <button class="btn btn-ghost btn-sm">View profile</button>
+          </div>
+        </div>
+
+        <!-- applicant 2 — newly verified, zero contracts, equal footing -->
+        <div class="card" id="applicant-ck" data-applicant>
+          <div class="row" style="gap:10px">
+            <span class="av">CK</span>
+            <div style="min-width:0;flex:1">
+              <div class="row" style="gap:6px;flex-wrap:wrap"><span class="t-h2" style="font-size:16px">Chidi K.</span><span class="badge badge-green">LCPU verified</span></div>
+              <div class="t-mono-sm" style="color:var(--slate);margin-top:3px;letter-spacing:.04em">Short-form video • newly verified (0 completed contracts)</div>
+            </div>
+            <span class="badge badge-mute award-status" hidden>Not selected</span>
+          </div>
+
+          <div class="field" style="margin-top:11px">
+            <span class="field-l" style="color:var(--slate-dim)">Existing portfolio — not made for this job</span>
+            <div class="well" style="margin-top:5px">
+              <div class="media">
+                <img src="../assets/prototype/campus-delivery-thumb.png" alt="Campus food delivery app promo">
+                <div class="media-scrim"></div>
+                <button class="play" data-play><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+              </div>
+              <div class="t-h3" style="font-size:13px;margin-top:9px">Campus Food Delivery App Promo</div>
+              <div class="notice" style="background:var(--paper-2);border:1px solid var(--hair);margin-top:7px;padding:8px 9px">
+                <p style="font-style:italic">Human reviewer: good edit quality, strong call-to-action.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="row-b well" style="margin-top:9px;padding:8px 10px">
+            <span class="t-mono-sm" style="color:var(--ink)">Rate for this job: ₦40,000</span>
+            <span class="t-mono-sm" style="color:var(--ink)">Timeline: 2 days</span>
+          </div>
+
+          <div class="stack" style="gap:7px;margin-top:10px">
+            <button class="btn btn-gold btn-sm" data-award="applicant-ck" data-goto="6">Select &amp; fund this student</button>
+            <button class="btn btn-ghost btn-sm">View profile</button>
+          </div>
+        </div>
+
+        <p class="annot">[Illustrative — job marketplace, applicants compared on existing proof only (§5/§7). No ranking, no score, no spec work: each card shows a portfolio sample built before this job existed, not a submission made to compete for it.]</p>
+      </div>
+    </section>
+
+    <!-- ============ 7. CLIENT: SCOPE AGREEMENT & FUNDING ============ -->
+    <section class="screen scroll" data-screen="6">
+      <div class="stack">
+        <div class="card-ink">
+          <div class="eyebrow"><span class="eyebrow-sq"></span><span class="t-mono">Client workspace • agree terms &amp; fund</span></div>
+          <h1 class="t-h2" style="margin:9px 0 0;color:var(--paper)">3x TikTok Reels for Campus Launch</h1>
+          <div class="divide-dark"></div>
+          <div class="row-b">
+            <div class="row">
+              <span class="av av-sm" style="background:var(--gold);color:var(--ink)">AO</span>
+              <div>
+                <div class="t-mono-sm" style="color:var(--slate-dim)">Selected talent</div>
+                <div style="font-size:12px;font-weight:600;color:var(--paper);margin-top:2px">Adebayo O.</div>
+              </div>
+            </div>
+            <span class="badge badge-ondark">UNILAG verified</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row-b" style="padding-bottom:8px;border-bottom:1px solid var(--hair)">
+            <span class="sect-label">Agreed deliverable specifications</span>
+            <span class="badge badge-gold">9:16 reel</span>
+          </div>
+          <div class="media crop-crowd" style="margin-top:11px">
+            <img src="../assets/prototype/techfest-reel-thumb.png" alt="Campus launch brief reference">
+            <div class="media-mask"><span>Sample delivered work — placeholder</span></div>
+            <div class="media-scrim"></div>
+            <div class="media-bot"><span class="media-tag">Tech Fest promo style &amp; pacing guide</span></div>
+          </div>
+          <div class="stack" style="gap:7px;margin-top:11px">
+            <div class="row" style="gap:8px;align-items:flex-start"><span class="dot" style="color:var(--gold);margin-top:6px"></span><span class="t-body"><b>3x MP4 vertical videos</b> (9:16, 1080p 60fps minimum master).</span></div>
+            <div class="row" style="gap:8px;align-items:flex-start"><span class="dot" style="color:var(--gold);margin-top:6px"></span><span class="t-body"><b>Campus footage</b> with licensed audio and burned-in captions.</span></div>
+            <div class="row" style="gap:8px;align-items:flex-start"><span class="dot" style="color:var(--gold);margin-top:6px"></span><span class="t-body"><b>Delivery timeline:</b> 3 days from funding.</span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row-b" style="padding-bottom:8px;border-bottom:1px solid var(--hair)">
+            <span class="sect-label">Payment authorisation</span>
+          </div>
+          <div style="margin-top:8px">
+            <div class="lrow"><span>Agreed scope budget</span><span class="t-num" style="font-size:14px">₦45,000</span></div>
+            <div class="lrow"><span class="row" style="gap:6px">Platform service fee <span class="badge badge-mute">Promo</span></span><span style="color:var(--green);font-weight:600;font-size:12px">₦0 — zero fee phase</span></div>
+            <div class="lrow lrow-total">
+              <div>
+                <div class="t-mono-sm" style="color:var(--ink)">Total protected deposit</div>
+                <div class="t-small" style="margin-top:2px">Held until you approve the work</div>
+              </div>
+              <span class="t-num" style="font-size:21px;color:var(--gold)">₦45,000</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="notice notice-green">
+          <!-- matte lock mark: flat-shaded facets, no gradient / sheen / shadow -->
+          <svg class="lockmark" viewBox="0 0 48 48" aria-hidden="true">
+            <path d="M16 21v-5a8 8 0 0 1 16 0v5" fill="none" stroke="#C9A227" stroke-width="4" stroke-linecap="square"/>
+            <path d="M10 21h28v6l-4 4H14l-4-4z" fill="#C9A227"/>
+            <path d="M14 31h20v10l-4 4H18l-4-4z" fill="#151A2E"/>
+            <path d="M34 31v10l-4 4V35z" fill="#2A3149"/>
+            <rect x="22" y="35" width="4" height="6" fill="#C9A227"/>
+          </svg>
+          <div>
+            <div class="t-mono" style="color:var(--green);margin-bottom:4px">Payment protection</div>
+            <p>On authorising, <b>₦45,000</b> is held in protected status. Funds release to the student only after you inspect and approve the final deliverables.</p>
+          </div>
+        </div>
+
+        <button class="btn btn-gold" data-fund>Authorise ₦45,000 &amp; fund contract</button>
+        <button class="btn btn-ghost btn-sm">Modify scope terms</button>
+
+        <p class="annot">[Illustrative — scope agreement &amp; funding step (§4/§8)]</p>
+      </div>
+    </section>
+
+    <!-- ============ 8. TALENT: DELIVERY SUBMISSION ============ -->
+    <section class="screen scroll" data-screen="7">
+      <div class="stack">
+        <div class="card-ink">
+          <div class="row-b">
+            <span class="eyebrow"><span class="eyebrow-sq"></span><span class="t-mono">Active contract</span></span>
+            <span class="t-mono-sm" style="color:var(--slate-dim)">Step 2 / 5</span>
+          </div>
+          <h1 class="t-h2" style="margin:9px 0 8px;color:var(--paper)">3x TikTok Reels for Campus Launch</h1>
+          <div class="row-b" style="padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.1)">
+            <span class="t-small">FinTech Launch Campaign</span>
+            <span class="t-num" style="font-size:14px;color:var(--gold)">₦45,000</span>
+          </div>
+          <div class="t-mono-sm" style="color:var(--slate-dim);margin:11px 0 7px">Transaction state (§8)</div>
+          <div class="states">
+            <div class="state done"><small>✓</small>Funded</div>
+            <div class="state now"><small>Now</small>In prog</div>
+            <div class="state"><small>Next</small>Submit</div>
+            <div class="state"><small>·</small>Approve</div>
+            <div class="state"><small>·</small>Release</div>
+          </div>
+        </div>
+
+        <div class="notice notice-green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#2F7A5E" stroke-width="2" width="16" height="16"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3"/></svg>
+          <div>
+            <div class="t-mono" style="color:var(--green);margin-bottom:3px">Funds protected</div>
+            <p>₦45,000 is deposited and held. Payment releases automatically on client approval.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row-b" style="padding-bottom:8px;border-bottom:1px solid var(--hair)">
+            <span class="sect-label">Submit deliverables for review</span>
+          </div>
+
+          <div class="field" style="margin-top:11px">
+            <span class="field-l row-b"><span>Rendered deliverable preview</span><span style="color:var(--green)">Ready</span></span>
+            <div class="media crop-crowd">
+              <img src="../assets/prototype/techfest-reel-thumb.png" alt="Delivered reel master frame">
+            <div class="media-mask"><span>Sample delivered work — placeholder</span></div>
+              <div class="media-scrim"></div>
+              <div class="media-top"><span class="media-tag gold">9:16 vertical MP4</span><span class="media-tag">0:30 • 4K</span></div>
+              <button class="play" data-play><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+              <div class="media-bot"><span class="media-tag">Reel_1_CampusFintech_Master.mp4</span><span class="media-tag gold">142 MB</span></div>
+            </div>
+          </div>
+
+          <div class="field" style="margin-top:11px">
+            <span class="field-l">Deliverable asset links (required)</span>
+            <input class="input input-mono" value="https://drive.google.com/drive/folders/1_fintech_reels_final">
+          </div>
+
+          <div class="field" style="margin-top:11px">
+            <span class="field-l">Submission notes</span>
+            <textarea class="textarea" rows="3">Attached 3x MP4 files cut to 9:16 with captions, colour grade, and trending campus audio applied as requested in scope.</textarea>
+          </div>
+
+          <div class="row" style="gap:5px;flex-wrap:wrap;margin-top:10px">
+            <span class="badge badge-green">✓ 9:16 ratio</span>
+            <span class="badge badge-green">✓ Captions burned in</span>
+            <span class="badge badge-green">✓ 4K master</span>
+          </div>
+
+          <div class="stack" style="gap:7px;margin-top:12px">
+            <button class="btn btn-gold" data-submit-work>Submit work for client approval</button>
+            <button class="btn btn-ghost btn-sm">Message client / request scope revision</button>
+          </div>
+        </div>
+
+        <p class="annot">[Illustrative — protected-transaction state machine (§8)]</p>
+      </div>
+    </section>
+
+    <!-- ============ 9. CLIENT: REVIEW & RELEASE ============ -->
+    <section class="screen scroll" data-screen="8">
+      <div class="stack">
+        <div class="row-b card" style="padding:10px 12px;border-left:3px solid var(--green)">
+          <span class="row" style="gap:7px"><span class="dot" style="color:var(--green)"></span><span class="t-mono" style="color:var(--green)">Work delivered • pending review</span></span>
+          <span class="t-mono-sm" style="color:var(--slate)">Auto-release 47h 58m</span>
+        </div>
+
+        <div class="card-ink">
+          <div class="row-b">
+            <span class="t-mono" style="color:var(--gold)">Contract #8824 • inspection</span>
+            <span class="badge badge-ondark">Funds protected</span>
+          </div>
+          <h1 class="t-h2" style="margin:9px 0 10px;color:var(--paper)">3x TikTok Reels for Campus Launch</h1>
+          <div class="row-b">
+            <div class="row">
+              <span class="av av-sm">AO</span>
+              <div>
+                <div style="font-size:12px;font-weight:600;color:var(--paper)">Adebayo O.</div>
+                <div class="t-mono-sm" style="color:var(--slate-dim);margin-top:2px">Lead campus ambassador</div>
+              </div>
+            </div>
+            <span class="badge badge-ondark">UNILAG verified</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row-b" style="padding-bottom:8px;border-bottom:1px solid var(--hair)">
+            <span class="sect-label">Submitted master assets (3 / 3)</span>
+            <span class="t-mono-sm" style="color:var(--ink)">Batch 01</span>
+          </div>
+          <div class="media crop-crowd" style="margin-top:11px">
+            <img src="../assets/prototype/techfest-reel-thumb.png" alt="Reel 01 master">
+            <div class="media-mask"><span>Sample delivered work — placeholder</span></div>
+            <div class="media-scrim"></div>
+            <div class="media-top"><span class="media-tag">Reel 01 master (4K)</span><span class="media-tag" style="color:var(--green-soft)">Verified</span></div>
+            <button class="play" data-play><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+            <div class="media-bot"><span class="media-tag">TechFest '24: live audio</span><span class="media-tag gold">0:30 • 9:16</span></div>
+          </div>
+
+          <div class="t-mono-sm" style="color:var(--slate);margin:12px 0 7px">Inspection checklist</div>
+          <div class="row" style="gap:5px;flex-wrap:wrap">
+            <span class="badge badge-green">✓ 9:16 aspect ratio</span>
+            <span class="badge badge-green">✓ Burned-in captions</span>
+            <span class="badge badge-green">✓ Sound rights cleared</span>
+          </div>
+
+          <div class="row-b well" style="margin-top:10px;padding:9px 10px">
+            <div class="row" style="gap:9px;min-width:0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#C9A227" stroke-width="1.8" width="18" height="18"><path d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8M1 3h22v5H1zM10 12h4"/></svg>
+              <div><div style="font-size:12px;font-weight:600">Full Raw Package (.ZIP)</div><div class="t-mono-sm" style="color:var(--slate);letter-spacing:.03em">1.2 GB • 3 master reels</div></div>
+            </div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#5B6178" stroke-width="1.8" width="15" height="15"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 19h16"/></svg>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row-b">
+            <span class="sect-label">Transaction lifecycle</span>
+            <span class="t-mono-sm" style="color:var(--green)">₦45,000 protected</span>
+          </div>
+          <div class="row" style="gap:4px;margin-top:11px">
+            <div style="flex:1;text-align:center">
+              <div class="check" style="margin:0 auto 5px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></div>
+              <div class="t-mono-sm" style="color:var(--ink)">Funded</div>
+            </div>
+            <div style="flex:1;text-align:center">
+              <div class="check" style="margin:0 auto 5px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></div>
+              <div class="t-mono-sm" style="color:var(--ink)">Progress</div>
+            </div>
+            <div style="flex:1;text-align:center">
+              <div class="check" style="margin:0 auto 5px;background:var(--gold);border-color:var(--gold);color:var(--ink)"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/></svg></div>
+              <div class="t-mono-sm" style="color:var(--ink);font-weight:700">Delivered</div>
+            </div>
+            <div style="flex:1;text-align:center">
+              <div class="check off" style="margin:0 auto 5px"></div>
+              <div class="t-mono-sm" style="color:var(--slate-dim)">Payout</div>
+            </div>
+          </div>
+          <p class="t-small" style="text-align:center;margin:11px 0 0">The student is paid as soon as you approve the master reels.</p>
+        </div>
+
+        <div class="flash hidden" id="release-flash">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path d="m5 13 4 4L19 7"/></svg>
+          Released — ₦45,000 transferred to Adebayo O.
+        </div>
+
+        <button class="btn btn-green" data-release>Approve deliverables &amp; release ₦45,000</button>
+        <button class="btn btn-ghost btn-sm" data-toggle-revision>Request revision / scope feedback</button>
+
+        <div class="card hidden" id="revision-drawer">
+          <div class="row-b" style="margin-bottom:9px">
+            <span class="sect-label">Specify change request</span>
+            <button class="t-mono-sm" style="color:var(--slate)" data-toggle-revision>Close</button>
+          </div>
+          <textarea class="textarea" rows="3" placeholder="Cite a timestamp and the specific revision required (e.g. at 0:14, replace the audio fade)..."></textarea>
+          <button class="btn btn-gold btn-sm" style="margin-top:9px">Send feedback</button>
+        </div>
+
+        <p class="annot">[Illustrative — delivery review &amp; payment release (§8)]</p>
+      </div>
+    </section>
+
+    <!-- ============ 10. MUTUAL REVIEW & REPUTATION ============ -->
+    <section class="screen scroll" data-screen="9">
+      <div class="stack">
+        <div class="notice notice-green" style="flex-direction:column;align-items:stretch">
+          <span class="badge badge-green" style="align-self:flex-start"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="9" height="9"><path d="m5 13 4 4L19 7"/></svg>Released — ₦45,000 transferred</span>
+          <h1 class="t-h2" style="margin:9px 0 4px">Contract Completed</h1>
+          <p class="t-small" style="margin:0">Funds disbursed to Adebayo O. Both parties now add to their work record.</p>
+        </div>
+
+        <div class="card row" style="gap:11px;align-items:flex-start">
+          <!-- matte lock mark, reused -->
+          <svg class="lockmark" viewBox="0 0 48 48" aria-hidden="true">
+            <path d="M16 21v-5a8 8 0 0 1 16 0v5" fill="none" stroke="#C9A227" stroke-width="4" stroke-linecap="square"/>
+            <path d="M10 21h28v6l-4 4H14l-4-4z" fill="#C9A227"/>
+            <path d="M14 31h20v10l-4 4H18l-4-4z" fill="#151A2E"/>
+            <path d="M34 31v10l-4 4V35z" fill="#2A3149"/>
+            <rect x="22" y="35" width="4" height="6" fill="#C9A227"/>
+          </svg>
+          <div>
+            <div class="t-mono" style="color:var(--ink)">Reviews revealed after both sides submit</div>
+            <p class="t-small" style="margin:5px 0 0">Neither party sees the other's feedback until both have submitted, so neither can retaliate against the other's rating.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="padding-bottom:9px;border-bottom:1px solid var(--hair)">
+            <span class="t-mono" style="color:var(--gold)">Work record • contract #8824</span>
+            <div class="row" style="gap:6px;margin-top:7px">
+              <span style="font-size:12px">Talent: <b>Adebayo O.</b></span>
+              <span class="badge badge-green">UNILAG verified</span>
+            </div>
+            <div class="t-mono-sm" style="color:var(--slate);margin-top:4px;letter-spacing:.04em">Scope: short-form video &amp; motion</div>
+          </div>
+
+          <div class="row-b" style="margin:12px 0 8px">
+            <span class="field-l">1. What actually happened</span>
+            <span class="t-mono-sm" style="color:var(--green)">4 / 4 recorded</span>
+          </div>
+          <div class="stack" style="gap:6px">
+            <button class="tog on" data-tog>
+              <span class="row" style="gap:9px"><span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></span><span style="font-size:12px;font-weight:500">Met all brief specs</span></span>
+              <span class="t-mono-sm" style="color:var(--green)">Verified</span>
+            </button>
+            <button class="tog on" data-tog>
+              <span class="row" style="gap:9px"><span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></span><span style="font-size:12px;font-weight:500">On-time delivery (3 days)</span></span>
+              <span class="t-mono-sm" style="color:var(--green)">Recorded</span>
+            </button>
+            <button class="tog on" data-tog>
+              <span class="row" style="gap:9px"><span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></span><span style="font-size:12px;font-weight:500">Outstanding production quality</span></span>
+              <span class="t-mono-sm" style="color:var(--green)">Recorded</span>
+            </button>
+            <button class="tog on" data-tog>
+              <span class="row" style="gap:9px"><span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></span><span style="font-size:12px;font-weight:500">Clear &amp; prompt communication</span></span>
+              <span class="t-mono-sm" style="color:var(--green)">Recorded</span>
+            </button>
+          </div>
+
+          <div class="field" style="margin-top:14px">
+            <span class="field-l row-b"><span>2. Public note on the work record</span><span style="color:var(--slate-dim)">98 / 280</span></span>
+            <textarea class="textarea" rows="3">Adebayo delivered top-tier 4K vertical reels that captured the campus energy. Zero revision cycles needed.</textarea>
+            <span class="t-small" style="font-size:11px">This note attaches permanently to Adebayo's verified work record.</span>
+          </div>
+
+          <div class="well" style="margin-top:12px;display:flex;gap:10px;align-items:flex-start">
+            <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></span>
+            <div style="min-width:0">
+              <span style="font-size:12px;font-weight:500;line-height:17px;display:block">Attach the approved deliverable to Adebayo's public category proof gallery.</span>
+              <div class="row" style="gap:8px;margin-top:7px">
+                <span style="width:42px;height:26px;border-radius:2px;overflow:hidden;flex:0 0 auto;border:1px solid var(--hair)"><img src="../assets/prototype/techfest-reel-thumb.png" alt="" style="width:100%;height:100%;object-fit:cover"></span>
+                <span class="t-mono-sm" style="color:var(--slate);letter-spacing:.03em">3x master reels • 9:16 vertical</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-gold" data-finalise>Submit &amp; finalise record</button>
+
+        <p class="annot">
+          [Illustrative — reputation signal &amp; mutual review (§6)]<br>
+          <b>Flagged:</b> mutual-reveal review is not in the vision doc — an invented mechanic pending your decision.
+        </p>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ===================== BOTTOM NAV ===================== -->
+  <nav class="nav" id="nav"></nav>
+
+</div>
+
+<script>
+/* ==========================================================================
+   Screen registry — order follows the vision doc's two journeys (§4)
+   ========================================================================== */
+const SCREENS=[
+  {t:'Verify',      actor:'talent', nav:'profile'},
+  {t:'Proof',       actor:'talent', nav:'profile'},
+  {t:'Discover',    actor:'talent', nav:'discover'},
+  {t:'Apply',       actor:'talent', nav:'applications'},
+  {t:'Post need',   actor:'client', nav:'post'},
+  {t:'Applicants',  actor:'client', nav:'talent'},
+  {t:'Fund',        actor:'client', nav:'contracts'},
+  {t:'Deliver',     actor:'talent', nav:'contracts'},
+  {t:'Review',      actor:'client', nav:'contracts'},
+  {t:'Record',      actor:'client', nav:'contracts'},
+];
+
+const NAV_TALENT=[
+  {k:'discover',     l:'Discover',     d:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm4 5-2.1 6.4L7.5 16.5 9.6 10z'},
+  {k:'applications', l:'Applications', d:'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zm0 0v6h6M9 13h6M9 17h6'},
+  {k:'contracts',    l:'Contracts',    d:'M3 7h18v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'},
+  {k:'profile',      l:'Profile',      d:'M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM5 21a7 7 0 0 1 14 0'},
+];
+const NAV_CLIENT=[
+  {k:'overview',  l:'Overview',      d:'M4 4h7v7H4zM13 4h7v7h-7zM13 13h7v7h-7zM4 13h7v7H4z'},
+  {k:'post',      l:'Post need',     d:'M12 5v14M5 12h14'},
+  {k:'contracts', l:'Contracts',     d:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'},
+  {k:'talent',    l:'Talent search', d:'M11 3a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM21 21l-4.3-4.3'},
+];
+
+let current=0;
+
+/* ---------- build switcher ---------- */
+const sw=document.getElementById('switcher');
+SCREENS.forEach((s,i)=>{
+  const b=document.createElement('button');
+  b.className='chip'+(i===0?' on':'');
+  b.innerHTML=`<span class="chip-n">${i+1}</span><span class="chip-t">${s.t}</span>`;
+  b.addEventListener('click',()=>go(i));
+  sw.appendChild(b);
+});
+
+/* ---------- build nav ---------- */
+function renderNav(){
+  const s=SCREENS[current];
+  const items=s.actor==='talent'?NAV_TALENT:NAV_CLIENT;
+  document.getElementById('nav').innerHTML=items.map(it=>`
+    <a class="nav-i${it.k===s.nav?' on':''}" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${it.d}"/></svg>
+      <span>${it.l}</span>
+    </a>`).join('');
+}
+
+/* ---------- navigate ---------- */
+function go(i){
+  if(i<0||i>=SCREENS.length)return;
+  current=i;
+  document.querySelectorAll('.screen').forEach(el=>el.classList.toggle('on',+el.dataset.screen===i));
+  const chips=document.querySelectorAll('.chip');
+  chips.forEach((el,n)=>el.classList.toggle('on',n===i));
+  chips[i]?.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
+  const a=SCREENS[i].actor;
+  document.getElementById('tag-talent').className='actor-tag'+(a==='talent'?' on-talent':'');
+  document.getElementById('tag-client').className='actor-tag'+(a==='client'?' on-client':'');
+  const sc=document.querySelector(`.screen[data-screen="${i}"]`);
+  if(sc)sc.scrollTop=0;
+  renderNav();
+}
+
+/* ---------- interactions ---------- */
+function busy(btn,working,done,cls){
+  const original=btn.innerHTML;
+  btn.disabled=true;btn.textContent=working;
+  setTimeout(()=>{
+    btn.textContent=done;
+    if(cls){btn.classList.remove('btn-gold','btn-green');btn.classList.add(cls);}
+    setTimeout(()=>{btn.innerHTML=original;btn.disabled=false;btn.classList.remove('btn-green');if(!cls)return;btn.classList.add('btn-gold');},1800);
+  },700);
+}
+
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-goto],[data-verify],[data-submit-proof],[data-submit-proposal],[data-fund],[data-submit-work],[data-release],[data-finalise],[data-toggle-revision],[data-tog],[data-play],[data-award]');
+  if(!t)return;
+
+  if(t.hasAttribute('data-award')){
+    const winnerId=t.dataset.award;
+    document.querySelectorAll('[data-applicant]').forEach(card=>{
+      const isWinner=card.id===winnerId;
+      const status=card.querySelector('.award-status');
+      status.hidden=false;
+      status.textContent=isWinner?'Selected':'Not selected';
+      status.className='badge award-status '+(isWinner?'badge-green':'badge-mute');
+      card.querySelectorAll('button').forEach(b=>b.disabled=!isWinner);
+    });
+    return go(+t.dataset.goto);
+  }
+  if(t.hasAttribute('data-goto'))return go(+t.dataset.goto);
+  if(t.hasAttribute('data-verify'))return busy(t,'Verifying…','Verified ✓','btn-green'),setTimeout(()=>go(1),1400);
+  if(t.hasAttribute('data-submit-proof'))return busy(t,'Submitting…','Sent for review ✓','btn-green');
+  if(t.hasAttribute('data-submit-proposal'))return busy(t,'Sending…','Proposal sent ✓','btn-green'),setTimeout(()=>go(4),1400);
+  if(t.hasAttribute('data-fund'))return busy(t,'Authorising…','Contract funded ✓','btn-green'),setTimeout(()=>go(7),1400);
+  if(t.hasAttribute('data-submit-work'))return busy(t,'Uploading…','Submitted ✓','btn-green'),setTimeout(()=>go(8),1400);
+  if(t.hasAttribute('data-finalise'))return busy(t,'Recording…','Record finalised ✓','btn-green');
+
+  if(t.hasAttribute('data-release')){
+    document.getElementById('release-flash').classList.remove('hidden');
+    t.disabled=true;t.textContent='Released ✓';
+    setTimeout(()=>go(9),1500);
+    return;
+  }
+  if(t.hasAttribute('data-toggle-revision')){
+    document.getElementById('revision-drawer').classList.toggle('hidden');
+    return;
+  }
+  if(t.hasAttribute('data-tog'))return t.classList.toggle('on');
+  if(t.hasAttribute('data-play')){
+    const p=t.querySelector('svg');
+    p.innerHTML=p.innerHTML.includes('M8 5v14l11-7z')
+      ? '<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>'
+      : '<path d="M8 5v14l11-7z"/>';
+    return;
+  }
+});
+
+/* keyboard: ← → through screens */
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight')go(current+1);
+  if(e.key==='ArrowLeft')go(current-1);
+});
+
+renderNav();
+</script>
+</body>
+</html>

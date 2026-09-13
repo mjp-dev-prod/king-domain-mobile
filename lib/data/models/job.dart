@@ -11,6 +11,8 @@ class Job {
   final int clientCompletedJobs;
   final DateTime postedAt;
   final JobApplicationStatus applicationStatus;
+  final ContractStatus? contractStatus;
+  final String? deliverableNote;
 
   const Job({
     required this.id,
@@ -23,9 +25,15 @@ class Job {
     required this.clientCompletedJobs,
     required this.postedAt,
     this.applicationStatus = JobApplicationStatus.notApplied,
+    this.contractStatus,
+    this.deliverableNote,
   });
 
-  Job copyWith({JobApplicationStatus? applicationStatus}) {
+  Job copyWith({
+    JobApplicationStatus? applicationStatus,
+    ContractStatus? contractStatus,
+    String? deliverableNote,
+  }) {
     return Job(
       id: id,
       title: title,
@@ -37,11 +45,22 @@ class Job {
       clientCompletedJobs: clientCompletedJobs,
       postedAt: postedAt,
       applicationStatus: applicationStatus ?? this.applicationStatus,
+      contractStatus: contractStatus ?? this.contractStatus,
+      deliverableNote: deliverableNote ?? this.deliverableNote,
     );
   }
 }
 
 enum JobApplicationStatus { notApplied, pending, accepted, rejected }
+
+/// The wedge's actual product bet (see docs/core/vision-vs-research-reconciliation.md
+/// §2): once a client accepts a talent, the job's money moves through a plain,
+/// visible funded → in-progress → submitted → approved lifecycle. Nothing here
+/// is wired to a real payment/escrow provider yet — for the first real
+/// transactions, a human (the founding team) moves money manually outside the
+/// app and updates status accordingly. The screen exists to make that
+/// protection legible to the student, not to process real funds.
+enum ContractStatus { funded, inProgress, submitted, approved }
 
 /// Static mock catalog — one job per skill category used in T2's picker so
 /// the gating story in T6 always has a real example to demonstrate.
