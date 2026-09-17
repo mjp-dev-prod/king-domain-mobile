@@ -3,12 +3,14 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'token_store.dart';
 
-/// Change for a real device pointed at a deployed backend. 10.0.2.2 is the
-/// Android emulator's alias for the host machine's localhost — a physical
-/// device needs the host's real LAN IP or a deployed URL instead.
+/// Defaults to the real deployed backend so a normally-built/CI-built APK
+/// works out of the box. Override with --dart-define=KD_API_BASE=... only
+/// for local development — e.g. http://10.0.2.2:4000 for the Android
+/// emulator, or the host machine's LAN IP for a physical device on the same
+/// network as a locally-running backend.
 const _apiBase = String.fromEnvironment(
   'KD_API_BASE',
-  defaultValue: 'http://10.0.2.2:4000',
+  defaultValue: 'https://king-domain-backend-1.onrender.com',
 );
 
 class ApiException implements Exception {
