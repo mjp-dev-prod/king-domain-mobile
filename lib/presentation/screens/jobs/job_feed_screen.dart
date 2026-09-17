@@ -17,31 +17,44 @@ class JobFeedScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final jobs = ref.watch(jobsProvider);
-    final profile = ref.watch(talentProfileProvider);
+    final jobsAsync = ref.watch(jobsProvider);
+    final profileAsync = ref.watch(talentProfileProvider);
 
-    if (jobs.isEmpty) {
-      return Center(
-        child: Text('No open jobs right now.', style: AppTextStyles.bodyMedium),
-      );
-    }
+    return jobsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, _) => Center(
+        child: Text('Could not load jobs.', style: AppTextStyles.bodyMedium),
+      ),
+      data: (jobs) {
+        if (jobs.isEmpty) {
+          return Center(
+            child: Text('No open jobs right now.', style: AppTextStyles.bodyMedium),
+          );
+        }
 
-    return ListView(
-      padding: const EdgeInsets.all(AppDimensions.lg),
-      children: [
-        const SectionLabel('Open jobs'),
-        const SizedBox(height: AppDimensions.md),
-        for (final job in jobs) ...[
-          _JobCard(
-            job: job,
-            isVerified: profile.isVerifiedIn(job.category),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => JobDetailScreen(jobId: job.id)),
-            ),
+        final profile = profileAsync.valueOrNull;
+
+        return RefreshIndicator(
+          onRefresh: () => ref.read(jobsProvider.notifier).refresh(),
+          child: ListView(
+            padding: const EdgeInsets.all(AppDimensions.lg),
+            children: [
+              const SectionLabel('Open jobs'),
+              const SizedBox(height: AppDimensions.md),
+              for (final job in jobs) ...[
+                _JobCard(
+                  job: job,
+                  isVerified: profile?.isVerifiedIn(job.category) ?? false,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => JobDetailScreen(jobId: job.id)),
+                  ),
+                ),
+                const SizedBox(height: AppDimensions.md),
+              ],
+            ],
           ),
-          const SizedBox(height: AppDimensions.md),
-        ],
-      ],
+        );
+      },
     );
   }
 }

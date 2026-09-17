@@ -1,52 +1,58 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/api_client.dart';
 import '../../data/models/talent_profile.dart';
 
-class TalentProfileNotifier extends Notifier<TalentProfile> {
+/// Real backend now (king-domain-backend's /users/me/profile and
+/// /users/me/proof-items — Sprint 2). simulateReviewApproval() is gone:
+/// verification is a real human-reviewer action on the admin side
+/// (see backend/src/admin/proofReviewRoutes.js) — there is no self-approve
+/// path anymore, by design.
+class TalentProfileNotifier extends AsyncNotifier<TalentProfile> {
   @override
-  TalentProfile build() => const TalentProfile();
+  Future<TalentProfile> build() => _fetch();
 
-  void updateBasics({String? fullName, String? headline, String? bio}) {
-    state = state.copyWith(fullName: fullName, headline: headline, bio: bio);
+  Future<TalentProfile> _fetch() async {
+    final data = await ApiClient.instance.get('/users/me/profile');
+    return TalentProfile.fromJson(data['profile'] as Map<String, dynamic>);
   }
 
-  void setSkillCategories(List<String> categories) {
-    state = state.copyWith(skillCategories: categories);
+  Future<void> refresh() async {
+    state = await AsyncValue.guard(_fetch);
   }
 
-  void addProofItem(ProofItem item) {
-    state = state.copyWith(proofItems: [...state.proofItems, item]);
-  }
-
-  void removeProofItem(String id) {
-    state = state.copyWith(
-      proofItems: state.proofItems.where((p) => p.id != id).toList(),
+  Future<void> updateProfile({String? headline, String? bio, List<String>? skillCategories}) async {
+    final data = await ApiClient.instance.patch(
+      '/users/me/profile',
+      body: {
+        if (headline != null) 'headline': headline,
+        if (bio != null) 'bio': bio,
+        if (skillCategories != null) 'skillCategories': skillCategories,
+      },
     );
+    state = AsyncData(TalentProfile.fromJson(data['profile'] as Map<String, dynamic>));
   }
 
-  /// There's no reviewer-facing screen yet, so this simulates a King Domain
-  /// reviewer approving a submission — the only way to reach the "verified,
-  /// can apply" state in this mock. Real approval happens on the admin side
-  /// once that flow exists (out of scope for the talent app).
-  void simulateReviewApproval(String proofItemId) {
-    state = state.copyWith(
-      proofItems: [
-        for (final item in state.proofItems)
-          if (item.id == proofItemId)
-            ProofItem(
-              id: item.id,
-              category: item.category,
-              title: item.title,
-              filePath: item.filePath,
-              status: ProofReviewStatus.verified,
-            )
-          else
-            item,
-      ],
+  Future<void> addProofItem({
+    required String category,
+    required String title,
+    List<int>? fileBytes,
+    String? fileName,
+  }) async {
+    await ApiClient.instance.postMultipart(
+      '/users/me/proof-items',
+      fields: {'category': category, 'title': title},
+      fileBytes: fileBytes,
+      fileField: 'file',
+      fileName: fileName,
     );
+    await refresh();
+  }
+
+  Future<void> removeProofItem(String id) async {
+    await ApiClient.instance.delete('/users/me/proof-items/$id');
+    await refresh();
   }
 }
 
 final talentProfileProvider =
-    NotifierProvider<TalentProfileNotifier, TalentProfile>(
-      TalentProfileNotifier.new,
-    );
+    AsyncNotifierProvider<TalentProfileNotifier, TalentProfile>(TalentProfileNotifier.new);

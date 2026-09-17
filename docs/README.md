@@ -14,19 +14,24 @@ live here regardless of which sibling repo (backend, web, admin) they end up aff
 
 ## Current docs
 
+- [Backend + Frontend Sprint Plan](./research/BACKEND_SPRINT_PLAN.md) —
+  **the current build order.** 6 sprints (schema+auth → profile/proof/review →
+  jobs/applications/contracts → frontend wiring → payment → client-side experience),
+  each depending only on the sprint(s) before it. Owner decision 2026-09-17: build the
+  real product now, not a narrowed wedge — this supersedes the "narrower first slice"
+  framing in the reconciliation doc below.
 - [Vision vs. Research Reconciliation](./core/vision-vs-research-reconciliation.md) —
-  **read this first** if picking up product/build-order questions. Reconciles the
-  original product vision against the 2026-09-12 market validation research,
-  section by section, so "what are we actually building" doesn't need re-deriving.
+  reconciles the original product vision against the 2026-09-12 market validation
+  research, section by section. Still the reference for *what* to build; the sprint
+  plan above is the reference for *what order*.
 
 ### Full-vision prototype (design track)
 
 The clickable prototype lives at
 [`prototypes/king-domain-full-vision.html`](../prototypes/king-domain-full-vision.html) —
 open it in a browser. 10 screens across both the talent and client journeys, built
-from the 2026-09-13 Stitch export with corrections applied. This is a design
-reference, **not** the build order — the Flutter app ships a much narrower first
-slice (see the reconciliation doc).
+from the 2026-09-13 Stitch export with corrections applied. This is the design
+reference the sprint plan's Prisma schema and endpoints are built against.
 
 - [Stitch brief](./core/stitch-brief-full-vision-prototype.md) — what Stitch designs, and the rules it must not break.
 - [Gemini brief](./core/gemini-brief-full-vision-prototype.md) — how Gemini directs Stitch, and what is and isn't its call.

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../data/api_client.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/common/arrow_forward_button.dart';
 import '../../widgets/common/king_text_field.dart';
 import '../../widgets/common/section_label.dart';
@@ -9,23 +12,28 @@ import 'login_screen.dart';
 import 'verify_email_screen.dart';
 
 /// T1 — Sign Up. Identity + student status verification entry point (see
-/// Milestone 02 screen map). Static mock: no real auth wired yet, hands off
-/// to VerifyEmailScreen the way a real signup would.
-class SignUpScreen extends StatefulWidget {
+/// Milestone 02 screen map). Real backend now (king-domain-backend's
+/// /users/signup — Sprint 1/4): the account exists and is already signed
+/// in by the time VerifyEmailScreen opens, matching that screen's own UX
+/// (enter the code, land straight in the app).
+class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
 
   @override
-  State<SignUpScreen> createState() => _SignUpScreenState();
+  ConsumerState<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-class _SignUpScreenState extends State<SignUpScreen> {
+class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _submitting = false;
+  String? _error;
 
   @override
   void dispose() {
+    _fullNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -34,16 +42,32 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Future<void> _continue() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _submitting = true);
-    await Future.delayed(const Duration(milliseconds: 500));
-    if (!mounted) return;
-    setState(() => _submitting = false);
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => VerifyEmailScreen(email: _emailController.text.trim()),
-      ),
-    );
+    try {
+      await ref.read(authProvider.notifier).signUp(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+            role: 'talent',
+            fullName: _fullNameController.text.trim(),
+          );
+      if (!mounted) return;
+
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => VerifyEmailScreen(email: _emailController.text.trim()),
+        ),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = e.message;
+      });
+    }
   }
 
   @override
@@ -75,6 +99,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
                 const SizedBox(height: AppDimensions.xxl),
                 KingTextField(
+                  controller: _fullNameController,
+                  label: 'Full name',
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Enter your full name.';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: AppDimensions.lg),
+                KingTextField(
                   controller: _emailController,
                   label: 'Student email',
                   hintText: 'you@university.edu',
@@ -99,6 +134,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     return null;
                   },
                 ),
+                if (_error != null) ...[
+                  const SizedBox(height: AppDimensions.md),
+                  Text(
+                    _error!,
+                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.openPending),
+                  ),
+                ],
                 const SizedBox(height: AppDimensions.xxl),
                 ArrowForwardButton(
                   onPressed: _submitting ? null : _continue,

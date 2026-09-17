@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../data/api_client.dart';
 import '../../providers/jobs_provider.dart';
 import '../../widgets/common/section_label.dart';
 
@@ -26,6 +27,7 @@ class _SubmitDeliverableScreenState
   final _noteController = TextEditingController();
   String? _pickedPath;
   bool _submitting = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -42,18 +44,33 @@ class _SubmitDeliverableScreenState
   Future<void> _submit() async {
     if (_noteController.text.trim().isEmpty || _pickedPath == null) return;
 
-    setState(() => _submitting = true);
-    await Future.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
 
-    ref
-        .read(jobsProvider.notifier)
-        .submitDeliverable(widget.jobId, _noteController.text.trim());
+    try {
+      // The attached file isn't uploaded to the backend yet — /jobs/:id/
+      // contract/submit only takes a deliverableNote (and an optional
+      // deliverableUrl string, unused here). There's no multipart deliverable
+      // upload route yet, unlike proof items. Flagged rather than silently
+      // dropping the picker.
+      await ref
+          .read(jobsProvider.notifier)
+          .submitDeliverable(widget.jobId, _noteController.text.trim());
+      if (!mounted) return;
 
-    Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Deliverable submitted for review.')),
-    );
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Deliverable submitted for review.')),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = e.message;
+      });
+    }
   }
 
   @override
@@ -110,6 +127,13 @@ class _SubmitDeliverableScreenState
                 ],
               ),
             ),
+            if (_error != null) ...[
+              const SizedBox(height: AppDimensions.md),
+              Text(
+                _error!,
+                style: AppTextStyles.bodySmall.copyWith(color: AppColors.openPending),
+              ),
+            ],
             const SizedBox(height: AppDimensions.xl),
             ElevatedButton(
               onPressed: canSubmit ? _submit : null,

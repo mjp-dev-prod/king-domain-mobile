@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../data/api_client.dart';
 import '../../../data/models/job.dart';
 import '../../providers/jobs_provider.dart';
 import '../../widgets/common/section_label.dart';
@@ -16,10 +17,18 @@ import 'submit_deliverable_screen.dart';
 /// ("you'll be paid once the client approves") changes how safe a student
 /// feels delivering work to a stranger, before any payment infrastructure
 /// is built.
-class ContractDetailScreen extends ConsumerWidget {
+class ContractDetailScreen extends ConsumerStatefulWidget {
   final String jobId;
 
   const ContractDetailScreen({super.key, required this.jobId});
+
+  @override
+  ConsumerState<ContractDetailScreen> createState() => _ContractDetailScreenState();
+}
+
+class _ContractDetailScreenState extends ConsumerState<ContractDetailScreen> {
+  bool _startingWork = false;
+  String? _error;
 
   static const _steps = [
     ContractStatus.funded,
@@ -50,9 +59,39 @@ class ContractDetailScreen extends ConsumerWidget {
           'to you.',
   };
 
+  Future<void> _startWork(String jobId) async {
+    setState(() {
+      _startingWork = true;
+      _error = null;
+    });
+    try {
+      await ref.read(jobsProvider.notifier).startWork(jobId);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _startingWork = false);
+    }
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final job = ref.watch(jobsProvider).firstWhere((j) => j.id == jobId);
+  Widget build(BuildContext context) {
+    final jobsAsync = ref.watch(jobsProvider);
+
+    return jobsAsync.when(
+      loading: () => Scaffold(
+        appBar: AppBar(),
+        body: const Center(child: CircularProgressIndicator()),
+      ),
+      error: (err, _) => Scaffold(
+        appBar: AppBar(),
+        body: Center(child: Text('Could not load this contract.', style: AppTextStyles.bodyMedium)),
+      ),
+      data: (jobs) => _buildBody(context, jobs.firstWhere((j) => j.id == widget.jobId)),
+    );
+  }
+
+  Widget _buildBody(BuildContext context, Job job) {
     final status = job.contractStatus;
 
     if (status == null) {
@@ -118,12 +157,28 @@ class ContractDetailScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            if (_error != null) ...[
+              Text(
+                _error!,
+                style: AppTextStyles.bodySmall.copyWith(color: AppColors.openPending),
+              ),
+              const SizedBox(height: AppDimensions.md),
+            ],
             const SizedBox(height: AppDimensions.xl),
 
             if (status == ContractStatus.funded)
               ElevatedButton(
-                onPressed: () => ref.read(jobsProvider.notifier).startWork(job.id),
-                child: const Text('Start work'),
+                onPressed: _startingWork ? null : () => _startWork(job.id),
+                child: _startingWork
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: AppColors.ink,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                    : const Text('Start work'),
               ),
             if (status == ContractStatus.inProgress)
               ElevatedButton(
@@ -141,10 +196,25 @@ class ContractDetailScreen extends ConsumerWidget {
                 Text(job.deliverableNote!, style: AppTextStyles.bodyMedium),
                 const SizedBox(height: AppDimensions.lg),
               ],
-              OutlinedButton(
-                onPressed: () =>
-                    ref.read(jobsProvider.notifier).simulateClientApproval(job.id),
-                child: const Text('Simulate client approval'),
+              Container(
+                padding: const EdgeInsets.all(AppDimensions.md),
+                decoration: BoxDecoration(
+                  color: AppColors.openPending.withValues(alpha: 0.1),
+                  border: Border.all(color: AppColors.openPending.withValues(alpha: 0.4)),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.hourglass_empty, size: AppDimensions.iconSm, color: AppColors.openPending),
+                    const SizedBox(width: AppDimensions.sm),
+                    Expanded(
+                      child: Text(
+                        'Waiting on ${job.clientName} to review and approve.',
+                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.openPending),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
             if (status == ContractStatus.approved)
