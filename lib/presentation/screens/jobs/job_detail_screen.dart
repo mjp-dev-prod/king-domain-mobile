@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/formatting/currency.dart';
 import '../../../data/models/job.dart';
 import '../../providers/jobs_provider.dart';
 import '../../providers/talent_profile_provider.dart';
@@ -18,117 +19,133 @@ class JobDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final job = ref.watch(jobsProvider).firstWhere((j) => j.id == jobId);
-    final profile = ref.watch(talentProfileProvider);
-    final isVerified = profile.isVerifiedIn(job.category);
-    final alreadyApplied = job.applicationStatus != JobApplicationStatus.notApplied;
+    final jobsAsync = ref.watch(jobsProvider);
+    final profileAsync = ref.watch(talentProfileProvider);
 
-    return Scaffold(
-      appBar: AppBar(),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(AppDimensions.lg),
-          children: [
-            SectionLabel(job.category),
-            const SizedBox(height: AppDimensions.sm),
-            Text(job.title, style: AppTextStyles.h2),
-            const SizedBox(height: AppDimensions.md),
-            Text(
-              '\$${job.budget.toStringAsFixed(0)}',
-              style: AppTextStyles.h3.copyWith(color: AppColors.gold),
-            ),
-            const SizedBox(height: AppDimensions.lg),
-            Text('Description', style: AppTextStyles.h3),
-            const SizedBox(height: AppDimensions.sm),
-            Text(job.description, style: AppTextStyles.bodyMedium),
-            const SizedBox(height: AppDimensions.xl),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(AppDimensions.md),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 22,
-                      backgroundColor: AppColors.ink3,
-                      child: Text(
-                        job.clientName.isNotEmpty
-                            ? job.clientName[0].toUpperCase()
-                            : '?',
-                        style: AppTextStyles.h3,
-                      ),
-                    ),
-                    const SizedBox(width: AppDimensions.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+    return jobsAsync.when(
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (err, _) => Scaffold(
+        appBar: AppBar(),
+        body: Center(child: Text('Could not load this job.', style: AppTextStyles.bodyMedium)),
+      ),
+      data: (jobs) {
+        final job = jobs.firstWhere((j) => j.id == jobId);
+        final profile = profileAsync.valueOrNull;
+        final isVerified = profile?.isVerifiedIn(job.category) ?? false;
+        final alreadyApplied = job.applicationStatus != JobApplicationStatus.notApplied;
+
+        return Scaffold(
+          appBar: AppBar(),
+          body: SafeArea(
+            child: ListView(
+              padding: const EdgeInsets.all(AppDimensions.lg),
+              children: [
+                SectionLabel(job.category),
+                const SizedBox(height: AppDimensions.sm),
+                Text(job.title, style: AppTextStyles.h2),
+                const SizedBox(height: AppDimensions.md),
+                Text(
+                  formatNaira(job.budget),
+                  style: AppTextStyles.h3.copyWith(color: AppColors.gold),
+                ),
+                const SizedBox(height: AppDimensions.lg),
+                Text('Description', style: AppTextStyles.h3),
+                const SizedBox(height: AppDimensions.sm),
+                Text(job.description, style: AppTextStyles.bodyMedium),
+                const SizedBox(height: AppDimensions.xl),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppDimensions.md),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 22,
+                          backgroundColor: AppColors.ink3,
+                          child: Text(
+                            job.clientName.isNotEmpty
+                                ? job.clientName[0].toUpperCase()
+                                : '?',
+                            style: AppTextStyles.h3,
+                          ),
+                        ),
+                        const SizedBox(width: AppDimensions.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                job.clientName,
-                                style: AppTextStyles.bodyMedium.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              Row(
+                                children: [
+                                  Text(
+                                    job.clientName,
+                                    style: AppTextStyles.bodyMedium.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppDimensions.sm),
+                                  Icon(Icons.verified, size: 14, color: AppColors.settled),
+                                ],
                               ),
-                              const SizedBox(width: AppDimensions.sm),
-                              Icon(Icons.verified, size: 14, color: AppColors.settled),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${job.clientRating} rating · '
+                                '${job.clientCompletedJobs} jobs completed',
+                                style: AppTextStyles.bodySmall,
+                              ),
                             ],
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${job.clientRating} rating · '
-                            '${job.clientCompletedJobs} jobs completed',
-                            style: AppTextStyles.bodySmall,
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: AppDimensions.xxl),
-            if (!isVerified) ...[
-              Container(
-                padding: const EdgeInsets.all(AppDimensions.md),
-                decoration: BoxDecoration(
-                  color: AppColors.openPending.withValues(alpha: 0.1),
-                  border: Border.all(
-                    color: AppColors.openPending.withValues(alpha: 0.4),
                   ),
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
                 ),
-                child: Row(
-                  children: [
-                    Icon(Icons.lock_outline, size: AppDimensions.iconSm, color: AppColors.openPending),
-                    const SizedBox(width: AppDimensions.sm),
-                    Expanded(
-                      child: Text(
-                        'You need Verified status in ${job.category} to apply. '
-                        'Submit proof from your profile first.',
-                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.openPending),
+                const SizedBox(height: AppDimensions.xxl),
+                if (!isVerified) ...[
+                  Container(
+                    padding: const EdgeInsets.all(AppDimensions.md),
+                    decoration: BoxDecoration(
+                      color: AppColors.openPending.withValues(alpha: 0.1),
+                      border: Border.all(
+                        color: AppColors.openPending.withValues(alpha: 0.4),
                       ),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
                     ),
-                  ],
+                    child: Row(
+                      children: [
+                        Icon(Icons.lock_outline, size: AppDimensions.iconSm, color: AppColors.openPending),
+                        const SizedBox(width: AppDimensions.sm),
+                        Expanded(
+                          child: Text(
+                            'You need Verified status in ${job.category} to apply. '
+                            'Submit proof from your profile first.',
+                            style: AppTextStyles.bodySmall.copyWith(color: AppColors.openPending),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppDimensions.md),
+                ],
+                ElevatedButton(
+                  onPressed: (!isVerified || alreadyApplied)
+                      ? null
+                      : () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => ApplyScreen(jobId: job.id)),
+                        ),
+                  child: Text(
+                    switch (job.applicationStatus) {
+                      JobApplicationStatus.accepted => 'You were awarded this job',
+                      JobApplicationStatus.pending => 'Application pending',
+                      JobApplicationStatus.rejected => 'Not selected for this job',
+                      JobApplicationStatus.notApplied =>
+                        isVerified ? 'Apply for this job' : 'Verification required',
+                    },
+                  ),
                 ),
-              ),
-              const SizedBox(height: AppDimensions.md),
-            ],
-            ElevatedButton(
-              onPressed: (!isVerified || alreadyApplied)
-                  ? null
-                  : () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => ApplyScreen(jobId: job.id)),
-                    ),
-              child: Text(
-                alreadyApplied
-                    ? 'Already applied'
-                    : (isVerified ? 'Apply for this job' : 'Verification required'),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/formatting/currency.dart';
 import '../../../data/models/job.dart';
 import '../../providers/jobs_provider.dart';
 import '../../providers/talent_profile_provider.dart';
@@ -17,31 +18,44 @@ class JobFeedScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final jobs = ref.watch(jobsProvider);
-    final profile = ref.watch(talentProfileProvider);
+    final jobsAsync = ref.watch(jobsProvider);
+    final profileAsync = ref.watch(talentProfileProvider);
 
-    if (jobs.isEmpty) {
-      return Center(
-        child: Text('No open jobs right now.', style: AppTextStyles.bodyMedium),
-      );
-    }
+    return jobsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, _) => Center(
+        child: Text('Could not load jobs.', style: AppTextStyles.bodyMedium),
+      ),
+      data: (jobs) {
+        if (jobs.isEmpty) {
+          return Center(
+            child: Text('No open jobs right now.', style: AppTextStyles.bodyMedium),
+          );
+        }
 
-    return ListView(
-      padding: const EdgeInsets.all(AppDimensions.lg),
-      children: [
-        const SectionLabel('Open jobs'),
-        const SizedBox(height: AppDimensions.md),
-        for (final job in jobs) ...[
-          _JobCard(
-            job: job,
-            isVerified: profile.isVerifiedIn(job.category),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => JobDetailScreen(jobId: job.id)),
-            ),
+        final profile = profileAsync.valueOrNull;
+
+        return RefreshIndicator(
+          onRefresh: () => ref.read(jobsProvider.notifier).refresh(),
+          child: ListView(
+            padding: const EdgeInsets.all(AppDimensions.lg),
+            children: [
+              const SectionLabel('Open jobs'),
+              const SizedBox(height: AppDimensions.md),
+              for (final job in jobs) ...[
+                _JobCard(
+                  job: job,
+                  isVerified: profile?.isVerifiedIn(job.category) ?? false,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => JobDetailScreen(jobId: job.id)),
+                  ),
+                ),
+                const SizedBox(height: AppDimensions.md),
+              ],
+            ],
           ),
-          const SizedBox(height: AppDimensions.md),
-        ],
-      ],
+        );
+      },
     );
   }
 }
@@ -85,7 +99,7 @@ class _JobCard extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    '\$${job.budget.toStringAsFixed(0)}',
+                    formatNaira(job.budget),
                     style: AppTextStyles.bodyMedium.copyWith(
                       color: AppColors.gold,
                       fontWeight: FontWeight.w600,
@@ -100,6 +114,26 @@ class _JobCard extends StatelessWidget {
                       style: AppTextStyles.bodySmall,
                       overflow: TextOverflow.ellipsis,
                     ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppDimensions.sm),
+              Row(
+                children: [
+                  Icon(Icons.shield_outlined, size: 12, color: AppColors.settled),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Funded on award',
+                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.settled),
+                  ),
+                  const SizedBox(width: AppDimensions.sm),
+                  Text('·', style: AppTextStyles.bodySmall),
+                  const SizedBox(width: AppDimensions.sm),
+                  Text(
+                    job.applicationCount == 1
+                        ? '1 applicant'
+                        : '${job.applicationCount} applicants',
+                    style: AppTextStyles.bodySmall,
                   ),
                 ],
               ),

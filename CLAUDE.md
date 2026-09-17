@@ -63,6 +63,23 @@ Green is reserved strictly for verification/proof/status semantics, never decora
 Logomark is a typographic **KD** in Fraunces 700, gold. No illustrated logo yet — deliberately
 left open.
 
+### Imagery and dimension
+
+Decided 2026-09-13, after a Stitch pass shipped a 3D gold padlock into two screens and an
+earlier Gemini pass proposed a full claymorphic asset set.
+
+Dimensional/3D illustration is **allowed when it is matte and content-bearing** — it carries
+real information (a work-sample thumbnail, a moodboard, delivered media) or is a restrained
+matte object. It is **not** allowed as pure decoration, and it never gets an exemption from
+the bans below: no gradient fills, no specular sheen, no drop shadow, no glow. A dimensional
+object that needs those effects to read is the wrong object.
+
+The reasoning: real content imagery is what fixes "the app looks plain," and it doubles as
+proof — which the product vision actively wants. A decorative icon next to a label that
+already says the same thing in words is redundancy, and every such asset becomes a permanent
+production dependency (empty, error, pending and success variants, kept visually coherent
+forever). Spend that budget on content, not ornament.
+
 ### Do not
 
 These were explicit calls, not accidents:

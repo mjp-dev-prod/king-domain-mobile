@@ -4,13 +4,14 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../data/models/job.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/jobs_provider.dart';
 import '../../providers/talent_profile_provider.dart';
+import '../contracts/contract_detail_screen.dart';
 import '../jobs/job_feed_screen.dart';
 
-/// Post-onboarding app shell — bottom tab nav. Jobs and Profile show real
-/// state now (jobsProvider, talentProfileProvider); Applications is a
-/// placeholder until T7-T9 (contracts, Milestone 04) are built out.
+/// Post-onboarding app shell — bottom tab nav. Jobs and Profile hit the
+/// real backend now (jobsProvider, talentProfileProvider — Sprint 4).
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
 
@@ -56,97 +57,131 @@ class _AppShellState extends State<AppShell> {
   }
 }
 
-/// T7 — My Applications (partial). Tracks proposals submitted via T6; the
-/// rest of T7's scope (pre-hire messaging with interested clients) waits on
-/// the real-time-chat hosting migration decided in Milestone 03.
+/// T7 — My Applications. A job only shows up here once this talent has
+/// actually applied (backend has no "my application status" embedded on
+/// the job list — see jobs_provider.dart's fetchOne/listApplications — so
+/// this tab shows jobs with a contract, i.e. jobs this talent was awarded).
+/// Awarding is a client-side action (backend jobsRoutes.js's /award route)
+/// with no client UI in this app yet — see BACKEND_SPRINT_PLAN.md Sprint 6.
 class _ApplicationsTab extends ConsumerWidget {
   const _ApplicationsTab();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final applied = ref
-        .watch(jobsProvider)
-        .where((j) => j.applicationStatus != JobApplicationStatus.notApplied)
-        .toList();
+    final jobsAsync = ref.watch(jobsProvider);
 
-    if (applied.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppDimensions.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.description_outlined,
-                size: 40,
-                color: AppColors.slateDim,
+    return jobsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, _) => Center(
+        child: Text('Could not load applications.', style: AppTextStyles.bodyMedium),
+      ),
+      data: (jobs) {
+        final withContract = jobs.where((j) => j.contractStatus != null).toList();
+
+        if (withContract.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppDimensions.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.description_outlined,
+                    size: 40,
+                    color: AppColors.slateDim,
+                  ),
+                  const SizedBox(height: AppDimensions.md),
+                  Text(
+                    'No active contracts yet',
+                    style: AppTextStyles.h3,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppDimensions.sm),
+                  Text(
+                    'Jobs you\'re awarded show up here once a client selects you.',
+                    style: AppTextStyles.bodySmall,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
+            ),
+          );
+        }
+
+        return ListView(
+          padding: const EdgeInsets.all(AppDimensions.lg),
+          children: [
+            for (final job in withContract) ...[
+              _ApplicationTile(job: job),
               const SizedBox(height: AppDimensions.md),
-              Text(
-                'No applications yet',
-                style: AppTextStyles.h3,
-                textAlign: TextAlign.center,
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ApplicationTile extends ConsumerWidget {
+  final Job job;
+
+  const _ApplicationTile({required this.job});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => ContractDetailScreen(jobId: job.id)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimensions.md),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      job.title,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(job.clientName, style: AppTextStyles.bodySmall),
+                  ],
+                ),
               ),
-              const SizedBox(height: AppDimensions.sm),
-              Text(
-                'Applications you submit from the Jobs tab show up here.',
-                style: AppTextStyles.bodySmall,
-                textAlign: TextAlign.center,
+              _StatusBadge(status: job.contractStatus),
+              const SizedBox(width: AppDimensions.sm),
+              Icon(
+                Icons.chevron_right,
+                size: AppDimensions.iconSm,
+                color: AppColors.slateDim,
               ),
             ],
           ),
         ),
-      );
-    }
-
-    return ListView(
-      padding: const EdgeInsets.all(AppDimensions.lg),
-      children: [
-        for (final job in applied) ...[
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(AppDimensions.md),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          job.title,
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(job.clientName, style: AppTextStyles.bodySmall),
-                      ],
-                    ),
-                  ),
-                  _StatusBadge(status: job.applicationStatus),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: AppDimensions.md),
-        ],
-      ],
+      ),
     );
   }
 }
 
 class _StatusBadge extends StatelessWidget {
-  final JobApplicationStatus status;
+  final ContractStatus? status;
 
   const _StatusBadge({required this.status});
 
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (status) {
-      JobApplicationStatus.pending => ('Pending', AppColors.openPending),
-      JobApplicationStatus.accepted => ('Accepted', AppColors.settled),
-      JobApplicationStatus.rejected => ('Rejected', AppColors.slateDim),
-      JobApplicationStatus.notApplied => ('', AppColors.slateDim),
+      ContractStatus.funded => ('Funded', AppColors.openPending),
+      ContractStatus.inProgress => ('In progress', AppColors.openPending),
+      ContractStatus.submitted => ('Submitted', AppColors.openPending),
+      ContractStatus.approved => ('Approved', AppColors.settled),
+      null => ('', AppColors.slateDim),
     };
 
     return Container(
@@ -169,56 +204,69 @@ class _ProfileTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(talentProfileProvider);
+    final profileAsync = ref.watch(talentProfileProvider);
+    final authUser = ref.watch(authProvider).user;
+    final fullName = authUser?.fullName ?? '';
 
-    return ListView(
-      padding: const EdgeInsets.all(AppDimensions.lg),
-      children: [
-        CircleAvatar(
-          radius: 36,
-          backgroundColor: AppColors.ink2,
-          child: Text(
-            profile.fullName.isNotEmpty ? profile.fullName[0].toUpperCase() : '?',
-            style: AppTextStyles.h1,
+    return profileAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, _) => Center(
+        child: Text('Could not load profile.', style: AppTextStyles.bodyMedium),
+      ),
+      data: (profile) => ListView(
+        padding: const EdgeInsets.all(AppDimensions.lg),
+        children: [
+          CircleAvatar(
+            radius: 36,
+            backgroundColor: AppColors.ink2,
+            child: Text(
+              fullName.isNotEmpty ? fullName[0].toUpperCase() : '?',
+              style: AppTextStyles.h1,
+            ),
           ),
-        ),
-        const SizedBox(height: AppDimensions.md),
-        Text(
-          profile.fullName.isEmpty ? 'Unnamed' : profile.fullName,
-          style: AppTextStyles.h2,
-        ),
-        Text(
-          profile.headline,
-          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.slateDim),
-        ),
-        const SizedBox(height: AppDimensions.lg),
-        Text(profile.bio, style: AppTextStyles.bodyMedium),
-        const SizedBox(height: AppDimensions.xl),
-        Text('Skill categories', style: AppTextStyles.h3),
-        const SizedBox(height: AppDimensions.sm),
-        Wrap(
-          spacing: AppDimensions.sm,
-          runSpacing: AppDimensions.sm,
-          children: profile.skillCategories.map((c) {
-            final verifiedCount = profile.proofItems
-                .where((p) => p.category == c && p.status.name == 'verified')
-                .length;
-            final isVerified = verifiedCount > 0;
-            final color = isVerified ? AppColors.settled : AppColors.openPending;
-            return Chip(
-              label: Text(c),
-              labelStyle: AppTextStyles.bodySmall,
-              backgroundColor: AppColors.ink2,
-              side: BorderSide(color: color.withValues(alpha: 0.4)),
-              avatar: Icon(
-                isVerified ? Icons.verified : Icons.hourglass_empty,
-                size: AppDimensions.iconSm - 4,
-                color: color,
-              ),
-            );
-          }).toList(),
-        ),
-      ],
+          const SizedBox(height: AppDimensions.md),
+          Text(
+            fullName.isEmpty ? 'Unnamed' : fullName,
+            style: AppTextStyles.h2,
+          ),
+          Text(
+            profile.headline,
+            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.slateDim),
+          ),
+          const SizedBox(height: AppDimensions.lg),
+          Text(profile.bio, style: AppTextStyles.bodyMedium),
+          const SizedBox(height: AppDimensions.xl),
+          Text('Skill categories', style: AppTextStyles.h3),
+          const SizedBox(height: AppDimensions.sm),
+          Wrap(
+            spacing: AppDimensions.sm,
+            runSpacing: AppDimensions.sm,
+            children: profile.skillCategories.map((c) {
+              final verifiedCount = profile.proofItems
+                  .where((p) => p.category == c && p.status.name == 'verified')
+                  .length;
+              final isVerified = verifiedCount > 0;
+              final color = isVerified ? AppColors.settled : AppColors.openPending;
+              return Chip(
+                label: Text(c),
+                labelStyle: AppTextStyles.bodySmall,
+                backgroundColor: AppColors.ink2,
+                side: BorderSide(color: color.withValues(alpha: 0.4)),
+                avatar: Icon(
+                  isVerified ? Icons.verified : Icons.hourglass_empty,
+                  size: AppDimensions.iconSm - 4,
+                  color: color,
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: AppDimensions.xl),
+          OutlinedButton(
+            onPressed: () => ref.read(authProvider.notifier).logout(),
+            child: const Text('Sign out'),
+          ),
+        ],
+      ),
     );
   }
 }

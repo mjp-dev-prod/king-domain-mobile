@@ -1,9 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../data/api_client.dart';
 import '../../../data/models/talent_profile.dart';
 import '../../providers/talent_profile_provider.dart';
 import '../../widgets/common/onboarding_step_header.dart';
@@ -11,9 +13,12 @@ import '../shell/app_shell.dart';
 
 /// T3 — Proof Upload. One work sample per skill category, submitted for
 /// human review (Milestone 03: self-submitted work samples, human-reviewed,
-/// one-time per category, permanent). Nothing here auto-verifies — every
-/// item starts `pending` until a King Domain reviewer approves it, and a
-/// talent can't apply to jobs in a category until it's verified there.
+/// one-time per category, permanent). Real upload now (multer -> Supabase
+/// Storage — Sprint 2/4): the file picked here is genuinely sent to the
+/// backend, not just remembered as a local device path. There is no
+/// self-approve anymore — simulateReviewApproval() is gone; verification
+/// only happens through the real admin reviewer flow
+/// (backend/src/admin/proofReviewRoutes.js), which has no UI in this app.
 class ProofUploadScreen extends ConsumerStatefulWidget {
   const ProofUploadScreen({super.key});
 
@@ -24,9 +29,11 @@ class ProofUploadScreen extends ConsumerStatefulWidget {
 class _ProofUploadScreenState extends ConsumerState<ProofUploadScreen> {
   Future<void> _addProof(String category) async {
     final titleController = TextEditingController();
-    String? pickedPath;
+    XFile? pickedFile;
+    bool submitting = false;
+    String? sheetError;
 
-    final confirmed = await showModalBottomSheet<bool>(
+    await showModalBottomSheet<void>(
       context: context,
       backgroundColor: AppColors.ink2,
       shape: const RoundedRectangleBorder(
@@ -60,6 +67,7 @@ class _ProofUploadScreenState extends ConsumerState<ProofUploadScreen> {
                       labelText: 'What is this?',
                       hintText: 'e.g. E-commerce app redesign, portfolio site',
                     ),
+                    onChanged: (_) => setSheetState(() {}),
                   ),
                   const SizedBox(height: AppDimensions.md),
                   OutlinedButton.icon(
@@ -69,22 +77,54 @@ class _ProofUploadScreenState extends ConsumerState<ProofUploadScreen> {
                         source: ImageSource.gallery,
                       );
                       if (file != null) {
-                        setSheetState(() => pickedPath = file.path);
+                        setSheetState(() => pickedFile = file);
                       }
                     },
                     icon: const Icon(Icons.attach_file, size: AppDimensions.iconSm),
                     label: Text(
-                      pickedPath == null
+                      pickedFile == null
                           ? 'Attach a file or screenshot'
                           : 'Attached ✓',
                     ),
                   ),
+                  if (sheetError != null) ...[
+                    const SizedBox(height: AppDimensions.sm),
+                    Text(
+                      sheetError!,
+                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.openPending),
+                    ),
+                  ],
                   const SizedBox(height: AppDimensions.lg),
                   ElevatedButton(
-                    onPressed: titleController.text.trim().isEmpty
+                    onPressed: (titleController.text.trim().isEmpty || submitting)
                         ? null
-                        : () => Navigator.of(sheetContext).pop(true),
-                    child: const Text('Submit for review'),
+                        : () async {
+                            setSheetState(() => submitting = true);
+                            try {
+                              final bytes = pickedFile != null
+                                  ? await File(pickedFile!.path).readAsBytes()
+                                  : null;
+                              await ref.read(talentProfileProvider.notifier).addProofItem(
+                                    category: category,
+                                    title: titleController.text.trim(),
+                                    fileBytes: bytes,
+                                    fileName: pickedFile?.name,
+                                  );
+                              if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+                            } on ApiException catch (e) {
+                              setSheetState(() {
+                                submitting = false;
+                                sheetError = e.message;
+                              });
+                            }
+                          },
+                    child: submitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2.5),
+                          )
+                        : const Text('Submit for review'),
                   ),
                 ],
               );
@@ -93,19 +133,6 @@ class _ProofUploadScreenState extends ConsumerState<ProofUploadScreen> {
         );
       },
     );
-
-    if (confirmed == true && titleController.text.trim().isNotEmpty) {
-      ref
-          .read(talentProfileProvider.notifier)
-          .addProofItem(
-            ProofItem(
-              id: DateTime.now().microsecondsSinceEpoch.toString(),
-              category: category,
-              title: titleController.text.trim(),
-              filePath: pickedPath,
-            ),
-          );
-    }
   }
 
   void _finish() {
@@ -117,55 +144,60 @@ class _ProofUploadScreenState extends ConsumerState<ProofUploadScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final profile = ref.watch(talentProfileProvider);
-    final categories = profile.skillCategories;
+    final profileAsync = ref.watch(talentProfileProvider);
 
     return Scaffold(
       appBar: AppBar(),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(AppDimensions.lg),
-          children: [
-            const OnboardingStepHeader(
-              step: 3,
-              totalSteps: 3,
-              title: 'Upload proof',
-              subtitle:
-                  'One work sample per category. A King Domain reviewer '
-                  'checks it before you can apply to jobs in that category.',
-            ),
-            const SizedBox(height: AppDimensions.xl),
-            for (final category in categories) ...[
-              _CategoryProofSection(
-                category: category,
-                items: profile.proofItems
-                    .where((p) => p.category == category)
-                    .toList(),
-                onAdd: () => _addProof(category),
-                onRemove: (id) => ref
-                    .read(talentProfileProvider.notifier)
-                    .removeProofItem(id),
-                onSimulateApprove: (id) => ref
-                    .read(talentProfileProvider.notifier)
-                    .simulateReviewApproval(id),
-              ),
-              const SizedBox(height: AppDimensions.lg),
-            ],
-            const SizedBox(height: AppDimensions.md),
-            ElevatedButton(
-              onPressed: profile.proofItems.isEmpty ? null : _finish,
-              child: const Text('Finish setup'),
-            ),
-            if (profile.proofItems.isEmpty) ...[
-              const SizedBox(height: AppDimensions.sm),
-              Center(
-                child: Text(
-                  'Add at least one proof item to continue.',
-                  style: AppTextStyles.bodySmall,
+        child: profileAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, _) => Center(
+            child: Text('Could not load your profile.', style: AppTextStyles.bodyMedium),
+          ),
+          data: (profile) {
+            final categories = profile.skillCategories;
+
+            return ListView(
+              padding: const EdgeInsets.all(AppDimensions.lg),
+              children: [
+                const OnboardingStepHeader(
+                  step: 3,
+                  totalSteps: 3,
+                  title: 'Upload proof',
+                  subtitle:
+                      'One work sample per category. A King Domain reviewer '
+                      'checks it before you can apply to jobs in that category.',
                 ),
-              ),
-            ],
-          ],
+                const SizedBox(height: AppDimensions.xl),
+                for (final category in categories) ...[
+                  _CategoryProofSection(
+                    category: category,
+                    items: profile.proofItems
+                        .where((p) => p.category == category)
+                        .toList(),
+                    onAdd: () => _addProof(category),
+                    onRemove: (id) =>
+                        ref.read(talentProfileProvider.notifier).removeProofItem(id),
+                  ),
+                  const SizedBox(height: AppDimensions.lg),
+                ],
+                const SizedBox(height: AppDimensions.md),
+                ElevatedButton(
+                  onPressed: profile.proofItems.isEmpty ? null : _finish,
+                  child: const Text('Finish setup'),
+                ),
+                if (profile.proofItems.isEmpty) ...[
+                  const SizedBox(height: AppDimensions.sm),
+                  Center(
+                    child: Text(
+                      'Add at least one proof item to continue.',
+                      style: AppTextStyles.bodySmall,
+                    ),
+                  ),
+                ],
+              ],
+            );
+          },
         ),
       ),
     );
@@ -177,14 +209,12 @@ class _CategoryProofSection extends StatelessWidget {
   final List<ProofItem> items;
   final VoidCallback onAdd;
   final ValueChanged<String> onRemove;
-  final ValueChanged<String> onSimulateApprove;
 
   const _CategoryProofSection({
     required this.category,
     required this.items,
     required this.onAdd,
     required this.onRemove,
-    required this.onSimulateApprove,
   });
 
   @override
@@ -221,11 +251,7 @@ class _CategoryProofSection extends StatelessWidget {
               )
             else
               ...items.map(
-                (item) => _ProofItemTile(
-                  item: item,
-                  onRemove: onRemove,
-                  onSimulateApprove: onSimulateApprove,
-                ),
+                (item) => _ProofItemTile(item: item, onRemove: onRemove),
               ),
           ],
         ),
@@ -237,53 +263,53 @@ class _CategoryProofSection extends StatelessWidget {
 class _ProofItemTile extends StatelessWidget {
   final ProofItem item;
   final ValueChanged<String> onRemove;
-  final ValueChanged<String> onSimulateApprove;
 
-  const _ProofItemTile({
-    required this.item,
-    required this.onRemove,
-    required this.onSimulateApprove,
-  });
+  const _ProofItemTile({required this.item, required this.onRemove});
 
   @override
   Widget build(BuildContext context) {
     final isVerified = item.status == ProofReviewStatus.verified;
     final statusColor = isVerified ? AppColors.settled : AppColors.openPending;
-    final statusText = isVerified ? 'Verified' : 'Pending review · tap to simulate approval';
+    final statusText = isVerified ? 'Verified' : 'Pending human review';
 
     return Padding(
       padding: const EdgeInsets.only(top: AppDimensions.sm),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Text(item.title, style: AppTextStyles.bodyMedium),
-          ),
-          GestureDetector(
-            onTap: isVerified ? null : () => onSimulateApprove(item.id),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppDimensions.sm,
-                vertical: 2,
-              ),
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.12),
-                border: Border.all(color: statusColor.withValues(alpha: 0.4)),
-                borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
-              ),
-              child: Text(
-                statusText,
-                style: AppTextStyles.bodySmall.copyWith(color: statusColor),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.title, style: AppTextStyles.bodyMedium),
+                const SizedBox(height: AppDimensions.xs),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimensions.sm,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.12),
+                    border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
+                  ),
+                  child: Text(
+                    statusText,
+                    style: AppTextStyles.bodySmall.copyWith(color: statusColor),
+                  ),
+                ),
+              ],
             ),
           ),
-          IconButton(
-            icon: const Icon(
-              Icons.close,
-              size: AppDimensions.iconSm,
-              color: AppColors.slateDim,
+          if (!isVerified)
+            IconButton(
+              icon: const Icon(
+                Icons.close,
+                size: AppDimensions.iconSm,
+                color: AppColors.slateDim,
+              ),
+              onPressed: () => onRemove(item.id),
             ),
-            onPressed: () => onRemove(item.id),
-          ),
         ],
       ),
     );
