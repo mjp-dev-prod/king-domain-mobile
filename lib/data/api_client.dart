@@ -131,7 +131,7 @@ class ApiClient {
       try {
         _refreshing ??= _refreshAccessToken().whenComplete(() => _refreshing = null);
         await _refreshing;
-        return _request(
+        return await _request(
           method,
           path,
           body: body,

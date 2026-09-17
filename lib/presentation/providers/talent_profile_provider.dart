@@ -24,9 +24,9 @@ class TalentProfileNotifier extends AsyncNotifier<TalentProfile> {
     final data = await ApiClient.instance.patch(
       '/users/me/profile',
       body: {
-        if (headline != null) 'headline': headline,
-        if (bio != null) 'bio': bio,
-        if (skillCategories != null) 'skillCategories': skillCategories,
+        'headline': ?headline,
+        'bio': ?bio,
+        'skillCategories': ?skillCategories,
       },
     );
     state = AsyncData(TalentProfile.fromJson(data['profile'] as Map<String, dynamic>));

@@ -76,7 +76,7 @@ class JobsNotifier extends AsyncNotifier<List<Job>> {
   }) async {
     await ApiClient.instance.postMultipart(
       '/jobs/$jobId/contract/submit',
-      fields: {'deliverableNote': note, if (url != null) 'deliverableUrl': url},
+      fields: {'deliverableNote': note, 'deliverableUrl': ?url},
       fileBytes: fileBytes,
       fileName: fileName,
     );
