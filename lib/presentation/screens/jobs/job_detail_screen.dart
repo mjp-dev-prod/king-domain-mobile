@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/formatting/currency.dart';
 import '../../../data/models/job.dart';
 import '../../providers/jobs_provider.dart';
 import '../../providers/talent_profile_provider.dart';
@@ -44,7 +45,7 @@ class JobDetailScreen extends ConsumerWidget {
                 Text(job.title, style: AppTextStyles.h2),
                 const SizedBox(height: AppDimensions.md),
                 Text(
-                  '\$${job.budget.toStringAsFixed(0)}',
+                  formatNaira(job.budget),
                   style: AppTextStyles.h3.copyWith(color: AppColors.gold),
                 ),
                 const SizedBox(height: AppDimensions.lg),

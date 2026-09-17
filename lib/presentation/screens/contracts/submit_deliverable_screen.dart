@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -11,7 +12,10 @@ import '../../widgets/common/section_label.dart';
 /// Reuses the attach-a-file interaction already built for proof upload
 /// (proof_upload_screen.dart) — same pattern, different purpose: this
 /// submits the finished deliverable against a funded contract rather than
-/// a portfolio sample.
+/// a portfolio sample. The file is genuinely uploaded now (backend's
+/// /jobs/:id/contract/submit takes multipart — Contract.deliverableFilePath,
+/// a private Supabase Storage path resolved to a signed URL on read, same
+/// shape as ProofItem.filePath).
 class SubmitDeliverableScreen extends ConsumerStatefulWidget {
   final String jobId;
 
@@ -25,7 +29,7 @@ class SubmitDeliverableScreen extends ConsumerStatefulWidget {
 class _SubmitDeliverableScreenState
     extends ConsumerState<SubmitDeliverableScreen> {
   final _noteController = TextEditingController();
-  String? _pickedPath;
+  XFile? _pickedFile;
   bool _submitting = false;
   String? _error;
 
@@ -38,11 +42,11 @@ class _SubmitDeliverableScreenState
   Future<void> _pickFile() async {
     final picker = ImagePicker();
     final file = await picker.pickImage(source: ImageSource.gallery);
-    if (file != null) setState(() => _pickedPath = file.path);
+    if (file != null) setState(() => _pickedFile = file);
   }
 
   Future<void> _submit() async {
-    if (_noteController.text.trim().isEmpty || _pickedPath == null) return;
+    if (_noteController.text.trim().isEmpty || _pickedFile == null) return;
 
     setState(() {
       _submitting = true;
@@ -50,14 +54,13 @@ class _SubmitDeliverableScreenState
     });
 
     try {
-      // The attached file isn't uploaded to the backend yet — /jobs/:id/
-      // contract/submit only takes a deliverableNote (and an optional
-      // deliverableUrl string, unused here). There's no multipart deliverable
-      // upload route yet, unlike proof items. Flagged rather than silently
-      // dropping the picker.
-      await ref
-          .read(jobsProvider.notifier)
-          .submitDeliverable(widget.jobId, _noteController.text.trim());
+      final bytes = await File(_pickedFile!.path).readAsBytes();
+      await ref.read(jobsProvider.notifier).submitDeliverable(
+            widget.jobId,
+            _noteController.text.trim(),
+            fileBytes: bytes,
+            fileName: _pickedFile!.name,
+          );
       if (!mounted) return;
 
       Navigator.of(context).pop();
@@ -76,7 +79,7 @@ class _SubmitDeliverableScreenState
   @override
   Widget build(BuildContext context) {
     final canSubmit =
-        !_submitting && _noteController.text.trim().isNotEmpty && _pickedPath != null;
+        !_submitting && _noteController.text.trim().isNotEmpty && _pickedFile != null;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Submit deliverable')),
@@ -89,7 +92,7 @@ class _SubmitDeliverableScreenState
             OutlinedButton.icon(
               onPressed: _pickFile,
               icon: const Icon(Icons.attach_file, size: AppDimensions.iconSm),
-              label: Text(_pickedPath == null ? 'Attach the finished file' : 'Attached ✓'),
+              label: Text(_pickedFile == null ? 'Attach the finished file' : 'Attached ✓'),
             ),
             const SizedBox(height: AppDimensions.lg),
             const SectionLabel('Note to client'),

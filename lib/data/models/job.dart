@@ -23,6 +23,12 @@ class Job {
   final ContractStatus? contractStatus;
   final String? deliverableNote;
   final String? deliverableUrl;
+  /// A short-lived signed URL to the uploaded deliverable file, if one was
+  /// attached at submit — resolved server-side from Contract.
+  /// deliverableFilePath (private Supabase Storage), same pattern as
+  /// ProofItem.fileUrl. Re-fetch the job/contract to get a fresh link once
+  /// this one expires; never cache it long-term.
+  final String? deliverableFileUrl;
   /// Set from a separate /jobs/:id/applications lookup (the current
   /// user's own application on this job, if any) — the backend doesn't
   /// embed this on the job payload itself, since a job has many
@@ -45,6 +51,7 @@ class Job {
     this.contractStatus,
     this.deliverableNote,
     this.deliverableUrl,
+    this.deliverableFileUrl,
     this.applicationStatus = JobApplicationStatus.notApplied,
   });
 
@@ -65,6 +72,7 @@ class Job {
       contractStatus: contract != null ? _contractStatusFromString(contract['status'] as String?) : null,
       deliverableNote: contract?['deliverableNote'] as String?,
       deliverableUrl: contract?['deliverableUrl'] as String?,
+      deliverableFileUrl: contract?['deliverableFileUrl'] as String?,
       applicationStatus: _applicationStatusFromString(json['myApplicationStatus'] as String?),
     );
   }
@@ -74,6 +82,7 @@ class Job {
     ContractStatus? contractStatus,
     String? deliverableNote,
     String? deliverableUrl,
+    String? deliverableFileUrl,
     String? awardedApplicationId,
     int? applicationCount,
   }) {
@@ -93,6 +102,7 @@ class Job {
       contractStatus: contractStatus ?? this.contractStatus,
       deliverableNote: deliverableNote ?? this.deliverableNote,
       deliverableUrl: deliverableUrl ?? this.deliverableUrl,
+      deliverableFileUrl: deliverableFileUrl ?? this.deliverableFileUrl,
       applicationStatus: applicationStatus ?? this.applicationStatus,
     );
   }

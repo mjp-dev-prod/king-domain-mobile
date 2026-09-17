@@ -20,6 +20,12 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
+/// The http package has no built-in request timeout — an unreachable host
+/// (server down, wrong IP, device off the LAN) hangs the Future forever
+/// rather than throwing, which left callers (and their loading spinners)
+/// stuck indefinitely instead of surfacing "Could not reach the server."
+const _requestTimeout = Duration(seconds: 12);
+
 /// Talks to king-domain-backend's /users and /jobs routes. Access tokens
 /// are short-lived (15 min, see backend/src/user/jwt.js) — a 401 on
 /// anything other than the auth endpoints themselves triggers a silent
@@ -36,11 +42,13 @@ class ApiClient {
     final refreshToken = await TokenStore.instance.getRefreshToken();
     if (refreshToken == null) throw ApiException('Not signed in.', 401);
 
-    final response = await http.post(
-      Uri.parse('$_apiBase/users/auth/refresh'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'refreshToken': refreshToken}),
-    );
+    final response = await http
+        .post(
+          Uri.parse('$_apiBase/users/auth/refresh'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'refreshToken': refreshToken}),
+        )
+        .timeout(_requestTimeout);
 
     if (response.statusCode != 200) {
       await TokenStore.instance.clear();
@@ -85,7 +93,7 @@ class ApiClient {
             filename: fileName ?? 'upload',
           ),
         );
-        final streamed = await request.send();
+        final streamed = await request.send().timeout(_requestTimeout);
         response = await http.Response.fromStream(streamed);
       } else {
         final headers = <String, String>{
@@ -96,17 +104,23 @@ class ApiClient {
 
         switch (method) {
           case 'GET':
-            response = await http.get(uri, headers: headers);
+            response = await http.get(uri, headers: headers).timeout(_requestTimeout);
           case 'POST':
-            response = await http.post(uri, headers: headers, body: encoded);
+            response = await http
+                .post(uri, headers: headers, body: encoded)
+                .timeout(_requestTimeout);
           case 'PATCH':
-            response = await http.patch(uri, headers: headers, body: encoded);
+            response = await http
+                .patch(uri, headers: headers, body: encoded)
+                .timeout(_requestTimeout);
           case 'DELETE':
-            response = await http.delete(uri, headers: headers);
+            response = await http.delete(uri, headers: headers).timeout(_requestTimeout);
           default:
             throw ApiException('Unsupported method $method', 0);
         }
       }
+    } on TimeoutException {
+      throw ApiException('Could not reach the server.', 0);
     } on http.ClientException {
       throw ApiException('Could not reach the server.', 0);
     }

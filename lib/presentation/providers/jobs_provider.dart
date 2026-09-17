@@ -67,10 +67,18 @@ class JobsNotifier extends AsyncNotifier<List<Job>> {
     await refresh();
   }
 
-  Future<void> submitDeliverable(String jobId, String note, {String? url}) async {
-    await ApiClient.instance.post(
+  Future<void> submitDeliverable(
+    String jobId,
+    String note, {
+    String? url,
+    List<int>? fileBytes,
+    String? fileName,
+  }) async {
+    await ApiClient.instance.postMultipart(
       '/jobs/$jobId/contract/submit',
-      body: {'deliverableNote': note, if (url != null) 'deliverableUrl': url},
+      fields: {'deliverableNote': note, if (url != null) 'deliverableUrl': url},
+      fileBytes: fileBytes,
+      fileName: fileName,
     );
     await refresh();
   }

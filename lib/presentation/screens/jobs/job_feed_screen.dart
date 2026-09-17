@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/formatting/currency.dart';
 import '../../../data/models/job.dart';
 import '../../providers/jobs_provider.dart';
 import '../../providers/talent_profile_provider.dart';
@@ -98,7 +99,7 @@ class _JobCard extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    '\$${job.budget.toStringAsFixed(0)}',
+                    formatNaira(job.budget),
                     style: AppTextStyles.bodyMedium.copyWith(
                       color: AppColors.gold,
                       fontWeight: FontWeight.w600,
@@ -113,6 +114,26 @@ class _JobCard extends StatelessWidget {
                       style: AppTextStyles.bodySmall,
                       overflow: TextOverflow.ellipsis,
                     ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppDimensions.sm),
+              Row(
+                children: [
+                  Icon(Icons.shield_outlined, size: 12, color: AppColors.settled),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Funded on award',
+                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.settled),
+                  ),
+                  const SizedBox(width: AppDimensions.sm),
+                  Text('·', style: AppTextStyles.bodySmall),
+                  const SizedBox(width: AppDimensions.sm),
+                  Text(
+                    job.applicationCount == 1
+                        ? '1 applicant'
+                        : '${job.applicationCount} applicants',
+                    style: AppTextStyles.bodySmall,
                   ),
                 ],
               ),

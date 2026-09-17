@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/formatting/currency.dart';
 import '../../../data/api_client.dart';
 import '../../../data/models/job.dart';
 import '../../providers/jobs_provider.dart';
@@ -142,7 +143,7 @@ class _ContractDetailScreenState extends ConsumerState<ContractDetailScreen> {
                       ),
                       const SizedBox(width: AppDimensions.sm),
                       Text(
-                        '\$${job.budget.toStringAsFixed(0)}',
+                        formatNaira(job.budget),
                         style: AppTextStyles.h3.copyWith(color: AppColors.paper),
                       ),
                     ],
@@ -194,8 +195,19 @@ class _ContractDetailScreenState extends ConsumerState<ContractDetailScreen> {
                 const SectionLabel('Your submission'),
                 const SizedBox(height: AppDimensions.sm),
                 Text(job.deliverableNote!, style: AppTextStyles.bodyMedium),
-                const SizedBox(height: AppDimensions.lg),
+                const SizedBox(height: AppDimensions.sm),
               ],
+              if (job.deliverableFileUrl != null) ...[
+                Row(
+                  children: [
+                    Icon(Icons.attach_file, size: AppDimensions.iconSm, color: AppColors.slateDim),
+                    const SizedBox(width: AppDimensions.sm),
+                    Text('File attached', style: AppTextStyles.bodySmall),
+                  ],
+                ),
+                const SizedBox(height: AppDimensions.lg),
+              ] else
+                const SizedBox(height: AppDimensions.sm),
               Container(
                 padding: const EdgeInsets.all(AppDimensions.md),
                 decoration: BoxDecoration(
