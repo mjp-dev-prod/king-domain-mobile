@@ -3,24 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/constants/skill_categories.dart';
 import '../../../data/api_client.dart';
 import '../../providers/talent_profile_provider.dart';
-import '../../widgets/common/onboarding_step_header.dart';
-import '../proof/proof_upload_screen.dart';
 
-const _skillCategories = [
-  'Software & tech',
-  'Design & creative',
-  'Writing & content',
-  'Marketing & growth',
-  'Tutoring & training',
-  'Video & media',
-];
-
-/// T2 — Profile Builder. Builds the "living professional identity"
-/// (product vision §05). Writes to the real backend now (PATCH
-/// /users/me/profile — Sprint 2/4); full name lives on the User record
-/// from signup, not collected again here.
+/// Profile Builder. Builds the "living professional identity" (product
+/// vision §05). Writes to the real backend now (PATCH /users/me/profile —
+/// Sprint 2/4); full name lives on the User record from signup, not
+/// collected again here. Reached from ProfileOverviewScreen, not a forced
+/// onboarding step — saving pops back to the overview rather than pushing
+/// straight into proof upload.
 class ProfileBuilderScreen extends ConsumerStatefulWidget {
   const ProfileBuilderScreen({super.key});
 
@@ -84,9 +76,7 @@ class _ProfileBuilderScreenState extends ConsumerState<ProfileBuilderScreen> {
           );
       if (!mounted) return;
 
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const ProofUploadScreen()),
-      );
+      Navigator.of(context).pop();
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -116,12 +106,11 @@ class _ProfileBuilderScreenState extends ConsumerState<ProfileBuilderScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const OnboardingStepHeader(
-                  step: 2,
-                  totalSteps: 3,
-                  title: 'Build your profile',
-                  subtitle:
-                      'This is what clients see first — make it count.',
+                Text('Build your profile', style: AppTextStyles.h2),
+                const SizedBox(height: AppDimensions.sm),
+                Text(
+                  'This is what clients see first — make it count.',
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.slateDim),
                 ),
                 const SizedBox(height: AppDimensions.xl),
                 TextFormField(
@@ -160,7 +149,7 @@ class _ProfileBuilderScreenState extends ConsumerState<ProfileBuilderScreen> {
                     return Wrap(
                       spacing: AppDimensions.sm,
                       runSpacing: AppDimensions.sm,
-                      children: _skillCategories.map((category) {
+                      children: kSkillCategories.map((category) {
                         final selected = _selectedCategories.contains(category);
                         return FilterChip(
                           label: Text(category),
@@ -212,7 +201,7 @@ class _ProfileBuilderScreenState extends ConsumerState<ProfileBuilderScreen> {
                             strokeWidth: 2.5,
                           ),
                         )
-                      : const Text('Continue to proof upload'),
+                      : const Text('Save'),
                 ),
               ],
             ),

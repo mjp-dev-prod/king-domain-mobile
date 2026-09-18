@@ -7,7 +7,7 @@ import '../../../data/api_client.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/common/arrow_forward_button.dart';
 import '../../widgets/common/section_label.dart';
-import '../profile/profile_builder_screen.dart';
+import '../shell/app_shell.dart';
 
 const _codeLength = 6;
 
@@ -73,8 +73,12 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
       await ref.read(authProvider.notifier).verifyEmail(code);
       if (!mounted) return;
 
+      // Straight into the app for both roles — profile/proof-upload for
+      // talents is now an in-app task from the Profile tab, not a gate
+      // before entry. Applying to jobs still requires verified proof;
+      // that's enforced server-side in jobsRoutes.js, unaffected by this.
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const ProfileBuilderScreen()),
+        MaterialPageRoute(builder: (_) => const AppShell()),
         (route) => false,
       );
     } on ApiException catch (e) {

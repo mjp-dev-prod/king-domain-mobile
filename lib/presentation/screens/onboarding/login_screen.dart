@@ -8,9 +8,9 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/common/arrow_forward_button.dart';
 import '../../widgets/common/king_text_field.dart';
 import '../../widgets/common/section_label.dart';
-import '../profile/profile_builder_screen.dart';
 import '../shell/app_shell.dart';
 import 'sign_up_screen.dart';
+import 'verify_email_screen.dart';
 
 /// Returning-user path. Real backend now (king-domain-backend's
 /// /users/login — Sprint 1/4).
@@ -51,16 +51,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (!mounted) return;
 
       final user = ref.read(authProvider).user;
-      // A returning user who never finished profile setup goes back there,
-      // matching the flow a fresh signup follows — the backend has no
-      // separate "onboarding complete" flag, so this is a client-side
-      // heuristic (profile builder itself has all the fields, so anyone
-      // sent there again just re-confirms/edits what's already saved).
+      // Profile/proof-upload is an in-app task now (Profile tab), not a
+      // gate before entry — only unverified email still redirects.
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => user?.emailVerified == true
               ? const AppShell()
-              : const ProfileBuilderScreen(),
+              : VerifyEmailScreen(email: user?.email ?? _emailController.text.trim()),
         ),
       );
     } on ApiException catch (e) {

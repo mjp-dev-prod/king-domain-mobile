@@ -32,6 +32,13 @@ void main() {
 
     expect(find.text('Create your account'), findsOneWidget);
 
+    // The role picker + confirm-password field push the submit button below
+    // the fold on a small test viewport. The button is already built (just
+    // off-screen), so ensureVisible — not scrollUntilVisible, which is for
+    // not-yet-built lazy-list items and needs an unambiguous single
+    // Scrollable — is the right call here.
+    await tester.ensureVisible(find.byIcon(Icons.arrow_forward));
+    await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.arrow_forward));
     await tester.pump();
 

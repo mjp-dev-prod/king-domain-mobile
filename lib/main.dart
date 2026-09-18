@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
 import 'presentation/providers/auth_provider.dart';
+import 'presentation/screens/onboarding/verify_email_screen.dart';
 import 'presentation/screens/onboarding/welcome_screen.dart';
-import 'presentation/screens/profile/profile_builder_screen.dart';
 import 'presentation/screens/shell/app_shell.dart';
 
 void main() {
@@ -40,8 +40,12 @@ class _RootRouter extends ConsumerWidget {
     if (auth.user == null) {
       return const WelcomeScreen();
     }
-    // Same heuristic as login_screen.dart: the backend has no separate
-    // "onboarding complete" flag, so emailVerified stands in for it.
-    return auth.user!.emailVerified ? const AppShell() : const ProfileBuilderScreen();
+    final user = auth.user!;
+    if (!user.emailVerified) {
+      return VerifyEmailScreen(email: user.email);
+    }
+    // Profile/proof-upload is an in-app task now (Profile tab), not a gate
+    // before entry — every verified user of either role goes straight in.
+    return const AppShell();
   }
 }

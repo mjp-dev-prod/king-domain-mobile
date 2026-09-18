@@ -8,17 +8,16 @@ import '../../../core/constants/app_text_styles.dart';
 import '../../../data/api_client.dart';
 import '../../../data/models/talent_profile.dart';
 import '../../providers/talent_profile_provider.dart';
-import '../../widgets/common/onboarding_step_header.dart';
-import '../shell/app_shell.dart';
 
-/// T3 — Proof Upload. One work sample per skill category, submitted for
-/// human review (Milestone 03: self-submitted work samples, human-reviewed,
+/// Proof Upload. One work sample per skill category, submitted for human
+/// review (Milestone 03: self-submitted work samples, human-reviewed,
 /// one-time per category, permanent). Real upload now (multer -> Supabase
 /// Storage — Sprint 2/4): the file picked here is genuinely sent to the
 /// backend, not just remembered as a local device path. There is no
 /// self-approve anymore — simulateReviewApproval() is gone; verification
 /// only happens through the real admin reviewer flow
 /// (backend/src/admin/proofReviewRoutes.js), which has no UI in this app.
+/// Reached from ProfileOverviewScreen, not a forced onboarding step.
 class ProofUploadScreen extends ConsumerStatefulWidget {
   const ProofUploadScreen({super.key});
 
@@ -136,10 +135,7 @@ class _ProofUploadScreenState extends ConsumerState<ProofUploadScreen> {
   }
 
   void _finish() {
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const AppShell()),
-      (route) => false,
-    );
+    Navigator.of(context).pop();
   }
 
   @override
@@ -160,13 +156,12 @@ class _ProofUploadScreenState extends ConsumerState<ProofUploadScreen> {
             return ListView(
               padding: const EdgeInsets.all(AppDimensions.lg),
               children: [
-                const OnboardingStepHeader(
-                  step: 3,
-                  totalSteps: 3,
-                  title: 'Upload proof',
-                  subtitle:
-                      'One work sample per category. A King Domain reviewer '
-                      'checks it before you can apply to jobs in that category.',
+                Text('Upload proof', style: AppTextStyles.h2),
+                const SizedBox(height: AppDimensions.sm),
+                Text(
+                  'One work sample per category. A King Domain reviewer '
+                  'checks it before you can apply to jobs in that category.',
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.slateDim),
                 ),
                 const SizedBox(height: AppDimensions.xl),
                 for (final category in categories) ...[
@@ -183,18 +178,9 @@ class _ProofUploadScreenState extends ConsumerState<ProofUploadScreen> {
                 ],
                 const SizedBox(height: AppDimensions.md),
                 ElevatedButton(
-                  onPressed: profile.proofItems.isEmpty ? null : _finish,
-                  child: const Text('Finish setup'),
+                  onPressed: _finish,
+                  child: const Text('Done'),
                 ),
-                if (profile.proofItems.isEmpty) ...[
-                  const SizedBox(height: AppDimensions.sm),
-                  Center(
-                    child: Text(
-                      'Add at least one proof item to continue.',
-                      style: AppTextStyles.bodySmall,
-                    ),
-                  ),
-                ],
               ],
             );
           },
