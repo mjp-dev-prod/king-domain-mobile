@@ -50,6 +50,9 @@ reference the sprint plan's Prisma schema and endpoints are built against.
 - [Correction 02 — talent discovery](./core/correction-talent-discovery-screen.md) — killed the composite score and "top candidate" ranking.
 - [Correction 03 — invented mechanics](./core/correction-03-invented-mechanics.md) — proof-score leak, "escrow-free" contradiction, mutual-reveal review. **Read the closing section** — the pattern across all three corrections matters more than the individual fixes.
 - [Spotify / SheerID student verification](./research/spotify-sheerid-student-verification.md) — how student status is actually verified in the wild, and what transfers to Nigeria.
+- [UI/UX audit 2026-10-01](./research/ui-audit-2026-10-01.md) — what the app looks and feels like today,
+  the defects found, and what Pendu, Discord, Telegram and the platform guidelines actually do.
+  Read before any UI redesign.
 - [Market Validation Research](./research/market-validation-2026-09-12.md) — the
   adversarial research pass behind the reconciliation doc above.
 - [Shareholder Decisions](./features/shareholder-decisions.md) — async decision-making
