@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
+import 'data/api_client.dart';
+import 'presentation/widgets/common/environment_banner.dart';
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/screens/onboarding/verify_email_screen.dart';
 import 'presentation/screens/onboarding/welcome_screen.dart';
@@ -19,6 +21,7 @@ class KingDomainApp extends StatelessWidget {
       title: 'King Domain',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.theme,
+      builder: (context, child) => EnvironmentBanner(host: nonProductionApiHost, child: child!),
       home: const _RootRouter(),
     );
   }

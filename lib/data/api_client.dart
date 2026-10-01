@@ -8,10 +8,19 @@ import 'token_store.dart';
 /// for local development — e.g. http://10.0.2.2:4000 for the Android
 /// emulator, or the host machine's LAN IP for a physical device on the same
 /// network as a locally-running backend.
-const _apiBase = String.fromEnvironment(
-  'KD_API_BASE',
-  defaultValue: 'https://king-domain-backend-1.onrender.com',
-);
+const _productionApiBase = 'https://king-domain-backend-1.onrender.com';
+
+const _apiBase = String.fromEnvironment('KD_API_BASE', defaultValue: _productionApiBase);
+
+/// host:port of the server the app is talking to when it is NOT production
+/// (a --dart-define=KD_API_BASE override), else null. Drives the on-screen
+/// test-server banner so a staging run can't be mistaken for production.
+final String? nonProductionApiHost = _apiBase == _productionApiBase ? null : _hostAndPort(_apiBase);
+
+String _hostAndPort(String url) {
+  final uri = Uri.parse(url);
+  return uri.hasPort ? '${uri.host}:${uri.port}' : uri.host;
+}
 
 class ApiException implements Exception {
   final String message;
