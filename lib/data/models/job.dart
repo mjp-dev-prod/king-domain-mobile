@@ -27,6 +27,13 @@ class Job {
   final double? platformFeeAmount;
   /// Paystack reported the last checkout attempt as failed.
   final bool paymentFailed;
+  /// The client must pay by this time or the award cancels itself (24h after
+  /// award). Only meaningful while the contract is awaitingPayment.
+  final DateTime? payByAt;
+  /// When payment is released automatically if the client does nothing. The
+  /// backend only sends it while auto-release is actually switched on, so a
+  /// non-null value is always a real promise.
+  final DateTime? reviewDueAt;
   final String? deliverableNote;
   final String? deliverableUrl;
   /// A short-lived signed URL to the uploaded deliverable file, if one was
@@ -57,6 +64,8 @@ class Job {
     this.contractStatus,
     this.platformFeeAmount,
     this.paymentFailed = false,
+    this.payByAt,
+    this.reviewDueAt,
     this.deliverableNote,
     this.deliverableUrl,
     this.deliverableFileUrl,
@@ -80,6 +89,8 @@ class Job {
       contractStatus: contract != null ? _contractStatusFromString(contract['status'] as String?) : null,
       platformFeeAmount: double.tryParse(contract?['platformFeeAmount']?.toString() ?? ''),
       paymentFailed: contract?['paymentFailed'] as bool? ?? false,
+      payByAt: DateTime.tryParse(contract?['payByAt'] as String? ?? ''),
+      reviewDueAt: DateTime.tryParse(contract?['reviewDueAt'] as String? ?? ''),
       deliverableNote: contract?['deliverableNote'] as String?,
       deliverableUrl: contract?['deliverableUrl'] as String?,
       deliverableFileUrl: contract?['deliverableFileUrl'] as String?,
@@ -112,6 +123,8 @@ class Job {
       contractStatus: contractStatus ?? this.contractStatus,
       platformFeeAmount: platformFeeAmount,
       paymentFailed: paymentFailed,
+      payByAt: payByAt,
+      reviewDueAt: reviewDueAt,
       deliverableNote: deliverableNote ?? this.deliverableNote,
       deliverableUrl: deliverableUrl ?? this.deliverableUrl,
       deliverableFileUrl: deliverableFileUrl ?? this.deliverableFileUrl,

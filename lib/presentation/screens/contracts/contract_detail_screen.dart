@@ -4,6 +4,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/formatting/currency.dart';
+import '../../../core/formatting/deadline.dart';
 import '../../../data/api_client.dart';
 import '../../../data/models/job.dart';
 import '../../providers/jobs_provider.dart';
@@ -48,7 +49,8 @@ class _ContractDetailScreenState extends ConsumerState<ContractDetailScreen> {
   String _explanation(ContractStatus status, Job job) => switch (status) {
     ContractStatus.awaitingPayment =>
       '${job.clientName} selected you. They still need to pay before work '
-          'starts — don\'t begin until this contract shows Funded.',
+          'starts — don\'t begin until this contract shows Funded.'
+          '${job.payByAt == null ? '' : ' They have until ${formatDeadline(job.payByAt!)}; if it isn\'t paid by then the award is cancelled and you\'re back in the running.'}',
     ContractStatus.funded =>
       '${job.clientName} has funded this job. The money is set aside — '
           'you\'ll be paid once they approve your delivery.',
@@ -57,7 +59,8 @@ class _ContractDetailScreenState extends ConsumerState<ContractDetailScreen> {
           '${job.clientName} to review.',
     ContractStatus.submitted =>
       'Your work is with ${job.clientName} for review. You\'ll be paid as '
-          'soon as they approve it.',
+          'soon as they approve it.'
+          '${job.reviewDueAt == null ? '' : ' If they don\'t respond by ${formatDeadline(job.reviewDueAt!)}, you\'re paid automatically.'}',
     ContractStatus.approved =>
       '${job.clientName} approved your delivery. Payment has been sent to '
           'your payout account.',

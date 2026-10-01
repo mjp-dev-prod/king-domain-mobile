@@ -7,6 +7,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/formatting/currency.dart';
+import '../../../core/formatting/deadline.dart';
 import '../../../data/api_client.dart';
 import '../../../data/models/job.dart';
 import '../../providers/jobs_provider.dart';
@@ -144,7 +145,9 @@ class _FundContractScreenState extends ConsumerState<FundContractScreen> with Wi
             if (job == null) {
               return Center(child: Text('Could not find this job.', style: AppTextStyles.bodyMedium));
             }
-            final funded = job.contractStatus != null && job.contractStatus != ContractStatus.awaitingPayment;
+            // No contract at all: the 24-hour window ran out and the award was cancelled.
+            if (job.contractStatus == null) return _buildCancelled(job);
+            final funded = job.contractStatus != ContractStatus.awaitingPayment;
             return funded ? _buildFunded(job) : _buildAwaiting(job);
           },
         ),
@@ -155,6 +158,9 @@ class _FundContractScreenState extends ConsumerState<FundContractScreen> with Wi
   Widget _buildAwaiting(Job job) {
     final statusMessage = _statusMessage();
     final showFailedBefore = job.paymentFailed && !_checkoutOpened;
+    final deadline = job.payByAt;
+    final left = deadline == null ? null : timeLeft(deadline);
+    final windowEnded = deadline != null && left == null;
 
     return ListView(
       padding: const EdgeInsets.all(AppDimensions.lg),
@@ -170,7 +176,17 @@ class _FundContractScreenState extends ConsumerState<FundContractScreen> with Wi
           'when you approve their delivery.',
           style: AppTextStyles.bodySmall,
         ),
-        const SizedBox(height: AppDimensions.xl),
+        const SizedBox(height: AppDimensions.lg),
+        if (deadline != null) ...[
+          _Notice(
+            text: windowEnded
+                ? 'The 24-hour payment window has ended, so this award is being cancelled. You can award the job again.'
+                : "Pay within $left (by ${formatDeadline(deadline)}). If it isn't paid by then, the award is cancelled and the other applicants come back.",
+            color: AppColors.openPending,
+            icon: Icons.schedule,
+          ),
+          const SizedBox(height: AppDimensions.lg),
+        ],
         if (showFailedBefore) ...[
           _Notice(text: 'Your last payment attempt failed. You can try again.', color: AppColors.openPending),
           const SizedBox(height: AppDimensions.md),
@@ -190,7 +206,7 @@ class _FundContractScreenState extends ConsumerState<FundContractScreen> with Wi
         ],
         if (!_checkoutOpened)
           ElevatedButton(
-            onPressed: _starting ? null : _openCheckout,
+            onPressed: _starting || windowEnded ? null : _openCheckout,
             child: _starting
                 ? const SizedBox(
                     width: 20,
@@ -210,6 +226,25 @@ class _FundContractScreenState extends ConsumerState<FundContractScreen> with Wi
             child: const Text('Reopen checkout'),
           ),
         ],
+      ],
+    );
+  }
+
+  Widget _buildCancelled(Job job) {
+    return ListView(
+      padding: const EdgeInsets.all(AppDimensions.lg),
+      children: [
+        SectionLabel(job.category),
+        const SizedBox(height: AppDimensions.sm),
+        Text(job.title, style: AppTextStyles.h3),
+        const SizedBox(height: AppDimensions.xl),
+        _Notice(
+          text: "This award was cancelled because it wasn't paid for within 24 hours. The job is open again and nothing was charged.",
+          color: AppColors.openPending,
+          icon: Icons.cancel_outlined,
+        ),
+        const SizedBox(height: AppDimensions.xl),
+        ElevatedButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Done')),
       ],
     );
   }

@@ -1,7 +1,8 @@
 # Payments — how money moves
 
-**Status (2026-10-01):** built and tested on staging; production database schema is in place;
-not live. Going live is blocked on the King Domain Paystack business being activated and
+**Status (2026-10-01):** built and tested on staging; not live. Production's database has the
+payment columns, but NOT the timer columns (`payByAt`, `reviewDueAt`, …) or the `contract_events`
+table: push the schema (additive) before this code ships. Going live is blocked on the King Domain Paystack business being activated and
 upgraded to *Registered Business* (needs MJP Productions Limited's CAC certificate) — a
 Starter Business cannot make the payouts in step 4.
 
@@ -14,13 +15,46 @@ always receives the full posted budget.
 | # | Who | What happens | Contract status after |
 |---|---|---|---|
 | 0 | Talent | Adds a payout bank account. **Required before applying** (decision 2026-10-01) | — |
-| 1 | Client | Awards one applicant. Fee is computed and frozen onto the contract | `awaitingPayment` |
+| 1 | Client | Awards one applicant. Fee is computed and frozen onto the contract. **24 hours to pay, or the award cancels** | `awaitingPayment` |
 | 2 | Client | Pays budget + fee on Paystack's hosted checkout | `funded` once confirmed |
 | 3 | Talent | Starts work, submits deliverable | `inProgress` → `submitted` |
-| 4 | Client | Approves. Backend transfers the **budget only** to the talent's bank | `approved` |
+| 4 | Client | Approves, **or does nothing for 3 days and payment releases automatically** (once switched on). Backend transfers the **budget only** to the talent's bank | `approved` |
 
 There is no escrow product: between steps 2 and 4 the money sits in King Domain's own Paystack
 balance. The fee simply never leaves it.
+
+## The clocks (src/contractLifecycle.js)
+
+Agreed in shareholder decision "How a job gets paid" (ledger `736051b0-…`, 2026-10-01). Every
+clock is a **timestamp on the contract** (`payByAt`, `reviewDueAt`), never an in-memory timer, so a
+restart or a sleeping server only delays a step. A tick runs every 5 minutes inside the server
+(kept awake by the external health ping; `CONTRACT_SCHEDULER=off` disables it) and catches up on
+anything overdue.
+
+**24-hour payment window.** Award sets `payByAt = now + 24h`. Past it, the tick cancels the
+award: the contract is deleted, the awarded and passed-over applicants return to `pending`, the job
+reopens, and client and talent are emailed. Three guards stop a real payment being lost:
+- every checkout the contract ever opened (`contract_events` type `checkout_started`) is verified
+  with Paystack first — a paid one funds the contract instead of cancelling it;
+- a checkout opened in the last 30 minutes is left alone (a bank transfer may be settling);
+- a *new* checkout after the deadline is refused.
+
+A payment that still arrives after cancellation (matched by the contract id inside the reference)
+logs `ORPHAN PAYMENT needs manual refund` and writes a `late_payment_after_void` event.
+
+**3-day review window.** Submit sets `reviewDueAt = now + 3 days` and emails the client. When it
+lapses the tick runs the **same** `releasePayment` the Approve button uses, so there is one payout
+path; concurrent releases are safe because Paystack refuses a duplicate transfer reference. A
+refused transfer is retried hourly, up to 24 times, then left for an admin (`AUTO-RELEASE FAILED` /
+`NEEDS ADMIN` in the logs).
+
+**Auto-release is OFF by default** (`AUTO_RELEASE_ENABLED=true` turns it on). Paying the talent
+when the client says nothing is only fair once the client can object, and change requests and
+disputes (stages 2 and 3 of the decision) are not built yet. While it is off, `reviewDueAt` is not
+sent to the apps and the review email makes no automatic-payment promise.
+
+`contract_events` is an append-only trail per job (awarded, checkout_started, submitted, released,
+award_voided, …) that survives the contract row and is the evidence base for disputes.
 
 ## Step 0 — payout account
 
@@ -89,8 +123,9 @@ so re-sending is manual for now.
 
 ## Not built yet
 
-- **Disputes / non-delivery** — no rule for money held when a client never approves or a talent
-  never delivers. Open product decision.
+- **Stages 2 and 3 of the decision** — delivery dates and extensions, change requests (max 2
+  rounds), disputes with an admin ruling and split refunds. Auto-release must stay off until the
+  client can object.
 - **Refunds** — manual, from the Paystack dashboard.
 - **Payout state on the contract** — a payout that fails after approval is only logged; the
   contract still reads `approved` and the talent's app says paid. Needs a schema change.

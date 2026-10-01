@@ -5,6 +5,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/formatting/currency.dart';
+import '../../../core/formatting/deadline.dart';
 import '../../../data/api_client.dart';
 import '../../../data/models/job.dart';
 import '../../providers/jobs_provider.dart';
@@ -116,7 +117,30 @@ class _ReviewDeliverableScreenState extends ConsumerState<ReviewDeliverableScree
                   label: const Text('Open link'),
                 ),
               ],
-              const SizedBox(height: AppDimensions.xxl),
+              const SizedBox(height: AppDimensions.xl),
+              if (job.reviewDueAt != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(AppDimensions.md),
+                  decoration: BoxDecoration(
+                    color: AppColors.openPending.withValues(alpha: 0.1),
+                    border: Border.all(color: AppColors.openPending.withValues(alpha: 0.4)),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.schedule, size: AppDimensions.iconSm, color: AppColors.openPending),
+                      const SizedBox(width: AppDimensions.sm),
+                      Expanded(
+                        child: Text(
+                          'Review by ${formatDeadline(job.reviewDueAt!)}. If you do nothing, payment is released to the talent automatically.',
+                          style: AppTextStyles.bodySmall.copyWith(color: AppColors.openPending),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppDimensions.md),
+              ],
               Container(
                 padding: const EdgeInsets.all(AppDimensions.md),
                 decoration: BoxDecoration(

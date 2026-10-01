@@ -4,6 +4,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/formatting/currency.dart';
+import '../../../core/formatting/deadline.dart';
 import '../../../data/models/job.dart';
 import '../../../data/models/talent_profile.dart';
 import '../../providers/auth_provider.dart';
@@ -196,6 +197,18 @@ class _ClientJobTile extends StatelessWidget {
               Row(
                 children: [
                   _StatusBadge(status: job.contractStatus),
+                  if (job.contractStatus == ContractStatus.awaitingPayment && job.payByAt != null) ...[
+                    const SizedBox(width: AppDimensions.sm),
+                    Flexible(
+                      child: Text(
+                        switch (timeLeft(job.payByAt!)) {
+                          final left? => 'Pay within $left',
+                          null => 'Payment window ended',
+                        },
+                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.openPending),
+                      ),
+                    ),
+                  ],
                   if (!awarded) ...[
                     const SizedBox(width: AppDimensions.sm),
                     Text(
