@@ -7,17 +7,16 @@ import '../../../core/formatting/currency.dart';
 import '../../../data/api_client.dart';
 import '../../../data/models/job.dart';
 import '../../providers/jobs_provider.dart';
+import '../../providers/talent_profile_provider.dart';
 import '../../widgets/common/section_label.dart';
+import '../payments/payout_account_screen.dart';
 import 'submit_deliverable_screen.dart';
 
 /// The wedge's core screen (docs/core/vision-vs-research-reconciliation.md
 /// §2): makes payment protection legible in plain language, not a fintech
-/// dashboard. There is no real escrow integration yet — for the first real
-/// transactions, the founding team moves money manually and this status is
-/// updated by hand to match. The point is testing whether the *promise*
-/// ("you'll be paid once the client approves") changes how safe a student
-/// feels delivering work to a stranger, before any payment infrastructure
-/// is built.
+/// dashboard. Backed by real money now — "funded" means the client's
+/// payment is confirmed by Paystack and held in King Domain's balance, and
+/// approval transfers the budget to the talent's payout account.
 class ContractDetailScreen extends ConsumerStatefulWidget {
   final String jobId;
 
@@ -39,6 +38,7 @@ class _ContractDetailScreenState extends ConsumerState<ContractDetailScreen> {
   ];
 
   String _stepLabel(ContractStatus status) => switch (status) {
+    ContractStatus.awaitingPayment => 'Awaiting payment',
     ContractStatus.funded => 'Funded',
     ContractStatus.inProgress => 'In progress',
     ContractStatus.submitted => 'Submitted',
@@ -46,6 +46,9 @@ class _ContractDetailScreenState extends ConsumerState<ContractDetailScreen> {
   };
 
   String _explanation(ContractStatus status, Job job) => switch (status) {
+    ContractStatus.awaitingPayment =>
+      '${job.clientName} selected you. They still need to pay before work '
+          'starts — don\'t begin until this contract shows Funded.',
     ContractStatus.funded =>
       '${job.clientName} has funded this job. The money is set aside — '
           'you\'ll be paid once they approve your delivery.',
@@ -56,8 +59,8 @@ class _ContractDetailScreenState extends ConsumerState<ContractDetailScreen> {
       'Your work is with ${job.clientName} for review. You\'ll be paid as '
           'soon as they approve it.',
     ContractStatus.approved =>
-      '${job.clientName} approved your delivery. Payment has been released '
-          'to you.',
+      '${job.clientName} approved your delivery. Payment has been sent to '
+          'your payout account.',
   };
 
   Future<void> _startWork(String jobId) async {
@@ -96,16 +99,16 @@ class _ContractDetailScreenState extends ConsumerState<ContractDetailScreen> {
     final status = job.contractStatus;
 
     if (status == null) {
-      // Accepted but not yet funded shouldn't be reachable in the wedge
-      // (accept-and-fund happen together), but fail into something legible
-      // rather than crashing if state ever gets here.
       return Scaffold(
         appBar: AppBar(),
-        body: const Center(child: Text('Waiting on the client to fund this job.')),
+        body: const Center(child: Text('This job has no contract yet.')),
       );
     }
 
+    // -1 for awaitingPayment: nothing lit on the stepper until money is in.
     final stepIndex = _steps.indexOf(status);
+    final needsPayoutAccount = status != ContractStatus.approved &&
+        ref.watch(talentProfileProvider).valueOrNull?.payoutAccount == null;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Contract')),
@@ -133,13 +136,17 @@ class _ContractDetailScreenState extends ConsumerState<ContractDetailScreen> {
                   Row(
                     children: [
                       Icon(
-                        status == ContractStatus.approved
-                            ? Icons.check_circle
-                            : Icons.shield_outlined,
+                        switch (status) {
+                          ContractStatus.approved => Icons.check_circle,
+                          ContractStatus.awaitingPayment => Icons.hourglass_empty,
+                          _ => Icons.shield_outlined,
+                        },
                         size: AppDimensions.iconSm,
-                        color: status == ContractStatus.approved
-                            ? AppColors.settled
-                            : AppColors.gold,
+                        color: switch (status) {
+                          ContractStatus.approved => AppColors.settled,
+                          ContractStatus.awaitingPayment => AppColors.openPending,
+                          _ => AppColors.gold,
+                        },
                       ),
                       const SizedBox(width: AppDimensions.sm),
                       Text(
@@ -158,12 +165,20 @@ class _ContractDetailScreenState extends ConsumerState<ContractDetailScreen> {
                 ],
               ),
             ),
+            if (needsPayoutAccount) ...[
+              const SizedBox(height: AppDimensions.md),
+              _PayoutPrompt(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const PayoutAccountScreen()),
+                ),
+              ),
+            ],
             if (_error != null) ...[
+              const SizedBox(height: AppDimensions.md),
               Text(
                 _error!,
                 style: AppTextStyles.bodySmall.copyWith(color: AppColors.openPending),
               ),
-              const SizedBox(height: AppDimensions.md),
             ],
             const SizedBox(height: AppDimensions.xl),
 
@@ -250,6 +265,51 @@ class _ContractDetailScreenState extends ConsumerState<ContractDetailScreen> {
                   ],
                 ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PayoutPrompt extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _PayoutPrompt({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+      child: Container(
+        padding: const EdgeInsets.all(AppDimensions.md),
+        decoration: BoxDecoration(
+          color: AppColors.gold.withValues(alpha: 0.1),
+          border: Border.all(color: AppColors.gold.withValues(alpha: 0.4)),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.account_balance_outlined, size: AppDimensions.iconSm, color: AppColors.gold),
+            const SizedBox(width: AppDimensions.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Add a payout account',
+                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.gold, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'The client can\'t release your payment until you add the bank account it goes to.',
+                    style: AppTextStyles.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, size: AppDimensions.iconSm, color: AppColors.gold),
           ],
         ),
       ),

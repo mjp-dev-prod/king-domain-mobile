@@ -25,6 +25,10 @@ live here regardless of which sibling repo (backend, web, admin) they end up aff
   research, section by section. Still the reference for *what* to build; the sprint
   plan above is the reference for *what order*.
 
+- [Payments](./core/payments.md) — how money moves: payout accounts, Paystack funding
+  and its three confirmation paths, payout on approval, what's not built. Read before
+  touching anything in the contract lifecycle.
+
 ### Full-vision prototype (design track)
 
 The clickable prototype lives at

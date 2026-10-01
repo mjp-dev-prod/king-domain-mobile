@@ -21,6 +21,12 @@ class Job {
   final String? awardedApplicationId;
   final int applicationCount;
   final ContractStatus? contractStatus;
+  /// 10% of budget, frozen onto the contract at award time — see backend
+  /// paystack.js's PLATFORM_FEE_RATE. Paid by the client on top of the
+  /// budget; the talent always receives the full budget.
+  final double? platformFeeAmount;
+  /// Paystack reported the last checkout attempt as failed.
+  final bool paymentFailed;
   final String? deliverableNote;
   final String? deliverableUrl;
   /// A short-lived signed URL to the uploaded deliverable file, if one was
@@ -49,6 +55,8 @@ class Job {
     this.awardedApplicationId,
     this.applicationCount = 0,
     this.contractStatus,
+    this.platformFeeAmount,
+    this.paymentFailed = false,
     this.deliverableNote,
     this.deliverableUrl,
     this.deliverableFileUrl,
@@ -70,6 +78,8 @@ class Job {
       awardedApplicationId: json['awardedApplicationId'] as String?,
       applicationCount: json['applicationCount'] as int? ?? 0,
       contractStatus: contract != null ? _contractStatusFromString(contract['status'] as String?) : null,
+      platformFeeAmount: double.tryParse(contract?['platformFeeAmount']?.toString() ?? ''),
+      paymentFailed: contract?['paymentFailed'] as bool? ?? false,
       deliverableNote: contract?['deliverableNote'] as String?,
       deliverableUrl: contract?['deliverableUrl'] as String?,
       deliverableFileUrl: contract?['deliverableFileUrl'] as String?,
@@ -100,12 +110,17 @@ class Job {
       awardedApplicationId: awardedApplicationId ?? this.awardedApplicationId,
       applicationCount: applicationCount ?? this.applicationCount,
       contractStatus: contractStatus ?? this.contractStatus,
+      platformFeeAmount: platformFeeAmount,
+      paymentFailed: paymentFailed,
       deliverableNote: deliverableNote ?? this.deliverableNote,
       deliverableUrl: deliverableUrl ?? this.deliverableUrl,
       deliverableFileUrl: deliverableFileUrl ?? this.deliverableFileUrl,
       applicationStatus: applicationStatus ?? this.applicationStatus,
     );
   }
+
+  /// What the client pays at checkout: budget + platform fee.
+  double get clientTotal => budget + (platformFeeAmount ?? 0);
 }
 
 enum JobApplicationStatus { notApplied, pending, accepted, rejected }
@@ -131,15 +146,15 @@ JobApplicationStatus _applicationStatusFromString(String? value) {
 
 /// The wedge's actual product bet (see docs/core/vision-vs-research-reconciliation.md
 /// §2): once a client awards a talent, the job's money moves through a plain,
-/// visible funded → in-progress → submitted → approved lifecycle — now real
-/// server-side state (backend Contract model), not local app state. Nothing
-/// here is wired to a real payment/escrow provider yet (Sprint 5 in
-/// docs/research/BACKEND_SPRINT_PLAN.md) — "funded" means the state
-/// transitioned correctly, not that money actually moved.
-enum ContractStatus { funded, inProgress, submitted, approved }
+/// visible lifecycle. Backed by real Paystack money movement: awaitingPayment
+/// until the client pays at checkout, funded once Paystack confirms it, and
+/// approval transfers the budget to the talent's bank account.
+enum ContractStatus { awaitingPayment, funded, inProgress, submitted, approved }
 
 ContractStatus? _contractStatusFromString(String? value) {
   switch (value) {
+    case 'awaitingPayment':
+      return ContractStatus.awaitingPayment;
     case 'funded':
       return ContractStatus.funded;
     case 'inProgress':

@@ -8,6 +8,7 @@ import '../../../data/models/job.dart';
 import '../../providers/jobs_provider.dart';
 import '../../providers/talent_profile_provider.dart';
 import '../../widgets/common/section_label.dart';
+import '../payments/payout_account_screen.dart';
 import 'apply_screen.dart';
 
 /// T5 — Job Detail. Full spec, plus the client's verified profile/rating —
@@ -32,7 +33,9 @@ class JobDetailScreen extends ConsumerWidget {
         final job = jobs.firstWhere((j) => j.id == jobId);
         final profile = profileAsync.valueOrNull;
         final isVerified = profile?.isVerifiedIn(job.category) ?? false;
+        final hasPayout = profile?.payoutAccount != null;
         final alreadyApplied = job.applicationStatus != JobApplicationStatus.notApplied;
+        final canApply = isVerified && hasPayout && !alreadyApplied;
 
         return Scaffold(
           appBar: AppBar(),
@@ -125,19 +128,52 @@ class JobDetailScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppDimensions.md),
                 ],
+                if (!alreadyApplied && !hasPayout) ...[
+                  InkWell(
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const PayoutAccountScreen()),
+                    ),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+                    child: Container(
+                      padding: const EdgeInsets.all(AppDimensions.md),
+                      decoration: BoxDecoration(
+                        color: AppColors.openPending.withValues(alpha: 0.1),
+                        border: Border.all(color: AppColors.openPending.withValues(alpha: 0.4)),
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.account_balance_outlined, size: AppDimensions.iconSm, color: AppColors.openPending),
+                          const SizedBox(width: AppDimensions.sm),
+                          Expanded(
+                            child: Text(
+                              'Add a payout account to apply — it\'s where you\'re paid when the client approves your work.',
+                              style: AppTextStyles.bodySmall.copyWith(color: AppColors.openPending),
+                            ),
+                          ),
+                          Icon(Icons.chevron_right, size: AppDimensions.iconSm, color: AppColors.openPending),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppDimensions.md),
+                ],
                 ElevatedButton(
-                  onPressed: (!isVerified || alreadyApplied)
-                      ? null
-                      : () => Navigator.of(context).push(
+                  onPressed: canApply
+                      ? () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => ApplyScreen(jobId: job.id)),
-                        ),
+                        )
+                      : null,
                   child: Text(
                     switch (job.applicationStatus) {
                       JobApplicationStatus.accepted => 'You were awarded this job',
                       JobApplicationStatus.pending => 'Application pending',
                       JobApplicationStatus.rejected => 'Not selected for this job',
-                      JobApplicationStatus.notApplied =>
-                        isVerified ? 'Apply for this job' : 'Verification required',
+                      JobApplicationStatus.notApplied => !isVerified
+                          ? 'Verification required'
+                          : !hasPayout
+                              ? 'Payout account required'
+                              : 'Apply for this job',
                     },
                   ),
                 ),

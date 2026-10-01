@@ -5,6 +5,7 @@ import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../data/models/talent_profile.dart';
 import '../../providers/talent_profile_provider.dart';
+import '../payments/payout_account_screen.dart';
 import '../proof/proof_upload_screen.dart';
 import 'profile_builder_screen.dart';
 
@@ -37,20 +38,21 @@ class ProfileOverviewScreen extends ConsumerWidget {
                 profile.proofItems.where((p) => p.status == ProofReviewStatus.verified).length;
             final pendingCount = profile.proofItems.length - verifiedCount;
 
-            final doneCount = (profileDone ? 1 : 0) + (hasAnyProof ? 1 : 0);
+            final payout = profile.payoutAccount;
+            final doneCount = (profileDone ? 1 : 0) + (hasAnyProof ? 1 : 0) + (payout != null ? 1 : 0);
 
             return ListView(
               padding: const EdgeInsets.all(AppDimensions.lg),
               children: [
                 Text(
-                  '$doneCount / 2 steps completed',
+                  '$doneCount / 3 steps completed',
                   style: AppTextStyles.bodySmall.copyWith(color: AppColors.slateDim),
                 ),
                 const SizedBox(height: AppDimensions.sm),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
                   child: LinearProgressIndicator(
-                    value: doneCount / 2,
+                    value: doneCount / 3,
                     minHeight: 6,
                     backgroundColor: AppColors.ink3,
                     valueColor: const AlwaysStoppedAnimation(AppColors.gold),
@@ -83,6 +85,19 @@ class ProfileOverviewScreen extends ConsumerWidget {
                             MaterialPageRoute(builder: (_) => const ProofUploadScreen()),
                           )
                       : null,
+                ),
+                const _StepConnector(),
+                _StepRow(
+                  icon: Icons.account_balance_outlined,
+                  title: 'Payout account',
+                  subtitle: payout != null
+                      ? '${payout.bankName ?? 'Bank'} · •••• ${payout.accountNumberLast4}'
+                      : 'The bank account approved-job payments are sent to.',
+                  done: payout != null,
+                  actionLabel: payout != null ? 'View details' : 'Continue',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const PayoutAccountScreen()),
+                  ),
                 ),
                 const SizedBox(height: AppDimensions.xl),
                 Container(

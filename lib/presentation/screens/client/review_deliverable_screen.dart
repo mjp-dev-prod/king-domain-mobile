@@ -10,9 +10,9 @@ import '../../../data/models/job.dart';
 import '../../providers/jobs_provider.dart';
 import '../../widgets/common/section_label.dart';
 
-/// C3 — Deliverable review + approve. Backend route
-/// (POST /jobs/:id/contract/approve) has been real, tested, and role-gated
-/// (client-only, submitted->approved) since Sprint 3. First UI to call it.
+/// C3 — Deliverable review + approve. Approving is the real payout: the
+/// backend transfers the job budget to the talent's Paystack recipient
+/// (POST /jobs/:id/contract/approve), so failures there are surfaced as-is.
 class ReviewDeliverableScreen extends ConsumerStatefulWidget {
   final String jobId;
 
@@ -124,7 +124,8 @@ class _ReviewDeliverableScreenState extends ConsumerState<ReviewDeliverableScree
                   borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
                 ),
                 child: Text(
-                  'Approving releases payment to the talent. This can\'t be undone.',
+                  'Approving sends ${formatNaira(job.budget)} to the talent\'s bank account. '
+                  'This can\'t be undone.',
                   style: AppTextStyles.bodySmall.copyWith(color: AppColors.slateDim),
                 ),
               ),

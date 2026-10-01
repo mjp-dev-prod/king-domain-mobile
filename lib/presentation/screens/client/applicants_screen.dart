@@ -7,12 +7,11 @@ import '../../../data/api_client.dart';
 import '../../../data/models/job.dart';
 import '../../providers/jobs_provider.dart';
 import '../../widgets/common/section_label.dart';
+import '../payments/fund_contract_screen.dart';
 
-/// C2 — Applicant list + single-award action. Backend route
-/// (GET /jobs/:id/applications, POST .../award) has been real, tested,
-/// and atomic (one applicant selected, every other marked notSelected,
-/// contract funded — all in one transaction) since Sprint 3. No UI has
-/// ever called either until now — see
+/// C2 — Applicant list + single-award action. Awarding is atomic server-side
+/// (one applicant selected, every other marked notSelected, contract created
+/// awaitingPayment — one transaction), then hands straight to funding. See
 /// docs/core/correction-talent-discovery-screen.md for why the award must
 /// be atomic and single (not the old "matching" model).
 class ApplicantsScreen extends ConsumerStatefulWidget {
@@ -43,9 +42,8 @@ class _ApplicantsScreenState extends ConsumerState<ApplicantsScreen> {
     try {
       await ref.read(jobsProvider.notifier).awardApplication(widget.job.id, applicationId);
       if (!mounted) return;
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Job awarded. The contract is funded.')),
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => FundContractScreen(jobId: widget.job.id)),
       );
     } on ApiException catch (e) {
       if (!mounted) return;

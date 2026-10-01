@@ -14,6 +14,8 @@ import '../client/post_job_screen.dart';
 import '../client/review_deliverable_screen.dart';
 import '../contracts/contract_detail_screen.dart';
 import '../jobs/job_feed_screen.dart';
+import '../payments/fund_contract_screen.dart';
+import '../payments/payout_account_screen.dart';
 import '../profile/profile_overview_screen.dart';
 
 /// Post-onboarding app shell — bottom tab nav. Jobs and Profile hit the
@@ -163,17 +165,15 @@ class _ClientJobTile extends StatelessWidget {
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-        onTap: () {
-          if (job.contractStatus == ContractStatus.submitted || job.contractStatus == ContractStatus.approved) {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => ReviewDeliverableScreen(jobId: job.id)),
-            );
-          } else {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => ApplicantsScreen(job: job)),
-            );
-          }
-        },
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => switch (job.contractStatus) {
+              ContractStatus.awaitingPayment => FundContractScreen(jobId: job.id),
+              ContractStatus.submitted || ContractStatus.approved => ReviewDeliverableScreen(jobId: job.id),
+              _ => ApplicantsScreen(job: job),
+            },
+          ),
+        ),
         child: Padding(
           padding: const EdgeInsets.all(AppDimensions.md),
           child: Column(
@@ -248,12 +248,10 @@ class _ClientProfileTab extends ConsumerWidget {
   }
 }
 
-/// T7 — My Applications. A job only shows up here once this talent has
-/// actually applied (backend has no "my application status" embedded on
-/// the job list — see jobs_provider.dart's fetchOne/listApplications — so
-/// this tab shows jobs with a contract, i.e. jobs this talent was awarded).
-/// Awarding is a client-side action (backend jobsRoutes.js's /award route)
-/// with no client UI in this app yet — see BACKEND_SPRINT_PLAN.md Sprint 6.
+/// T7 — My contracts: jobs awarded to *this* talent. Every job in the feed
+/// carries its contract, so filtering on contractStatus alone would list
+/// other talents' contracts too — myApplicationStatus 'selected' (mapped to
+/// accepted) is what scopes it to this user.
 class _ApplicationsTab extends ConsumerWidget {
   const _ApplicationsTab();
 
@@ -267,7 +265,9 @@ class _ApplicationsTab extends ConsumerWidget {
         child: Text('Could not load applications.', style: AppTextStyles.bodyMedium),
       ),
       data: (jobs) {
-        final withContract = jobs.where((j) => j.contractStatus != null).toList();
+        final withContract = jobs
+            .where((j) => j.contractStatus != null && j.applicationStatus == JobApplicationStatus.accepted)
+            .toList();
 
         if (withContract.isEmpty) {
           return Center(
@@ -368,6 +368,7 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (status) {
+      ContractStatus.awaitingPayment => ('Awaiting payment', AppColors.openPending),
       ContractStatus.funded => ('Funded', AppColors.openPending),
       ContractStatus.inProgress => ('In progress', AppColors.openPending),
       ContractStatus.submitted => ('Submitted', AppColors.openPending),
@@ -467,11 +468,59 @@ class _ProfileTab extends ConsumerWidget {
             ),
           ],
           const SizedBox(height: AppDimensions.xl),
+          _PayoutAccountRow(account: profile.payoutAccount),
+          const SizedBox(height: AppDimensions.xl),
           OutlinedButton(
             onPressed: () => ref.read(authProvider.notifier).logout(),
             child: const Text('Sign out'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PayoutAccountRow extends StatelessWidget {
+  final PayoutAccount? account;
+
+  const _PayoutAccountRow({required this.account});
+
+  @override
+  Widget build(BuildContext context) {
+    final acct = account;
+    return InkWell(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const PayoutAccountScreen()),
+      ),
+      borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+      child: Container(
+        padding: const EdgeInsets.all(AppDimensions.md),
+        decoration: BoxDecoration(
+          color: AppColors.ink2,
+          border: Border.all(color: AppColors.ink3),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.account_balance_outlined, size: AppDimensions.iconSm, color: AppColors.slateDim),
+            const SizedBox(width: AppDimensions.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Payout account', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+                  Text(
+                    acct == null
+                        ? 'Not set — add one so you can be paid.'
+                        : '${acct.bankName ?? 'Bank'} · •••• ${acct.accountNumberLast4}',
+                    style: AppTextStyles.bodySmall.copyWith(color: acct == null ? AppColors.openPending : null),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, size: AppDimensions.iconSm, color: AppColors.slateDim),
+          ],
+        ),
       ),
     );
   }

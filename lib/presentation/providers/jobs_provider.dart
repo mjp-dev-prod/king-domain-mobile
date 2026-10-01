@@ -40,12 +40,34 @@ class JobsNotifier extends AsyncNotifier<List<Job>> {
   }
 
   /// The single-award action — one applicant selected, every other
-  /// applicant on the job marked not-selected, contract created (funded),
-  /// all atomically server-side. See docs/core/
+  /// applicant on the job marked not-selected, contract created
+  /// (awaitingPayment), all atomically server-side. See docs/core/
   /// correction-talent-discovery-screen.md for why this must be atomic.
   Future<void> awardApplication(String jobId, String applicationId) async {
     await ApiClient.instance.post('/jobs/$jobId/applications/$applicationId/award');
     await refresh();
+  }
+
+  /// Starts (or resumes) checkout. Returns null when the server found the
+  /// previous checkout was already paid and funded the contract instead.
+  Future<String?> startFunding(String jobId) async {
+    final data = await ApiClient.instance.post('/jobs/$jobId/contract/fund');
+    if (data['funded'] == true) {
+      await refresh();
+      return null;
+    }
+    return data['authorizationUrl'] as String;
+  }
+
+  /// Asks the server to check with Paystack. Returns Paystack's status
+  /// for the latest checkout ('success', 'abandoned', 'failed', ...).
+  Future<String> verifyPayment(String jobId) async {
+    final data = await ApiClient.instance.post('/jobs/$jobId/contract/verify-payment');
+    final status = data['paymentStatus'] as String;
+    // Only these change server-side state; skipping the refresh otherwise
+    // keeps background polling from re-fetching the whole feed every tick.
+    if (status == 'success' || status == 'failed') await refresh();
+    return status;
   }
 
   Future<Job> postJob({
