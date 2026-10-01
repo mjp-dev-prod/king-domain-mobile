@@ -36,7 +36,9 @@ award: the contract is deleted, the awarded and passed-over applicants return to
 reopens, and client and talent are emailed. Three guards stop a real payment being lost:
 - every checkout the contract ever opened (`contract_events` type `checkout_started`) is verified
   with Paystack first — a paid one funds the contract instead of cancelling it;
-- a checkout opened in the last 30 minutes is left alone (a bank transfer may be settling);
+- a checkout opened in the last 30 minutes is left alone (a bank transfer may be settling), and so
+  is one Paystack still reports as `ongoing` / `pending` / `processing` — for at most 6 hours past
+  the deadline (our own cap; Paystack doesn't say how long `ongoing` lasts);
 - a *new* checkout after the deadline is refused.
 
 A payment that still arrives after cancellation (matched by the contract id inside the reference)
@@ -44,7 +46,8 @@ logs `ORPHAN PAYMENT needs manual refund` and writes a `late_payment_after_void`
 
 **3-day review window.** Submit sets `reviewDueAt = now + 3 days` and emails the client. When it
 lapses the tick runs the **same** `releasePayment` the Approve button uses, so there is one payout
-path; concurrent releases are safe because Paystack refuses a duplicate transfer reference. A
+path; concurrent releases are safe because Paystack refuses a reused transfer reference (documented:
+"Reference already exists on a transfer"; not yet observed live for transfers). A
 refused transfer is retried hourly, up to 24 times, then left for an admin (`AUTO-RELEASE FAILED` /
 `NEEDS ADMIN` in the logs).
 
@@ -120,6 +123,10 @@ so re-sending is manual for now.
   Pushing the backend first breaks applying in production (the bank list can't load without a key).
 - Bank-account lookup and save are rate limited per user (20 and 10 per 15 min) — the lookup
   returns real account holders' names.
+
+## Tests
+
+See [testing.md](./testing.md) for what is covered, what passed, and what is not guaranteed.
 
 ## Not built yet
 

@@ -28,6 +28,8 @@ live here regardless of which sibling repo (backend, web, admin) they end up aff
 - [Payments](./core/payments.md) — how money moves: payout accounts, Paystack funding
   and its three confirmation paths, payout on approval, what's not built. Read before
   touching anything in the contract lifecycle.
+- [Testing](./core/testing.md) — what the test suites cover, what passed, and what is
+  *not* guaranteed (real payouts, production, CI). Update with every behaviour change.
 
 ### Full-vision prototype (design track)
 
