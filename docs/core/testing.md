@@ -12,11 +12,11 @@ Evidence tags: 🟢 documented by Paystack (source named) · 🔵 observed in th
 | `king-domain-backend` | `npm test` | `TEST_DATABASE_URL` in `.env.test` (git-ignored). Missing = the run **fails loudly**, it never skips. Refuses any URL containing `supabase`. |
 | `king-domain-mobile` | `flutter test` | nothing |
 
-The backend suite writes real rows, so it points at a disposable database. Today that is the
-Neon *staging* database; it only creates and deletes rows of its own (users
-`testsuite-*@example.com`, jobs titled `TestSuite …`), and the tick tests are handed a client that
-can only see those jobs, so a sweep can never touch someone's real staging contract.
-**Open item:** give it its own Neon branch (`test`) so it cannot share a database with phone testing.
+The backend suite writes real rows, so it points at its own Neon branch, `test` (a child of `staging`,
+project `floral-leaf-16911101`), never at the database used for phone testing. It only creates and
+deletes rows of its own (users `testsuite-*@example.com`, jobs titled `TestSuite …`), and the tick
+tests are handed a client that can only see those jobs. To refresh its schema after a schema change:
+`neonctl branches reset test --parent`.
 
 The HTTP tests start the real server, and the real `src/paystack.js` client, against a small fake
 Paystack served locally (`PAYSTACK_BASE_URL` is read only so the suite can do this). No real money,
