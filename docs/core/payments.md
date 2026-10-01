@@ -1,8 +1,9 @@
 # Payments — how money moves
 
-**Status (2026-10-01):** built and tested on staging; not live. Production's database has the
-payment columns, but NOT the timer columns (`payByAt`, `reviewDueAt`, …) or the `contract_events`
-table: push the schema (additive) before this code ships. Going live is blocked on the King Domain Paystack business being activated and
+**Status (2026-10-01):** stages 1 and 2 of the payment rules built and tested on staging (backend
+only for stage 2); not live. Production's database has the payment columns, but NOT the stage 1
+and 2 columns and tables (`payByAt`, `reviewDueAt`, `deliverByAt`, `contract_events`,
+`contract_extensions`, …): push the schema (additive) before this code ships. Going live is blocked on the King Domain Paystack business being activated and
 upgraded to *Registered Business* (needs MJP Productions Limited's CAC certificate) — a
 Starter Business cannot make the payouts in step 4.
 
@@ -17,7 +18,8 @@ always receives the full posted budget.
 | 0 | Talent | Adds a payout bank account. **Required before applying** (decision 2026-10-01) | — |
 | 1 | Client | Awards one applicant. Fee is computed and frozen onto the contract. **24 hours to pay, or the award cancels** | `awaitingPayment` |
 | 2 | Client | Pays budget + fee on Paystack's hosted checkout | `funded` once confirmed |
-| 3 | Talent | Starts work, submits deliverable | `inProgress` → `submitted` |
+| 3 | Talent | Starts work and delivers by the **delivery date** (job's days from funding; up to 2 extension requests) | `inProgress` → `submitted` |
+| 3b | Client | May ask for changes (max 2 rounds, 3 days each to resubmit); still unhappy after round 2 → an admin | `changesRequested` → `submitted`, or `disputed` |
 | 4 | Client | Approves, **or does nothing for 3 days and payment releases automatically** (once switched on). Backend transfers the **budget only** to the talent's bank | `approved` |
 
 There is no escrow product: between steps 2 and 4 the money sits in King Domain's own Paystack
@@ -58,6 +60,26 @@ sent to the apps and the review email makes no automatic-payment promise.
 
 `contract_events` is an append-only trail per job (awarded, checkout_started, submitted, released,
 award_voided, …) that survives the contract row and is the evidence base for disputes.
+
+## Stage 2 — delivery date, extensions, change rounds
+
+Full rules and the clarifications Victor settled: [stage 2 spec](../features/stage-2-delivery-and-changes.md).
+Code: `src/contractExtensions.js` (delivery date, extensions, overdue), `src/contractChanges.js`
+(versions, change rounds, escalation), `src/contractReminders.js`; the same 5-minute tick runs
+their sweeps.
+
+- **Delivery date** — `Job.deliveryDays` (1–60) is required when posting; funding fixes
+  `deliverByAt`. Jobs posted earlier have none.
+- **Extensions** — `POST /jobs/:id/contract/extension` (talent) and `…/extension/:id/answer`
+  (client). 2 requests per contract, a declined one counts; unanswered for 48 h = granted.
+- **Changes** — `POST /jobs/:id/contract/request-changes` (client, written reason). The talent
+  resubmits through the normal submit route; every delivery is an immutable version
+  (`GET /jobs/:id/contract/history`). After round 2, or a missed 3-day clock, the contract is
+  `disputed` and owner admins are emailed — nothing moves until stage 3.
+- **Overdue** — date + 3 days with nothing delivered: flagged and the client told. **No cancel or
+  refund yet.**
+- **Reminders** — email at 24 h and 6 h before each clock that defaults on silence; recorded before
+  sending so never sent twice.
 
 ## Step 0 — payout account
 
@@ -108,6 +130,11 @@ looks earlier attempts up with Paystack: a live one (`success`/`pending`/`otp`/`
 reused, never doubled; after a conclusive failure it moves to `n+1`. Two simultaneous approvals
 compute the same next reference, so Paystack's duplicate-reference check blocks a double payout.
 
+**Release claim.** Before any money moves, the release claims the contract (`releaseClaimedAt`,
+conditional). A change request needs the claim to be empty, so a payout and a change request can
+never both succeed. A failed payout releases the claim; one left by a crash can be taken over after
+10 minutes, and the retry still reuses any live transfer.
+
 `pending` resolves later by webhook. `transfer.failed` / `transfer.reversed` (money returned to our
 balance) is logged as `PAYOUT FAILED needs manual retry` — the contract already reads `approved`,
 so re-sending is manual for now.
@@ -130,9 +157,10 @@ See [testing.md](./testing.md) for what is covered, what passed, and what is not
 
 ## Not built yet
 
-- **Stages 2 and 3 of the decision** — delivery dates and extensions, change requests (max 2
-  rounds), disputes with an admin ruling and split refunds. Auto-release must stay off until the
-  client can object.
+- **Stage 2 in the apps** — the backend is built; the screens are next.
+- **Stage 3 of the decision** — disputes with an admin ruling and split refunds, cancel for a
+  refund after an overdue delivery. Auto-release stays off until an escalation can be resolved.
+- **Push notifications** — reminders are email and in-app only.
 - **Refunds** — manual, from the Paystack dashboard.
 - **Payout state on the contract** — a payout that fails after approval is only logged; the
   contract still reads `approved` and the talent's app says paid. Needs a schema change.

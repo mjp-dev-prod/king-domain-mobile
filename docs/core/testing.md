@@ -1,6 +1,6 @@
 # Testing — what is guaranteed, and what is not
 
-**Last run: 2026-10-01.** Backend 23/23, app 30/30.
+**Last run: 2026-10-01.** Backend 93/93, app 30/30.
 
 Evidence tags: 🟢 documented by Paystack (source named) · 🔵 observed in this repo's tests ·
 🟡 assumed, not yet seen against the real service · 🔴 not covered.
@@ -55,6 +55,41 @@ in-flight wait (M), ignoring the auto-release switch (G), treating `otp` as paid
 6 h cap (N). Removing the conditional delete that commits a cancellation is *not* testable here (it is a race), so that guard has no test. The first attempt at the `otp` breakage was *not* caught — the code has two guards and
 only one was broken; breaking both failed the test as it should.
 
+## Backend ledger — stage 2 (delivery dates, extensions, change rounds)
+
+Files: `deliveryDates`, `deliveries`, `extensions`, `changes`, `overdue`, `reminders`,
+`mailer`, `stage2Routes` (all `test/*.test.js`). Rules from
+[the stage 2 spec](../features/stage-2-delivery-and-changes.md). All 🔵 unless marked.
+
+| Area | Guarantee |
+|---|---|
+| Delivery date | Funding fixes `deliverByAt = fundedAt + deliveryDays`; jobs without days get none. `POST /jobs` refuses missing, 0, 61, fractional or non-numeric days. |
+| Versions | First delivery is version 1 with a 3-day review clock; empty deliveries refused; can't deliver from funded/submitted/approved/disputed; a resubmission is version 2 and version 1 is untouched; **two simultaneous deliveries record exactly one version**. |
+| History | `GET /contract/history`: client and awarded talent only (403 for anyone else). |
+| Extensions | Pending + counted + 48 h answer + client emailed; days 1..original duration; reason 10–1000 chars; one open at a time; **two simultaneous requests create one**; a declined request counts (no third); refused after delivery, on legacy jobs, and 3+ days past the date; grant adds the days, decline keeps the date; answering twice refused; a foreign extension id is not found; a grant that moves the date clears an overdue flag; delivering withdraws an open request. |
+| 48 h auto-grant | Granted once, date moved, both told; not before 48 h; a client answer that lands before the tick stands; the tick runs it. |
+| Change rounds | Round 1 sets `changesRequested` + 3-day clock and stops the review clock, talent gets the reason; reason required; only delivered work; **two simultaneous requests open one round**; after round 2 the same action escalates (`disputed`, no round 3, both told, reason recorded). |
+| Resubmit clock | Missed → `disputed`; not due → untouched; a late resubmission that lands before the tick stands; **a sweep holding a stale read can't escalate a fresh round**; the tick runs it. |
+| Money vs changes | A disputed contract is never auto-released; **a change request while a payout is in flight is refused and the contract ends approved with one transfer**; a failed payout releases the claim. |
+| Overdue | Flagged once at date + 3 days, client emailed, event recorded; not before; paused by a pending extension; never on delivered work or legacy jobs; the tick runs it. |
+| Reminders | 24 h / 6 h windows (pure function, incl. stale skip); sent once and **never twice, even from two simultaneous sweeps**; extension reminder to the client; delivery-date-passed to both, and a moved date gets fresh reminders; review reminders only while auto-release is on; a failed send is retried. |
+| Emails | Every stage 2 template escapes user text and states the date; an unknown reminder kind throws. |
+
+**Deliberate breakages (stage 2).** Each guard was removed and the named test failed, then passed
+once restored:
+
+- the extension-count compare-and-swap ("two requests at the same instant")
+- the delivery status compare-and-swap ("two simultaneous deliveries")
+- the release-claim guard in `requestChanges` ("payout is in flight")
+- the clock guard on escalation ("stale read")
+- the pending-extension pause on the overdue flag ("pauses it")
+- insert-before-send in reminders ("never twice" and "same instant")
+
+Two tests passed with their guards removed the first time, and were fixed. Both race tests had been
+running their two calls one after the other, so a barrier now holds racing calls until both arrive.
+The "late resubmission" test was found not to exercise the clock guard at all (the status condition
+covers that case), so the "stale read" test was added for the case the clock guard actually protects.
+
 ## App ledger — `flutter test` (30)
 
 `payments_test` (10: payout account and funding screens), `password_reset_test` (5),
@@ -77,7 +112,14 @@ including no automatic-payment promise while auto-release is off), `widget_test`
   conditional `updateMany`/`deleteMany` commit points make a second instance safe in principle
   (no test removes them and races them).
 - 🔴 **No CI.** The suites run when someone runs them. Nothing blocks a push.
-- 🔴 Stages 2 and 3 (delivery dates, extensions, change rounds, disputes, refunds) do not exist.
+- 🔴 **Stage 2 in the apps.** The backend exists; no app screen calls it yet. The current app's
+  post-job form fails against this backend (it doesn't send `deliveryDays`).
+- 🔴 **Push notifications** don't exist. Stage 2 reminders are email plus in-app countdowns only.
+- 🔴 **Admin handling of escalations.** `disputed` is a parking state; the only admin signal is an
+  email to owner admins. Stage 3 builds the screen.
+- 🟡 **The release claim's 10-minute takeover** after a crashed payout is reasoned, not tested
+  against a real crash.
+- 🔴 Stage 3 (disputes, rulings, cancel and refund) does not exist.
 
 ## Rule for new work
 

@@ -1,6 +1,10 @@
 # Stage 2 — delivery dates, extensions, change rounds
 
-**Status (2026-10-01):** design approved by Victor; backend not yet built; UI after the backend.
+**Status (2026-10-01):** backend built and tested on staging (93/93, see [testing.md](../core/testing.md));
+UI not built. Implementation notes beyond the design: the history list is its own endpoint
+(`GET /contract/history`), not part of every contract; delivering withdraws an open extension
+request; review reminders only go out while auto-release is on; payouts claim the contract first
+(release claim) so a change request can't cross a payout.
 Implements stage 2 of shareholder decision "How a job gets paid" (ledger `736051b0-a968-43cd-b9f5-ecbb1b442197`).
 Stage 1 (24 h payment window, 3-day auto-release) is described in [payments.md](../core/payments.md).
 Stage 3 (disputes, admin screen, cancel and refund) is not part of this.
