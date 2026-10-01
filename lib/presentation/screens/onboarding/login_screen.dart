@@ -9,6 +9,7 @@ import '../../widgets/common/arrow_forward_button.dart';
 import '../../widgets/common/king_text_field.dart';
 import '../../widgets/common/section_label.dart';
 import '../shell/app_shell.dart';
+import 'forgot_password_screen.dart';
 import 'sign_up_screen.dart';
 import 'verify_email_screen.dart';
 
@@ -69,6 +70,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _forgotPassword() async {
+    final reset = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => ForgotPasswordScreen(initialEmail: _emailController.text.trim()),
+      ),
+    );
+    if (reset != true || !mounted) return;
+    _passwordController.clear();
+    setState(() => _error = null);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Password reset. Sign in with your new password.')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -113,6 +128,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     }
                     return null;
                   },
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _submitting ? null : _forgotPassword,
+                    child: const Text('Forgot password?'),
+                  ),
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: AppDimensions.md),

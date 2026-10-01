@@ -112,6 +112,19 @@ class AuthNotifier extends Notifier<AuthState> {
 
   Future<void> resendCode() => ApiClient.instance.post('/users/resend-code');
 
+  /// The server replies the same way whether or not an account exists for
+  /// [email], so success here never confirms that one does.
+  Future<void> requestPasswordReset(String email) =>
+      ApiClient.instance.post('/users/auth/forgot-password', body: {'email': email});
+
+  /// Signs the account out everywhere server-side; the user then signs in
+  /// with the new password — no automatic login.
+  Future<void> resetPassword({required String email, required String code, required String newPassword}) =>
+      ApiClient.instance.post(
+        '/users/auth/reset-password',
+        body: {'email': email, 'code': code, 'newPassword': newPassword},
+      );
+
   Future<void> logout() async {
     final refreshToken = await TokenStore.instance.getRefreshToken();
     try {
