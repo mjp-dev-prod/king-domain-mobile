@@ -33,6 +33,8 @@ live here regardless of which sibling repo (backend, web, admin) they end up aff
 - [Stage 2 — delivery dates, extensions, change rounds](./features/stage-2-delivery-and-changes.md) —
   approved design for the second stage of the payment rules, with the clarifications Victor
   settled that the ledger text doesn't state.
+- [Stage 2 implementation plan](./features/stage-2-implementation-plan.md) — the task-by-task
+  build plan for the design above (backend only), with the tests each task must pass.
 
 ### Full-vision prototype (design track)
 
