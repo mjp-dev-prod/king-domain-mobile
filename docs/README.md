@@ -30,6 +30,9 @@ live here regardless of which sibling repo (backend, web, admin) they end up aff
   touching anything in the contract lifecycle.
 - [Testing](./core/testing.md) — what the test suites cover, what passed, and what is
   *not* guaranteed (real payouts, production, CI). Update with every behaviour change.
+- [Stage 2 — delivery dates, extensions, change rounds](./features/stage-2-delivery-and-changes.md) —
+  approved design for the second stage of the payment rules, with the clarifications Victor
+  settled that the ledger text doesn't state.
 
 ### Full-vision prototype (design track)
 
