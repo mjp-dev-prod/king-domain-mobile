@@ -101,6 +101,14 @@ Each clock gets the same three messages. The first is sent by the action itself;
 Plus one email to everyone affected when a clock resolves. After downtime a stale reminder is
 skipped when the next threshold has also passed.
 
+## UI prototype
+
+[`prototypes/stage2-contract-flow.html`](../../prototypes/stage2-contract-flow.html) (2026-10-02, brand v1):
+the talent and client phones on one live contract, with a time control that runs the same
+rules as the backend (48 h auto-grant, 3-day resubmit clock to an admin, overdue at date + 3 days,
+24 h / 6 h reminders) and a log of the events and emails the server would produce. Checked with a
+scripted run in Chromium (17/17).
+
 ## Not in this stage
 
 Cancel and refund; the Dispute record, admin screen and rulings (stage 3); push notifications (next
