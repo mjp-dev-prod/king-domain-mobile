@@ -9,18 +9,25 @@ class AppDimensions {
   static const double xl = 32.0;
   static const double xxl = 48.0;
 
-  // Border radius — brand v0 keeps this small (3-6px), never rounded-everything.
-  static const double radiusSm = 3.0;
-  static const double radiusMd = 4.0;
-  static const double radiusLg = 6.0;
+  /// Side gutter for screen content (matches the prototypes).
+  static const double gutter = 18.0;
+
+  // Radius — brand v1 (CLAUDE.md): 12 small controls · 16 buttons, tiles,
+  // inputs · 20 cards · 28 hero cards and sheets · pill.
+  static const double radiusSm = 12.0;
+  static const double radiusMd = 16.0;
+  static const double radiusLg = 20.0;
+  static const double radiusXl = 28.0;
+  static const double radiusPill = 999.0;
 
   // Icon sizes
-  static const double iconSm = 20.0;
-  static const double iconMd = 24.0;
+  static const double iconSm = 16.0;
+  static const double iconMd = 20.0;
   static const double iconLg = 32.0;
 
   // Button heights
-  static const double buttonHeightMd = 48.0;
+  static const double buttonHeightSm = 44.0;
+  static const double buttonHeightMd = 50.0;
   static const double buttonHeightLg = 56.0;
 
   // Bottom nav
