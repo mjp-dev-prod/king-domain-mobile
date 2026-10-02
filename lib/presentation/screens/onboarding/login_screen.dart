@@ -8,10 +8,9 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/common/arrow_forward_button.dart';
 import '../../widgets/common/king_text_field.dart';
 import '../../widgets/common/section_label.dart';
-import '../shell/app_shell.dart';
+import '../../root_router.dart';
 import 'forgot_password_screen.dart';
 import 'sign_up_screen.dart';
-import 'verify_email_screen.dart';
 
 /// Returning-user path. Real backend now (king-domain-backend's
 /// /users/login — Sprint 1/4).
@@ -51,16 +50,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           );
       if (!mounted) return;
 
-      final user = ref.read(authProvider).user;
-      // Profile/proof-upload is an in-app task now (Profile tab), not a
-      // gate before entry — only unverified email still redirects.
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => user?.emailVerified == true
-              ? const AppShell()
-              : VerifyEmailScreen(email: user?.email ?? _emailController.text.trim()),
-        ),
-      );
+      // RootRouter now shows the app, or Verify email if it isn't verified
+      // yet. Never push the app from here: it must sit on RootRouter, or
+      // signing out later leaves the user stranded inside it.
+      RootRouter.popToRoot(context);
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {

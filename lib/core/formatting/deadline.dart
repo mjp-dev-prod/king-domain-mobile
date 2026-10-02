@@ -18,3 +18,13 @@ String? timeLeft(DateTime deadline, {DateTime? now}) {
   final hours = remaining.inHours % 24;
   return '$days day${days == 1 ? '' : 's'} ${hours}h';
 }
+
+/// How long ago, in one unit: "just now", "12 min ago", "5h ago", "3 days ago".
+String formatAgo(DateTime then, {DateTime? now}) {
+  final d = (now ?? DateTime.now()).difference(then);
+  if (d.inMinutes < 1) return 'just now';
+  if (d.inHours < 1) return '${d.inMinutes} min ago';
+  if (d.inDays < 1) return '${d.inHours}h ago';
+  if (d.inDays < 30) return '${d.inDays} day${d.inDays == 1 ? '' : 's'} ago';
+  return formatDeadline(then).split(',').first;
+}

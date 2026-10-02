@@ -75,8 +75,9 @@ class _Profile extends TalentProfileNotifier {
 }
 
 Future<_Jobs> _show(WidgetTester tester, Widget screen, Job job, {ContractHistory history = const ContractHistory()}) async {
+  // 360 x 866 logical: the narrowest common Android width.
   tester.view.physicalSize = const Size(1080, 2600);
-  tester.view.devicePixelRatio = 2.6;
+  tester.view.devicePixelRatio = 3.0;
   addTearDown(tester.view.reset);
   final jobs = _Jobs(job);
   await tester.pumpWidget(ProviderScope(

@@ -27,7 +27,14 @@ class StatusPill extends StatelessWidget {
         children: [
           if (pulse) ...[PulseDot(color: ink), const SizedBox(width: 6)],
           if (icon != null) ...[Icon(icon, size: 14, color: ink), const SizedBox(width: 5)],
-          Text(label, style: AppTextStyles.bodySmall.copyWith(fontSize: 11.5, fontWeight: FontWeight.w600, color: ink)),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.bodySmall.copyWith(fontSize: 11.5, fontWeight: FontWeight.w600, color: ink),
+            ),
+          ),
         ],
       ),
     );

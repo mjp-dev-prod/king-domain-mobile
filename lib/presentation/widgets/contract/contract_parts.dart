@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/constants/app_brand.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_motion.dart';
@@ -425,3 +426,38 @@ class ActionBar extends StatelessWidget {
     );
   }
 }
+
+/// One line saying what happens next on a contract, for list rows. The tone
+/// keeps each colour's one job (amber = waiting, red = missed, green = done).
+({String text, KdTone tone}) contractNextStep(Job job, {required bool forClient}) {
+  String left(DateTime? t, String unknown) => t == null ? unknown : (timeLeft(t) ?? 'now');
+  return switch (job.contractStatus) {
+    ContractStatus.awaitingPayment => forClient
+        ? (text: 'Pay within ${left(job.payByAt, '24 hours')} to start the work', tone: KdTone.warn)
+        : (text: 'Waiting for ${job.clientName} to pay', tone: KdTone.warn),
+    ContractStatus.funded => forClient
+        ? (text: 'Paid · waiting for the talent to start', tone: KdTone.plain)
+        : (text: 'Paid · start when you\'re ready', tone: KdTone.brand),
+    ContractStatus.inProgress => job.overdue
+        ? (text: '3 days past the delivery date', tone: KdTone.bad)
+        : (text: 'Due in ${left(job.deliverByAt, 'time')}', tone: KdTone.plain),
+    ContractStatus.submitted => forClient
+        ? (text: 'Delivered · review it now', tone: KdTone.brand)
+        : (text: 'Delivered · waiting for ${job.clientName}', tone: KdTone.warn),
+    ContractStatus.changesRequested => forClient
+        ? (text: 'Waiting for the revised version', tone: KdTone.warn)
+        : (text: 'Changes requested · resubmit within ${left(job.changeDueAt, '3 days')}', tone: KdTone.warn),
+    ContractStatus.disputed => (text: 'With a ${AppBrand.name} admin', tone: KdTone.bad),
+    ContractStatus.approved => (text: 'Paid', tone: KdTone.ok),
+    null => (text: '', tone: KdTone.plain),
+  };
+}
+
+/// Contracts where the person looking needs to do something.
+bool contractNeedsYou(Job job, {required bool forClient}) => switch (job.contractStatus) {
+  ContractStatus.awaitingPayment => forClient,
+  ContractStatus.funded => !forClient,
+  ContractStatus.submitted => forClient,
+  ContractStatus.changesRequested => !forClient,
+  _ => false,
+};
