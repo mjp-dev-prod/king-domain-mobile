@@ -16,82 +16,98 @@ Source of truth for product decisions: `Student_Talent_Marketplace_Product_Visio
 
 ---
 
-## Brand — v0
+## Brand — v1 (mobile app)
 
-Working direction, established while building the waitlist landing page. Not locked; a motion
-designer may revise it. Anything built now should use these values rather than inventing new
-ones, so a later change is a single find-and-replace.
+Chosen by Victor on 2026-10-02 from `prototypes/palette-explorer.html` (Royal Violet, Public Sans
+headlines). It replaces v0 because v0 ("flat fills, hairline borders, 3–6px corners, no
+shadows") made the app look like a tutorial project. Evidence and references:
+[docs/research/ui-audit-2026-10-01.md](docs/research/ui-audit-2026-10-01.md).
 
-The concept: **proof, credentials, earned trust** — closer to a verified ledger or a diploma
-than a generic gradient SaaS startup. Warm, confident, restrained.
+**Scope:** the Flutter app. The waitlist site (`king-domain-web`) and the admin dashboard still use
+v0 tokens; moving them is a separate decision, not implied by this one.
 
-### Colour
+The concept is unchanged: **proof, credentials, earned trust.** What changed is how it is
+rendered. Depth comes from **tonal layering** (stacked dark surfaces, as Discord and Telegram do),
+soft rounded shapes and motion. It is **not** neumorphism: soft-shadow controls fail contrast and
+look broken in dark mode.
+
+### Colour (Royal Violet)
 
 | Token | Hex | Role |
 |---|---|---|
-| Ink | `#151A2E` | Primary dark ground; body text on light surfaces |
-| Ink-2 | `#1E2438` | Raised dark surface — cards, status strip |
-| Ink-3 | `#2A3149` | Hairline borders on dark |
-| Paper | `#FAF8F3` | Warm off-white ground — deliberately not pure white |
-| Paper-2 | `#F1EEE6` | Secondary light surface |
-| **KD Gold** | `#C9A227` | **The** accent — CTAs, logomark, italic emphasis |
-| Gold-soft | `#E0BE4A` | Gold hover / lighter gold on dark |
-| Signal Green | `#2F7A5E` | Verified / proof / trust cues on light |
-| Green-soft | `#4FA37F` | Same cues on dark |
-| Slate | `#5B6178` | Secondary text on light |
-| Slate-dim | `#8A90A3` | Secondary text on dark |
-| Open/pending | `#E2896C` | Status badges only — a decision, application, etc. still awaiting resolution |
-| Settled | `#6FBBA2` | Status badges only — resolved/closed, same semantic family as Signal Green |
+| Ground | `#0D0A16` | Page background |
+| Surface-1 | `#151121` | Cards, list groups, inputs |
+| Surface-2 | `#1D182E` | Raised: tiles inside cards, floating tab bar, sheets |
+| Surface-3 | `#27203D` | Highest: toasts, pressed/selected, skeleton shimmer |
+| Line | `rgba(255,255,255,.06)` | Dividers inside a surface only; never card outlines |
+| Text | `#F2EFFA` | Primary text (off-white, never pure white) |
+| Text-2 | `#ABA4C3` | Secondary text |
+| Text-3 | `#716A8B` | Hints, timestamps, disabled |
+| **Violet** | `#7451F2` | **The** action colour: primary button fill, active tab, progress |
+| Violet-text | `#A991FF` | Violet used as text or icons on dark (fill violet is too dark for text) |
+| Violet-soft | `rgba(140,108,255,.16)` | Selected chips, active tab pill, brand tags |
+| **Gold** | `#F2C14E` | **Money only** — budgets, earnings, payouts — and the KD logomark |
+| Green | `#34D399` | **Verified / done / paid** only (soft: `rgba(52,211,153,.13)`) |
+| Amber | `#F5A55B` | Waiting on someone: pending, extension requested, deadline near |
+| Red | `#F87171` | Errors, destructive actions, missed deadlines |
 
-Open/pending and Settled are a status-badge pair, added for the admin dashboard's shareholder
-decisions feature and reused wherever else a record needs an open-vs-resolved status (never as
-general decoration, same rule as Signal Green). Values match the Marketplace Decision Ledger
-artifact's own dark-mode tokens so both surfaces agree.
+On-violet text is white (5.0:1). Every pairing above passes WCAG AA; the palette explorer
+measures them live.
 
-**Gold is the single bold move.** Primary CTA, the KD mark, italic emphasis in a headline, one
-or two key highlights — nothing else. It must never become a dominant fill or a background.
-Green is reserved strictly for verification/proof/status semantics, never decoration.
+**Each colour has one job.** Violet means "you can act", gold means "money", green means
+"verified or done", amber means "waiting". Never use one for another's meaning, and never as
+decoration.
 
 ### Type
 
 | Role | Face | Notes |
 |---|---|---|
-| Display | **Fraunces** | Headlines. Italic + gold for the emphasised phrase in a hero. |
-| Body | **Public Sans** | All running copy and UI. |
-| Mono | **JetBrains Mono** | Eyebrow labels, stat labels, step numbers. Uppercase, letter-spaced. |
+| Headlines and UI | **Public Sans** | 800 weight, tight letter-spacing for headlines; 600–700 for titles |
+| Body | **Public Sans** | 400–500 |
+| Mono | **JetBrains Mono** | Eyebrow labels and step numbers only. Uppercase, letter-spaced |
+| Logomark | **Fraunces 700** | The typographic **KD** in gold. The only place Fraunces remains |
 
-Logomark is a typographic **KD** in Fraunces 700, gold. No illustrated logo yet — deliberately
-left open.
+Numbers that line up (money, counts, countdowns) use tabular figures.
 
-### Imagery and dimension
+### Shape, depth and motion
 
-Decided 2026-09-13, after a Stitch pass shipped a 3D gold padlock into two screens and an
-earlier Gemini pass proposed a full claymorphic asset set.
+- **Radius:** 12 (small controls) · 16 (buttons, tiles) · 20 (cards) · 28 (hero cards, sheets) ·
+  pill (chips, tags, tab indicator).
+- **Depth:** a card is one surface step lighter than what it sits on. No borders around cards.
+- **Shadows** only on things that float: the tab bar, sheets, toasts, the sticky CTA bar.
+- **Glow:** only the **single primary button** on a screen gets a soft violet shadow. Nothing else
+  glows: not cards, icons, text or badges.
+- **Motion:** 250 ms state changes, 400 ms layout, 450–700 ms arrivals; `easeOutCubic` for most,
+  a spring (`easeOutBack`) for selection pops. Press-scale 0.92–0.98 on everything tappable;
+  haptic tick on choices. Respect reduced motion.
+- **States are designed, not defaulted:** skeletons for lists, spinner only inside the button
+  that's working, toasts (one at a time, Undo for reversible actions), empty states that say
+  why and what to do next, inline errors with Retry. A loading state is held ≥ 300 ms so it
+  never flashes.
 
-Dimensional/3D illustration is **allowed when it is matte and content-bearing** — it carries
-real information (a work-sample thumbnail, a moodboard, delivered media) or is a restrained
-matte object. It is **not** allowed as pure decoration, and it never gets an exemption from
-the bans below: no gradient fills, no specular sheen, no drop shadow, no glow. A dimensional
-object that needs those effects to read is the wrong object.
+### Imagery
 
-The reasoning: real content imagery is what fixes "the app looks plain," and it doubles as
-proof — which the product vision actively wants. A decorative icon next to a label that
-already says the same thing in words is redundancy, and every such asset becomes a permanent
-production dependency (empty, error, pending and success variants, kept visually coherent
-forever). Spend that budget on content, not ornament.
+Decided 2026-09-13, after a Stitch pass shipped a 3D gold padlock and a Gemini pass proposed a
+claymorphic asset set; still in force.
+
+Images must be **real content**: a talent's actual work, delivered files, profile photos. Real
+work imagery is what fixes "the app looks plain", and it doubles as proof. Dimensional/3D art is
+allowed only when it is matte and carries information, never as decoration. Illustrations are
+allowed for empty states. Where images appear, and what each surface traces back to:
+[docs/features/imagery-surfaces.md](docs/features/imagery-surfaces.md).
 
 ### Do not
 
-These were explicit calls, not accidents:
+- No neumorphism (soft-shadow controls) and no glassmorphism or blur on cards.
+- No gradients as decoration. Allowed only as functional fades (content scrolling under a
+  sticky bar, skeleton shimmer).
+- No glow except the single primary button.
+- No stock photography, no floating abstract blobs, no decorative 3D.
+- No emoji as icons or section markers. Icons are simple line icons (Lucide style).
+- No colour used outside its job (see Colour).
 
-- No gradients — background, text, button or border.
-- No glassmorphism, frosted panels or blur effects.
-- No heavy drop shadows or glows. Depth comes from hairline borders (`Ink-3`) and flat fills.
-- No rounded-everything. Corner radius stays small (3–6px).
-- No stock photography, no floating abstract blob illustrations.
-- No emoji as icons or section markers. Icons are simple line/geometric (`lucide-react` on web).
-
-Reference implementation: `king-domain-web/src/styles/_tokens.scss`.
+Reference implementation: `prototypes/palette-explorer.html` (Royal Violet). The Flutter tokens
+in `lib/core/constants/` move to these values when the UI rebuild starts.
 
 ---
 
@@ -201,5 +217,5 @@ the doc that was wrong.
 
 ---
 
-*Last verified against the codebase: 2026-09-12. Working-discipline section ported from
+*Last verified against the codebase: 2026-10-02 (brand v1). Working-discipline section ported from
 the Pendu workspace, where each rule traces to a specific real failure.*
