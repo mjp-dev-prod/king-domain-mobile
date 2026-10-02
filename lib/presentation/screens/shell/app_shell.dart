@@ -36,7 +36,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     final List<KdTab> tabs;
     if (isClient) {
       final needs = ClientJobsTab.mine(jobs, user?.id).where((j) => contractNeedsYou(j, forClient: true)).length;
-      screens = [ClientJobsTab(onPostJob: () => _go(1)), const PostJobScreen(), const ClientProfileTab()];
+      screens = [ClientJobsTab(onPostJob: () => _go(1)), PostJobScreen(onPosted: () => _go(0)), const ClientProfileTab()];
       tabs = [
         KdTab(icon: Icons.work_outline_rounded, activeIcon: Icons.work_rounded, label: 'My jobs', badge: needs),
         const KdTab(icon: Icons.add_circle_outline_rounded, activeIcon: Icons.add_circle_rounded, label: 'Post'),

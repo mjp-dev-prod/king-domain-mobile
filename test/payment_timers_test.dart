@@ -10,6 +10,7 @@ import 'package:king_domain/presentation/providers/talent_profile_provider.dart'
 import 'package:king_domain/presentation/screens/client/client_contract_screen.dart';
 import 'package:king_domain/presentation/screens/contracts/contract_detail_screen.dart';
 import 'package:king_domain/presentation/screens/payments/fund_contract_screen.dart';
+import 'package:king_domain/presentation/widgets/kit/kd_button.dart';
 
 Job _job({ContractStatus? status, DateTime? payByAt, DateTime? reviewDueAt}) => Job(
   id: 'j1',
@@ -91,7 +92,7 @@ void main() {
 
       expect(find.textContaining('Pay within 23h'), findsOneWidget);
       expect(find.textContaining('award is cancelled'), findsOneWidget);
-      expect(tester.widget<ElevatedButton>(find.byType(ElevatedButton).first).onPressed, isNotNull);
+      expect(tester.widget<KdButton>(find.byType(KdButton).first).onPressed, isNotNull);
     });
 
     testWidgets('after the window: says so and the Pay button is disabled', (tester) async {
@@ -102,7 +103,7 @@ void main() {
       );
 
       expect(find.textContaining('payment window has ended'), findsOneWidget);
-      expect(tester.widget<ElevatedButton>(find.byType(ElevatedButton).first).onPressed, isNull);
+      expect(tester.widget<KdButton>(find.byType(KdButton).first).onPressed, isNull);
     });
 
     testWidgets('award cancelled while the screen was open: explains and offers no payment', (tester) async {

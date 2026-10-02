@@ -242,6 +242,8 @@ class JobApplication {
   final String talentName;
   final String status; // 'pending' | 'selected' | 'notSelected'
   final DateTime createdAt;
+  /// Real facts the client weighs (no score, no rank): see ApplicantSignals.
+  final ApplicantSignals signals;
 
   const JobApplication({
     required this.id,
@@ -250,6 +252,7 @@ class JobApplication {
     required this.talentName,
     required this.status,
     required this.createdAt,
+    this.signals = const ApplicantSignals(),
   });
 
   factory JobApplication.fromJson(Map<String, dynamic> json) {
@@ -261,6 +264,31 @@ class JobApplication {
       talentName: talent?['fullName'] as String? ?? 'Talent',
       status: json['status'] as String? ?? 'pending',
       createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+      signals: ApplicantSignals.fromJson(json['signals'] as Map<String, dynamic>?),
+    );
+  }
+}
+
+/// docs/core/correction-talent-discovery-screen.md: verified status in the
+/// job's category, their verified work samples there, and a plain count of
+/// completed jobs. A newcomer with 0 jobs is shown plainly, not ranked down.
+class ApplicantSignals {
+  final String? headline;
+  final bool verifiedInCategory;
+  final List<({String id, String title, String? fileUrl})> proof;
+  final int jobsCompleted;
+
+  const ApplicantSignals({this.headline, this.verifiedInCategory = false, this.proof = const [], this.jobsCompleted = 0});
+
+  factory ApplicantSignals.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return const ApplicantSignals();
+    return ApplicantSignals(
+      headline: json['headline'] as String?,
+      verifiedInCategory: json['verifiedInCategory'] as bool? ?? false,
+      proof: (json['proof'] as List? ?? const [])
+          .map((p) => (id: p['id'] as String, title: p['title'] as String? ?? '', fileUrl: p['fileUrl'] as String?))
+          .toList(),
+      jobsCompleted: json['jobsCompleted'] as int? ?? 0,
     );
   }
 }

@@ -285,14 +285,14 @@ void main() {
       await tester.pumpWidget(_host(const PayoutAccountScreen(), [banks, talentProfileProvider.overrideWith(() => profile)]));
       await _open(tester);
 
-      final save = find.widgetWithText(ElevatedButton, 'That\'s me — save account');
-      expect(tester.widget<ElevatedButton>(save).onPressed, isNull);
+      final save = find.widgetWithText(KdButton, 'That\'s me — save account');
+      expect(tester.widget<KdButton>(save).onPressed, isNull);
 
       await fillIn(tester);
 
       expect(find.text('ADA OBI'), findsOneWidget);
       expect(profile.savedAccount, isNull);
-      expect(tester.widget<ElevatedButton>(save).onPressed, isNotNull);
+      expect(tester.widget<KdButton>(save).onPressed, isNotNull);
 
       await tester.ensureVisible(save);
       await tester.tap(save);
@@ -300,6 +300,8 @@ void main() {
 
       expect(profile.savedAccount, '058:0123456789');
       expect(find.text('Payout account saved.'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 6)); // let the toast time out
+      await tester.pumpAndSettle();
     });
 
     testWidgets('unresolvable account shows the error and keeps save disabled', (tester) async {
@@ -312,8 +314,8 @@ void main() {
       await fillIn(tester);
 
       expect(find.text('Could not resolve account name.'), findsOneWidget);
-      final save = find.widgetWithText(ElevatedButton, 'That\'s me — save account');
-      expect(tester.widget<ElevatedButton>(save).onPressed, isNull);
+      final save = find.widgetWithText(KdButton, 'That\'s me — save account');
+      expect(tester.widget<KdButton>(save).onPressed, isNull);
     });
   });
 }
