@@ -1,0 +1,816 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>King Domain Contract Flow</title>
+<!--
+  Stage 2 of "How a job gets paid" (ledger 736051b0) as two phones on one live
+  contract: the talent (left) and the client (right). Actions on one phone reach
+  the other; the time control skips ahead so the automatic rules can be watched:
+  48 h extension auto-grant, 3-day resubmit clock -> admin, overdue at date + 3 d,
+  reminder emails at 24 h / 6 h.
+
+  Rules mirror the backend exactly (king-domain-backend src/contractExtensions.js,
+  contractChanges.js, contractReminders.js); spec:
+  docs/features/stage-2-delivery-and-changes.md. Brand v1 (CLAUDE.md).
+  Auto-release is OFF (as in production), so the client sees no review countdown.
+  Photos: example images, credited at the bottom (docs/features/imagery-surfaces.md).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&family=Public+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* Brand v1 — Royal Violet (CLAUDE.md) */
+:root{
+  color-scheme:dark;
+  --page:#07050D; --ground:#0D0A16; --s1:#151121; --s2:#1D182E; --s3:#27203D;
+  --line:rgba(255,255,255,.06);
+  --text:#F2EFFA; --text2:#ABA4C3; --text3:#716A8B;
+  --primary:#7451F2; --on-primary:#FFFFFF; --primary-text:#A991FF; --primary-soft:rgba(140,108,255,.16); --glow:rgba(116,81,242,.38);
+  --money:#F2C14E; --ok:#34D399; --ok-soft:rgba(52,211,153,.13); --warn:#F5A55B; --warn-soft:rgba(245,165,91,.13); --bad:#F87171; --bad-soft:rgba(248,113,113,.13);
+  --f-body:'Public Sans',system-ui,-apple-system,sans-serif; --f-mono:'JetBrains Mono',ui-monospace,monospace;
+  --r-sm:12px; --r:16px; --r-lg:20px; --r-xl:28px;
+  --ease:cubic-bezier(.22,1,.36,1); --spring:cubic-bezier(.34,1.56,.64,1);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--page);color:var(--text);font-family:var(--f-body);font-size:14px;line-height:1.5}
+button,textarea,input{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer}
+button:disabled{cursor:not-allowed}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--primary-text);outline-offset:2px}
+.i{width:20px;height:20px;flex:0 0 auto;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.i.sm{width:16px;height:16px}
+.num{font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--f-mono);font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--text3)}
+
+/* Layout: panel | talent | client */
+.wrap{display:grid;grid-template-columns:320px auto auto;gap:32px;justify-content:center;padding-inline:28px;padding-block:28px}
+.panel{position:sticky;top:28px;align-self:start;display:flex;flex-direction:column;gap:20px;max-height:calc(100vh - 56px);overflow:auto;scrollbar-width:none}
+.brand{display:flex;align-items:center;gap:10px}
+.mark{font-family:'Fraunces',Georgia,serif;font-weight:700;font-size:22px;color:var(--money)}
+.panel h1{font-size:19px;font-weight:800;letter-spacing:-.3px}
+.lede{color:var(--text2);font-size:13px}
+.group{display:flex;flex-direction:column;gap:10px}
+.clock{padding:14px;border-radius:var(--r);background:var(--s1)}
+.clock b{display:block;font-size:17px;font-weight:700;margin-top:2px}
+.clock small{font-size:12px;color:var(--text3)}
+.skips{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.skips button,.panel .reset{height:38px;border-radius:12px;background:var(--s1);font-size:13px;font-weight:600;transition:transform 140ms var(--ease),background-color 250ms}
+.skips button:hover,.panel .reset:hover{background:var(--s2)}
+.skips button:active,.panel .reset:active{transform:scale(.96)}
+.log{display:flex;flex-direction:column;gap:2px;border-radius:var(--r);background:var(--s1);padding:6px}
+.log .e{display:grid;grid-template-columns:22px 1fr;gap:8px;padding:8px;border-radius:10px;font-size:12.5px;animation:logIn 360ms var(--ease)}
+.log .e small{display:block;color:var(--text3);font-size:11px}
+.log .e .i{width:16px;height:16px;margin-top:2px}
+.log .e.mail .i{color:var(--warn)}
+.log .e.ev .i{color:var(--primary-text)}
+.log .empty{padding:12px;font-size:12.5px;color:var(--text3)}
+@keyframes logIn{from{opacity:0;transform:translateY(-6px);background:var(--s3)}to{opacity:1;transform:none}}
+.note{font-size:12px;color:var(--text3)}
+
+.col{display:flex;flex-direction:column;gap:12px;width:390px;max-width:100%}
+.who-head{display:flex;align-items:center;gap:10px;padding-left:4px}
+.who-head .av{width:28px;height:28px}
+.who-head b{font-size:14px}
+.who-head small{display:block;font-size:12px;color:var(--text3);line-height:1.2}
+
+/* Phone */
+.ph{position:relative;width:100%;height:812px;border-radius:46px;background:var(--ground);overflow:hidden;
+  box-shadow:0 0 0 9px #0d0b14,0 0 0 10px #221d30,0 40px 90px rgba(0,0,0,.55)}
+.scr{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding:0 18px 170px}
+.scr::-webkit-scrollbar{display:none}
+.status{display:flex;justify-content:space-between;align-items:center;height:48px;padding:6px 10px 0;font-size:14px;font-weight:600}
+.status .bat{width:24px;height:12px;border-radius:4px;border:1.5px solid var(--text2);position:relative;display:inline-block}
+.status .bat::after{content:"";position:absolute;inset:1.5px 6px 1.5px 1.5px;border-radius:2px;background:var(--text)}
+.bar-top{display:flex;align-items:center;justify-content:space-between;padding:8px 0}
+.iconbtn{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:var(--s1)}
+.title{font-size:24px;font-weight:800;letter-spacing:-.6px;line-height:1.2;margin-top:6px;text-wrap:balance}
+.sub{font-size:13px;color:var(--text2);margin-top:2px}
+.card{margin-top:12px;padding:16px;border-radius:var(--r-lg);background:var(--s1)}
+.card.hero{border-radius:var(--r-xl);padding:18px}
+.card.warn{background:var(--warn-soft)} .card.ok{background:var(--ok-soft)} .card.bad{background:var(--bad-soft)} .card.brand{background:var(--primary-soft)}
+.card .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.card h4{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+.card p{font-size:13px;color:var(--text2);margin-top:6px}
+.card .cardnote{font-size:12px;color:var(--text3);margin-top:8px}
+.big{font-size:34px;font-weight:800;letter-spacing:-1px;margin-top:6px}
+.big small{font-size:15px;font-weight:600;color:var(--text2);letter-spacing:0;margin-left:3px}
+.big.bad{color:var(--bad)}
+.meter{height:8px;border-radius:999px;background:var(--s3);margin-top:14px;overflow:hidden}
+.meter i{display:block;height:100%;border-radius:999px;background:var(--primary);transition:width 560ms var(--ease)}
+.meter.bad i{background:var(--bad)}
+.foot{display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:var(--text3)}
+.pill{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:999px;font-size:11.5px;font-weight:600;background:var(--s2);color:var(--text2);white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.brand{background:var(--primary-soft);color:var(--primary-text)}
+.quote{margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(0,0,0,.18);font-size:13px;color:var(--text)}
+.wait{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;font-weight:600}
+.wait.warn{color:var(--warn)}
+.pulse{width:8px;height:8px;border-radius:50%;background:currentColor;animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 currentColor}50%{box-shadow:0 0 0 5px transparent}}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.soft{display:flex;align-items:center;justify-content:center;gap:6px;height:44px;border-radius:14px;background:var(--s2);font-size:14px;font-weight:600;transition:transform 140ms var(--ease),background-color 250ms}
+.soft:active:not(:disabled){transform:scale(.97)}
+.soft.brand{background:var(--primary);color:var(--on-primary)}
+.soft.okb{background:var(--ok-soft);color:var(--ok)}
+.vers{display:flex;gap:8px;margin-top:12px;overflow-x:auto;scrollbar-width:none}
+.chip{flex:0 0 auto;height:34px;padding:0 13px;border-radius:999px;background:var(--s2);color:var(--text2);font-size:12.5px;font-weight:600}
+.chip[aria-pressed="true"]{background:var(--primary-soft);color:var(--primary-text)}
+.preview{position:relative;margin-top:12px;border-radius:var(--r-lg);overflow:hidden;aspect-ratio:4/3;background:var(--s2)}
+.photo{position:relative;display:block;overflow:hidden;background:var(--s2)}
+.photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 450ms var(--ease)}
+.photo img.in{opacity:1}
+.preview .photo{position:absolute;inset:0}
+.av{width:22px;height:22px;border-radius:50%;flex:0 0 auto}
+.steps{display:flex;gap:6px;margin-top:12px}
+.steps i{flex:1;height:5px;border-radius:999px;background:var(--s3)}
+.steps i.on{background:var(--warn)}
+.steps i.done{background:var(--ok)}
+.rise{animation:rise 520ms var(--ease) backwards}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+/* CTA bar */
+.ctabar{position:absolute;left:0;right:0;bottom:0;z-index:5;padding:16px 18px 26px;background:linear-gradient(to top,var(--ground) 66%,transparent)}
+.cta{width:100%;height:56px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;gap:10px;background:var(--primary);color:var(--on-primary);
+  font-size:16px;font-weight:700;box-shadow:0 12px 28px var(--glow);transition:transform 140ms var(--ease),opacity 250ms,background-color 250ms}
+.cta:active:not(:disabled){transform:scale(.97)}
+.cta:disabled{background:var(--s2);color:var(--text3);box-shadow:none}
+.ghost{width:100%;min-height:48px;margin-top:10px;padding:0 14px;border-radius:var(--r);background:var(--s1);font-size:14.5px;font-weight:600;transition:transform 140ms var(--ease)}
+.ghost:active:not(:disabled){transform:scale(.97)}
+.ghost:disabled{color:var(--text3)}
+.hint{text-align:center;font-size:12px;color:var(--text3);margin-top:8px;min-height:18px}
+.spin{width:18px;height:18px;border-radius:50%;border:2.5px solid currentColor;border-right-color:transparent;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Sheet */
+.scrim{position:absolute;inset:0;z-index:20;background:rgba(5,3,10,.6);opacity:0;pointer-events:none;transition:opacity 300ms var(--ease)}
+.scrim.open{opacity:1;pointer-events:auto}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:21;max-height:86%;overflow-y:auto;padding:10px 18px 26px;border-radius:28px 28px 0 0;background:var(--s1);
+  box-shadow:0 -20px 50px rgba(0,0,0,.5);transform:translateY(105%);transition:transform 420ms var(--ease)}
+.sheet.open{transform:none}
+.handle{width:40px;height:4px;border-radius:2px;background:var(--s3);margin:0 auto 16px}
+.sheet h3{font-size:19px;font-weight:800;letter-spacing:-.3px}
+.sheet .lead{font-size:13px;color:var(--text2);margin-top:4px}
+.field{margin-top:16px}
+.field label{display:block;font-size:12.5px;font-weight:600;color:var(--text2);margin-bottom:6px}
+.stepper{display:flex;align-items:center;justify-content:space-between;padding:6px;border-radius:var(--r);background:var(--s2)}
+.stepper button{width:44px;height:44px;border-radius:12px;background:var(--s3);display:grid;place-items:center;font-size:20px;font-weight:600}
+.stepper button:disabled{opacity:.35}
+.stepper b{font-size:18px}
+textarea{width:100%;min-height:96px;resize:none;padding:12px 14px;border:1.5px solid transparent;border-radius:var(--r);background:var(--s2);color:var(--text);font-size:14px;line-height:1.5;outline:none;transition:border-color 250ms}
+textarea:focus{border-color:var(--primary-text)}
+textarea.err{border-color:var(--bad)}
+.count{display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-top:6px}
+.count .e{color:var(--bad)}
+.calc{display:flex;align-items:center;gap:10px;margin-top:14px;padding:12px 14px;border-radius:var(--r);background:var(--primary-soft);font-size:13px}
+.calc .i{color:var(--primary-text)}
+.file{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--r);background:var(--s2)}
+.file div{flex:1;min-width:0}
+.file b{display:block;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file small{font-size:12px;color:var(--text2)}
+.sheet .cta{margin-top:18px}
+.sheet .ghost{margin-top:8px}
+
+/* Toast */
+.toasts{position:absolute;left:14px;right:14px;top:8px;z-index:30;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
+.toast{display:flex;align-items:center;gap:10px;max-width:100%;padding:10px 14px;border-radius:16px;background:var(--s3);box-shadow:0 16px 40px rgba(0,0,0,.55);font-size:13.5px;font-weight:600;animation:tIn 320ms var(--spring)}
+.toast.out{animation:tOut 260ms var(--ease) forwards}
+.toast .ic{width:26px;height:26px;border-radius:9px;display:grid;place-items:center;flex:0 0 auto;background:var(--ok-soft);color:var(--ok)}
+.toast.warn .ic{background:var(--warn-soft);color:var(--warn)}
+.toast.info .ic{background:var(--primary-soft);color:var(--primary-text)}
+@keyframes tIn{from{opacity:0;transform:translateY(-14px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes tOut{to{opacity:0;transform:translateY(-10px) scale(.97)}}
+
+.credits{grid-column:1/-1;text-align:center;font-size:12px;color:var(--text3);line-height:1.8}
+.credits a{color:var(--text2)}
+@media (max-width:1260px){.wrap{grid-template-columns:1fr 1fr;justify-items:center}.panel{grid-column:1/-1;position:static;max-height:none;width:100%;max-width:820px}}
+@media (max-width:860px){.wrap{grid-template-columns:1fr;padding-inline:16px}.ph{height:780px}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></symbol>
+  <symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22"/><path d="M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-scale" viewBox="0 0 24 24"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol>
+  <symbol id="i-dot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/></symbol>
+  <symbol id="i-coins" viewBox="0 0 24 24"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></symbol>
+</svg>
+
+<div class="wrap">
+  <aside class="panel" aria-label="Scenario controls">
+    <div class="group">
+      <div class="brand"><span class="mark">KD</span><h1>Contract flow</h1></div>
+      <p class="lede">One contract, two phones. Ada (talent) is on the left, Chinedu (client) on the right. Act on either phone, then skip time to watch the automatic rules.</p>
+    </div>
+    <div class="group">
+      <span class="eyebrow">Time</span>
+      <div class="clock"><small>Simulated now</small><b class="num" id="simNow"></b><small id="simOffset">Real time</small></div>
+      <div class="skips">
+        <button type="button" data-skip="6">+6 hours</button>
+        <button type="button" data-skip="24">+1 day</button>
+        <button type="button" data-skip="48">+2 days</button>
+      </div>
+      <button type="button" class="reset" id="reset">Start over</button>
+    </div>
+    <div class="group">
+      <span class="eyebrow">What the server did</span>
+      <div class="log" id="log"></div>
+      <span class="note">Events and emails, as the backend records and sends them. Reminders go 24 h and 6 h before any clock that ends in an automatic outcome.</span>
+    </div>
+  </aside>
+
+  <section class="col" aria-label="Talent phone">
+    <div class="who-head"><span class="photo av" data-img="women.1"></span><div><b>Ada Obi</b><small>Talent</small></div></div>
+    <div class="ph" id="talent">
+      <div class="toasts"></div>
+      <div class="scr"></div>
+      <div class="ctabar"></div>
+      <div class="scrim"></div>
+      <div class="sheet" role="dialog" aria-modal="true"><div class="handle"></div><div class="body"></div></div>
+    </div>
+  </section>
+
+  <section class="col" aria-label="Client phone">
+    <div class="who-head"><span class="photo av" data-img="men.0"></span><div><b>Chinedu Okafor</b><small>Client</small></div></div>
+    <div class="ph" id="client">
+      <div class="toasts"></div>
+      <div class="scr"></div>
+      <div class="ctabar"></div>
+      <div class="scrim"></div>
+      <div class="sheet" role="dialog" aria-modal="true"><div class="handle"></div><div class="body"></div></div>
+    </div>
+  </section>
+
+  <p class="credits" id="credits"></p>
+</div>
+
+<script src="data/example-images.js"></script>
+<script>
+/* ── Rules: same numbers as king-domain-backend/src/contractCore.js RULES ── */
+const MIN = 60e3, HOUR = 60 * MIN, DAY = 24 * HOUR;
+const RULES = {
+  deliveryDays: 5,
+  maxExtensionRequests: 2,
+  extensionAnswerMs: 48 * HOUR,
+  maxChangeRounds: 2,
+  changeResubmitMs: 3 * DAY,
+  overdueGraceMs: 3 * DAY,
+  reason: { min: 10, max: 1000 },
+};
+const BUDGET = "₦45,000";
+const JOB = "Logo and brand kit";
+const $ = (s, r = document) => r.querySelector(s);
+
+/* ── Simulated clock ──────────────────────────────────────────── */
+let offset = 0;
+const now = () => Date.now() + offset;
+const fmtDay = (t) => new Date(t).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+const fmtTime = (t) => new Date(t).toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit" });
+const fmtWhen = (t) => `${fmtDay(t)}, ${fmtTime(t)}`;
+// Same wording as lib/core/formatting/deadline.dart timeLeft().
+function left(ms) {
+  if (ms <= 0) return null;
+  const d = Math.floor(ms / DAY), h = Math.floor((ms % DAY) / HOUR), m = Math.floor((ms % HOUR) / MIN);
+  if (d >= 1) return `${d} day${d > 1 ? "s" : ""} ${h}h`;
+  if (h >= 1) return `${h}h ${m}m`;
+  if (m >= 1) return `${m} min`;
+  return "less than a minute";
+}
+function bigLeft(ms) {
+  const a = Math.abs(ms);
+  const d = Math.floor(a / DAY), h = Math.floor((a % DAY) / HOUR), m = Math.floor((a % HOUR) / MIN);
+  return d ? `${d}d ${h}h<small>${m}m</small>` : `${h}h<small>${m}m</small>`;
+}
+
+/* ── Contract state (mirrors the Contract row + its child tables) ─ */
+let S;
+function freshState() {
+  const fundedAt = Date.now() - 2 * DAY + 20 * MIN;
+  return {
+    status: "inProgress", // inProgress | submitted | changesRequested | disputed | approved
+    fundedAt,
+    deliverByAt: fundedAt + RULES.deliveryDays * DAY,
+    extensionsUsed: 0,
+    extensions: [], // {id, days, reason, requestedAt, answerDueAt, status}
+    changeRounds: 0,
+    changeRequests: [], // {round, reason, requestedAt, resubmitDueAt, resubmittedAt}
+    changeDueAt: null,
+    overdueFlaggedAt: null,
+    deliveries: [], // {version, note, file, img, at}
+    escalated: null, // {reason, note}
+    log: [],
+    reminders: new Set(),
+  };
+}
+const pendingExt = () => S.extensions.find((e) => e.status === "pending");
+const lastExt = () => S.extensions[S.extensions.length - 1];
+
+function log(kind, text, sub) {
+  S.log.unshift({ kind, text, sub, at: now() });
+  renderLog();
+}
+const event = (type, sub) => log("ev", type, sub);
+const email = (to, subject) => log("mail", `Email to ${to}`, subject);
+
+/* ── Actions (one per backend route) ─────────────────────────── */
+function canAskExtension() {
+  if (S.status !== "inProgress") return [false, "Only before you deliver"];
+  if (S.overdueFlaggedAt || now() >= S.deliverByAt + RULES.overdueGraceMs) return [false, "Too late: 3 days past the date"];
+  if (pendingExt()) return [false, "Waiting on Chinedu's answer"];
+  if (S.extensionsUsed >= RULES.maxExtensionRequests) return [false, "No extension requests left"];
+  const n = RULES.maxExtensionRequests - S.extensionsUsed;
+  return [true, `Ask for more time · ${n} request${n > 1 ? "s" : ""} left`];
+}
+function requestExtension(days, reason) {
+  const at = now();
+  const ext = { id: S.extensions.length + 1, days, reason, requestedAt: at, answerDueAt: at + RULES.extensionAnswerMs, status: "pending" };
+  S.extensions.push(ext);
+  S.extensionsUsed++;
+  event("extension_requested", `+${days} day${days > 1 ? "s" : ""}, answer by ${fmtWhen(ext.answerDueAt)}`);
+  email("Chinedu", `Extension requested on "${JOB}"`);
+  toast("client", `Ada asked for ${days} more day${days > 1 ? "s" : ""}`, "warn");
+}
+function grant(ext, auto) {
+  ext.status = auto ? "autoGranted" : "granted";
+  S.deliverByAt += ext.days * DAY;
+  if (S.overdueFlaggedAt && S.deliverByAt + RULES.overdueGraceMs > now()) S.overdueFlaggedAt = null;
+}
+function answerExtension(yes) {
+  const ext = pendingExt();
+  if (!ext) return toast("client", "That request was already answered", "warn");
+  if (yes) grant(ext, false); else ext.status = "declined";
+  event(yes ? "extension_granted" : "extension_declined", `delivery date ${fmtDay(S.deliverByAt)}`);
+  email("Ada", yes ? `Extension granted on "${JOB}"` : `Extension declined on "${JOB}"`);
+  toast("talent", yes ? `Extension granted · due ${fmtDay(S.deliverByAt)}` : "Chinedu declined the extension", yes ? "ok" : "warn");
+}
+function deliver(note) {
+  const resub = S.status === "changesRequested";
+  const v = S.deliveries.length + 1;
+  const imgs = ["work.packaging.0", "work.packaging.2", "work.packaging.1"];
+  S.deliveries.push({ version: v, note, file: `mamas-kitchen-brand-kit-v${v}.pdf`, img: imgs[(v - 1) % imgs.length], at: now() });
+  const ext = pendingExt();
+  if (ext) ext.status = "withdrawn";
+  if (resub) S.changeRequests[S.changeRequests.length - 1].resubmittedAt = now();
+  S.status = "submitted";
+  S.changeDueAt = null;
+  event(resub ? "resubmitted" : "submitted", `version ${v}`);
+  email("Chinedu", v > 1 ? `Revised work delivered (version ${v})` : `Work delivered on "${JOB}"`);
+  toast("client", `Ada delivered version ${v}`, "info");
+}
+function requestChanges(reason) {
+  if (S.changeRounds >= RULES.maxChangeRounds) return escalate("client_rejected_after_final_round", reason);
+  const at = now();
+  S.changeRounds++;
+  S.changeDueAt = at + RULES.changeResubmitMs;
+  S.changeRequests.push({ round: S.changeRounds, reason, requestedAt: at, resubmitDueAt: S.changeDueAt, resubmittedAt: null });
+  S.status = "changesRequested";
+  event("changes_requested", `round ${S.changeRounds} of ${RULES.maxChangeRounds}, resubmit by ${fmtWhen(S.changeDueAt)}`);
+  email("Ada", `Changes requested (round ${S.changeRounds} of ${RULES.maxChangeRounds})`);
+  toast("talent", `Chinedu asked for changes · round ${S.changeRounds} of 2`, "warn");
+}
+function escalate(reason, note) {
+  S.status = "disputed";
+  S.changeDueAt = null;
+  S.escalated = { reason, note };
+  event("escalated", reason === "talent_missed_change_deadline" ? "resubmit clock ran out" : "still not satisfied after round 2");
+  email("Ada and Chinedu", `"${JOB}" has gone to a King Domain admin`);
+  email("owner admins", `Dispute needs an admin: "${JOB}"`);
+  toast("talent", "This job has gone to an admin", "warn");
+  toast("client", "This job has gone to an admin", "warn");
+}
+function approve() {
+  S.status = "approved";
+  event("released", `${BUDGET} to GTBank ••6789`);
+  toast("talent", `You've been paid ${BUDGET}`, "ok");
+}
+
+/* ── The tick (contractLifecycle STAGE2_SWEEPS, same order) ───── */
+const REMINDERS = [
+  // [clock, who, thresholds before due (h); "at" = also at the deadline]
+  { clock: "extension", to: "Chinedu", before: [24, 6] },
+  { clock: "change", to: "Ada", before: [24, 6] },
+  { clock: "delivery", to: "Ada", before: [24], at: true },
+  { clock: "deliveryMissed", to: "Chinedu", before: [], at: true },
+];
+// Port of contractReminders.currentReminder: a reminder applies until the next one does.
+function currentReminder(entry, due, at) {
+  const pts = entry.before.map((h) => ({ label: `${h}h`, from: due - h * HOUR }));
+  if (entry.at) pts.push({ label: "due", from: due, until: due + RULES.overdueGraceMs });
+  for (let i = 0; i < pts.length; i++) {
+    const until = pts[i].until ?? (pts[i + 1] ? pts[i + 1].from : due);
+    if (at >= pts[i].from && at < until) return pts[i].label;
+  }
+  return null;
+}
+function sweep() {
+  const at = now();
+  const ext = pendingExt();
+  if (ext && at >= ext.answerDueAt) {
+    grant(ext, true);
+    event("extension_auto_granted", `no answer in 48 h · due ${fmtDay(S.deliverByAt)}`);
+    email("Ada", `Extension granted on "${JOB}"`);
+    email("Chinedu", `Extension granted automatically`);
+    toast("talent", `Granted automatically · due ${fmtDay(S.deliverByAt)}`, "ok");
+    toast("client", "You didn't answer in 48 h, so the extension was granted", "info");
+  }
+  if (S.status === "changesRequested" && S.changeDueAt && at >= S.changeDueAt) escalate("talent_missed_change_deadline");
+  if (S.status === "inProgress" && !S.overdueFlaggedAt && at >= S.deliverByAt + RULES.overdueGraceMs && !pendingExt()) {
+    S.overdueFlaggedAt = at;
+    event("overdue", `3 days past ${fmtDay(S.deliverByAt)}`);
+    email("Chinedu", `"${JOB}" is 3 days past its delivery date`);
+  }
+  // Reminders
+  const cands = [];
+  const p = pendingExt();
+  if (p) cands.push(["extension", p.answerDueAt, p.id]);
+  if (S.status === "changesRequested") cands.push(["change", S.changeDueAt, "r" + S.changeRounds]);
+  if (S.status === "inProgress" && !S.overdueFlaggedAt) {
+    cands.push(["delivery", S.deliverByAt, S.deliverByAt]);
+    cands.push(["deliveryMissed", S.deliverByAt, S.deliverByAt]);
+  }
+  const subjects = {
+    extension: (l) => `Reminder: answer the extension (${l === "6h" ? "6 hours" : "24 hours"} left)`,
+    change: (l) => `Reminder: resubmit (${l === "6h" ? "6 hours" : "24 hours"} left)`,
+    delivery: (l) => (l === "due" ? "Your delivery date has passed" : "Reminder: due in 24 hours"),
+    deliveryMissed: () => "The delivery date passed with nothing delivered",
+  };
+  for (const [clock, due, ref] of cands) {
+    const entry = REMINDERS.find((r) => r.clock === clock);
+    const label = currentReminder(entry, due, at);
+    if (!label) continue;
+    const key = `${clock}:${ref}:${label}`;
+    if (S.reminders.has(key)) continue;
+    S.reminders.add(key);
+    email(entry.to, subjects[clock](label));
+  }
+}
+
+/* ── Photos ───────────────────────────────────────────────────── */
+const IMG = window.KD_IMAGES || null;
+const used = new Map();
+const lookup = (key) => key.split(".").reduce((o, k) => (o ? o[k] : null), IMG);
+function hydrate(el, key = el.dataset.img, size = "small") {
+  const ph = IMG && key && lookup(key);
+  if (!ph) return;
+  used.set(ph.id, ph);
+  if (el.dataset.loaded === ph.id) return;
+  el.dataset.loaded = ph.id;
+  el.style.background = ph.color;
+  el.innerHTML = "";
+  const img = new Image();
+  img.alt = ph.alt || "";
+  img.onload = () => img.classList.add("in");
+  img.src = size === "regular" ? ph.regular : ph.small;
+  el.appendChild(img);
+  if (img.complete) img.classList.add("in"); // cached: no fade on every re-render
+}
+
+/* ── Rendering ────────────────────────────────────────────────── */
+const icon = (n, cls = "") => `<svg class="i ${cls}"><use href="#i-${n}"/></svg>`;
+const head = (pill) => `<div class="status"><span class="num">${fmtTime(now())}</span><span class="bat"></span></div>
+  <div class="bar-top"><button class="iconbtn" aria-label="Back">${icon("back")}</button>${pill}</div>
+  <div class="title">${JOB}</div><div class="sub">Mama's Kitchen · ${BUDGET} held by King Domain</div>`;
+const STATUS_PILL = {
+  inProgress: `<span class="pill brand"><span class="pulse"></span>In progress</span>`,
+  submitted: `<span class="pill warn"><span class="pulse"></span>In review</span>`,
+  changesRequested: `<span class="pill warn"><span class="pulse"></span>Changes requested</span>`,
+  disputed: `<span class="pill bad">${icon("scale", "sm")}With an admin</span>`,
+  approved: `<span class="pill ok">${icon("check", "sm")}Paid</span>`,
+};
+
+function dueCard(forClient) {
+  const ms = S.deliverByAt - now();
+  const total = S.deliverByAt - S.fundedAt;
+  const late = ms <= 0;
+  const pct = late ? 100 : Math.round(((total - ms) / total) * 100);
+  return {
+    key: "due",
+    html: `<div class="card hero">
+      <div class="row"><span class="eyebrow">${late ? "Delivery date passed" : forClient ? "Ada delivers in" : "Delivery due in"}</span><span class="pill">${icon("cal", "sm")}${fmtDay(S.deliverByAt)}</span></div>
+      <div class="big num ${late ? "bad" : ""}">${late ? "Late " : ""}${bigLeft(ms)}</div>
+      <div class="meter ${late ? "bad" : ""}"><i style="width:${pct}%"></i></div>
+      <div class="foot"><span>Paid ${fmtDay(S.fundedAt)}</span><span>${late ? (forClient ? "Ada can still deliver" : "Deliver now, or ask for more time") : `${100 - pct}% of the time left`}</span></div>
+    </div>`,
+  };
+}
+function extCard(forClient) {
+  const e = lastExt();
+  if (!e || e.status === "withdrawn") return null;
+  const plural = e.days > 1 ? "s" : "";
+  if (e.status === "pending") {
+    const l = left(e.answerDueAt - now());
+    return forClient
+      ? { key: "ext" + e.id + "p", html: `<div class="card warn">
+          <h4>${icon("hourglass")}Ada asked for ${e.days} more day${plural}</h4>
+          <div class="quote">"${escapeHtml(e.reason)}"</div>
+          <p>The delivery date would move from <b>${fmtDay(S.deliverByAt)}</b> to <b>${fmtDay(S.deliverByAt + e.days * DAY)}</b>.</p>
+          <div class="wait warn"><span class="pulse"></span>Answer within ${l}, or it's granted automatically</div>
+          <div class="acts"><button class="soft" data-act="decline">Decline</button><button class="soft brand" data-act="grant">Give ${e.days} more day${plural}</button></div>
+        </div>` }
+      : { key: "ext" + e.id + "p", html: `<div class="card warn">
+          <h4>${icon("hourglass")}You asked for ${e.days} more day${plural}</h4>
+          <div class="quote">"${escapeHtml(e.reason)}"</div>
+          <div class="wait warn"><span class="pulse"></span>Waiting on Chinedu · ${l} left to answer</div>
+          <p class="cardnote">If Chinedu doesn't answer by ${fmtWhen(e.answerDueAt)}, it's granted automatically.</p>
+        </div>` };
+  }
+  const word = { granted: "granted", autoGranted: "granted automatically (no answer in 48 h)", declined: "declined" }[e.status];
+  const tone = e.status === "declined" ? "" : "ok";
+  return { key: "ext" + e.id + e.status, html: `<div class="card ${tone}">
+    <h4>${icon(e.status === "declined" ? "alert" : "check")}Extension ${word}</h4>
+    <p>${e.status === "declined" ? `The delivery date stays ${fmtDay(S.deliverByAt)}.` : `+${e.days} day${plural}. The new delivery date is ${fmtDay(S.deliverByAt)}.`}</p>
+  </div>` };
+}
+function overdueCard(forClient) {
+  if (!S.overdueFlaggedAt || S.status !== "inProgress") return null;
+  return { key: "overdue", html: `<div class="card bad">
+    <h4>${icon("alert")}3 days past the delivery date</h4>
+    <p>${forClient
+      ? "Nothing has been delivered and no extension was agreed. We've recorded this on the job. Cancelling for a refund of the budget isn't available in the app yet."
+      : "Nothing has been delivered and no extension was agreed, and Chinedu has been told. Deliver as soon as you can."}</p>
+  </div>` };
+}
+function changeCard(forClient) {
+  if (S.status !== "changesRequested") return null;
+  const c = S.changeRequests[S.changeRequests.length - 1];
+  const l = left(S.changeDueAt - now());
+  const steps = [1, 2].map((r) => `<i class="${r < c.round ? "done" : r === c.round ? "on" : ""}"></i>`).join("");
+  return { key: "chg" + c.round, html: `<div class="card warn">
+    <div class="row"><h4>${icon("edit")}${forClient ? "You asked for changes" : "Chinedu asked for changes"}</h4><span class="pill warn">Round ${c.round} of 2</span></div>
+    <div class="steps">${steps}</div>
+    <div class="quote">"${escapeHtml(c.reason)}"</div>
+    <div class="wait warn"><span class="pulse"></span>${forClient ? `Ada resubmits within ${l}` : `Resubmit within ${l}`}</div>
+    <p class="cardnote">${forClient ? "If Ada doesn't resubmit in time, the job goes to a King Domain admin." : `If you don't resubmit by ${fmtWhen(S.changeDueAt)}, the job goes to a King Domain admin.`}${c.round === 2 ? " This is the last round." : ""}</p>
+  </div>` };
+}
+let viewVersion = null;
+function deliveryCard(forClient) {
+  if (!S.deliveries.length) return null;
+  const v = viewVersion && S.deliveries[viewVersion - 1] ? S.deliveries[viewVersion - 1] : S.deliveries[S.deliveries.length - 1];
+  const chips = S.deliveries.map((d) => `<button class="chip" data-ver="${d.version}" aria-pressed="${d.version === v.version}">Version ${d.version} · ${fmtDay(d.at)}</button>`).join("");
+  return { key: "deliv", html: `<div class="card">
+    <div class="row"><h4>${icon("file")}${forClient ? "Delivered work" : "What you delivered"}</h4><span class="pill">${S.deliveries.length} version${S.deliveries.length > 1 ? "s" : ""}</span></div>
+    <div class="vers">${chips}</div>
+    <div class="preview"><span class="photo" data-img="${v.img}" data-size="regular"></span></div>
+    <div class="quote" style="margin-top:10px">${escapeHtml(v.note)}</div>
+    <p class="cardnote">${v.file} · versions are kept, never overwritten</p>
+  </div>` };
+}
+function disputeCard() {
+  if (S.status !== "disputed") return null;
+  const why = S.escalated.reason === "talent_missed_change_deadline"
+    ? "The requested changes weren't resubmitted in time."
+    : "Chinedu was still not satisfied after the last round of changes.";
+  return { key: "disp", html: `<div class="card bad">
+    <h4>${icon("scale")}With a King Domain admin</h4>
+    <p>${why} An admin will look at every version and change request and decide. Nothing is paid out or refunded until then.</p>
+    ${S.escalated.note ? `<div class="quote">"${escapeHtml(S.escalated.note)}"</div>` : ""}
+  </div>` };
+}
+function paidCard(forClient) {
+  if (S.status !== "approved") return null;
+  return { key: "paid", html: `<div class="card ok"><h4>${icon("coins")}${forClient ? `You approved. ${BUDGET} sent to Ada` : `You've been paid ${BUDGET}`}</h4><p>${forClient ? "Thanks for paying through King Domain." : "To GTBank ••6789. Transfers can take a little while to show."}</p></div>` };
+}
+
+function talentCards() {
+  return [
+    S.status === "inProgress" ? dueCard(false) : null,
+    paidCard(false), disputeCard(), changeCard(false),
+    S.status === "inProgress" ? overdueCard(false) : null,
+    S.status === "inProgress" ? extCard(false) : null,
+    S.status === "submitted" ? { key: "waitreview", html: `<div class="card brand"><h4>${icon("clock")}Waiting for Chinedu to review</h4><p>Chinedu can approve and pay, or ask for changes (${RULES.maxChangeRounds - S.changeRounds} round${RULES.maxChangeRounds - S.changeRounds === 1 ? "" : "s"} left).</p></div>` } : null,
+    deliveryCard(false),
+  ].filter(Boolean);
+}
+function clientCards() {
+  return [
+    S.status === "inProgress" ? dueCard(true) : null,
+    paidCard(true), disputeCard(),
+    S.status === "inProgress" ? overdueCard(true) : null,
+    S.status === "inProgress" ? extCard(true) : null,
+    changeCard(true),
+    deliveryCard(true),
+  ].filter(Boolean);
+}
+function talentCta() {
+  if (S.status === "inProgress") {
+    const [ok, label] = canAskExtension();
+    return `<button class="cta" data-act="deliver">${icon("upload")}Deliver the work</button>
+      <button class="ghost" data-act="extend" ${ok ? "" : "disabled"}>${label}</button>`;
+  }
+  if (S.status === "changesRequested") return `<button class="cta" data-act="deliver">${icon("upload")}Deliver version ${S.deliveries.length + 1}</button><div class="hint">Your earlier versions stay on the record.</div>`;
+  return "";
+}
+function clientCta() {
+  if (S.status !== "submitted") return "";
+  const last = S.changeRounds >= RULES.maxChangeRounds;
+  return `<button class="cta" data-act="approve">Approve and pay ${BUDGET}</button>
+    <button class="ghost" data-act="changes">${last ? "Still not right? Ask an admin" : `Ask for changes · ${RULES.maxChangeRounds - S.changeRounds} round${RULES.maxChangeRounds - S.changeRounds === 1 ? "" : "s"} left`}</button>`;
+}
+
+const seen = { talent: new Set(), client: new Set() };
+function renderPhone(id, cards, cta) {
+  const ph = document.getElementById(id);
+  const scr = $(".scr", ph);
+  const top = scr.scrollTop;
+  const keys = new Set(cards.map((c) => c.key));
+  scr.innerHTML = head(STATUS_PILL[S.status]) + cards.map((c) => (seen[id].has(c.key) ? c.html : c.html.replace('class="card', 'class="rise card'))).join("");
+  seen[id] = keys;
+  scr.scrollTop = top;
+  $(".ctabar", ph).innerHTML = cta;
+  $(".ctabar", ph).hidden = !cta;
+  ph.querySelectorAll(".photo[data-img]").forEach((el) => hydrate(el, el.dataset.img, el.dataset.size || "small"));
+}
+function render() {
+  $("#simNow").textContent = fmtWhen(now());
+  $("#simOffset").textContent = offset ? `+${Math.round(offset / HOUR)} hours ahead of real time` : "Real time";
+  renderPhone("talent", talentCards(), talentCta());
+  renderPhone("client", clientCards(), clientCta());
+  renderCredits();
+}
+function renderLog() {
+  const el = $("#log");
+  el.innerHTML = S.log.length
+    ? S.log.slice(0, 40).map((e) => `<div class="e ${e.kind}">${icon(e.kind === "mail" ? "mail" : "dot")}<div>${escapeHtml(e.text)}<small>${escapeHtml(e.sub || "")}${e.sub ? " · " : ""}${fmtWhen(e.at)}</small></div></div>`).join("")
+    : `<div class="empty">Nothing yet. Ada has ${left(S.deliverByAt - now())} to deliver.</div>`;
+}
+function renderCredits() {
+  if (!IMG) return;
+  const list = [...used.values()].map((p) => `<a href="${p.photoUrl}" target="_blank" rel="noopener">${p.by}</a>`).join(", ");
+  $("#credits").innerHTML = `Example photos from <a href="${IMG.unsplash}" target="_blank" rel="noopener">Unsplash</a> by ${list}. People and work are examples, not King Domain users.`;
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
+/* ── Toasts ───────────────────────────────────────────────────── */
+function toast(id, msg, kind = "ok") {
+  const box = $(`#${id} .toasts`);
+  box.innerHTML = "";
+  const el = document.createElement("div");
+  el.className = "toast " + kind;
+  el.setAttribute("role", "status");
+  el.innerHTML = `<span class="ic">${icon(kind === "ok" ? "check" : kind === "warn" ? "alert" : "dot", "sm")}</span><span>${escapeHtml(msg)}</span>`;
+  box.appendChild(el);
+  setTimeout(() => { el.classList.add("out"); setTimeout(() => el.remove(), 260); }, 3400);
+}
+
+/* ── Sheets ───────────────────────────────────────────────────── */
+function openSheet(id, html, mount) {
+  const ph = document.getElementById(id);
+  $(".sheet .body", ph).innerHTML = html;
+  $(".scrim", ph).classList.add("open");
+  $(".sheet", ph).classList.add("open");
+  mount?.($(".sheet", ph));
+}
+function closeSheet(id) {
+  const ph = document.getElementById(id);
+  $(".scrim", ph).classList.remove("open");
+  $(".sheet", ph).classList.remove("open");
+}
+for (const id of ["talent", "client"]) $(`#${id} .scrim`).addEventListener("click", () => closeSheet(id));
+
+// A reason field with a live count; returns a getter. Copy states what's needed, not a scold.
+function reasonField(sheet, onChange) {
+  const ta = $("textarea", sheet), count = $(".count", sheet);
+  const update = () => {
+    const n = ta.value.trim().length;
+    const ok = n >= RULES.reason.min && n <= RULES.reason.max;
+    count.innerHTML = n && n < RULES.reason.min
+      ? `<span class="e">${RULES.reason.min - n} more character${RULES.reason.min - n === 1 ? "" : "s"}</span><span>${n}/${RULES.reason.max}</span>`
+      : `<span></span><span>${n}/${RULES.reason.max}</span>`;
+    ta.classList.toggle("err", n > 0 && !ok);
+    onChange(ok);
+  };
+  ta.addEventListener("input", update);
+  update();
+  return () => ta.value.trim();
+}
+// Button: idle -> spinner (held long enough to read) -> action.
+function busy(btn, label, then) {
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spin"></span>${label}`;
+  setTimeout(then, 900);
+}
+
+function extensionSheet() {
+  const max = RULES.deliveryDays;
+  let days = 2;
+  openSheet("talent", `
+    <h3>Ask for more time</h3>
+    <p class="lead">Chinedu has 48 hours to answer. If they don't, it's granted automatically. You have ${RULES.maxExtensionRequests - S.extensionsUsed} request${RULES.maxExtensionRequests - S.extensionsUsed > 1 ? "s" : ""} left on this job, and a declined one counts.</p>
+    <div class="field"><label>Extra days (up to ${max}, the job's original length)</label>
+      <div class="stepper"><button type="button" data-d="-1" aria-label="Fewer days">−</button><b class="num" id="xdays"></b><button type="button" data-d="1" aria-label="More days">+</button></div></div>
+    <div class="calc">${icon("cal", "sm")}<span id="xcalc"></span></div>
+    <div class="field"><label for="xreason">Why do you need it?</label><textarea id="xreason" maxlength="1000" placeholder="e.g. The menu photos I need arrived two days late."></textarea><div class="count"></div></div>
+    <button class="cta" id="xsend" disabled>Send request</button>
+    <button class="ghost" id="xcancel">Cancel</button>`, (sh) => {
+    const draw = () => {
+      $("#xdays", sh).textContent = `${days} day${days > 1 ? "s" : ""}`;
+      $("#xcalc", sh).textContent = `New date if granted: ${fmtDay(S.deliverByAt + days * DAY)} (now ${fmtDay(S.deliverByAt)})`;
+      sh.querySelector('[data-d="-1"]').disabled = days <= 1;
+      sh.querySelector('[data-d="1"]').disabled = days >= max;
+    };
+    sh.querySelectorAll("[data-d]").forEach((b) => b.addEventListener("click", () => { days = Math.min(max, Math.max(1, days + Number(b.dataset.d))); draw(); }));
+    draw();
+    const send = $("#xsend", sh);
+    const reason = reasonField(sh, (ok) => (send.disabled = !ok));
+    send.addEventListener("click", () => busy(send, "Sending", () => { requestExtension(days, reason()); closeSheet("talent"); render(); toast("talent", "Request sent to Chinedu", "ok"); }));
+    $("#xcancel", sh).addEventListener("click", () => closeSheet("talent"));
+  });
+}
+function deliverSheet() {
+  const v = S.deliveries.length + 1;
+  openSheet("talent", `
+    <h3>${v > 1 ? `Deliver version ${v}` : "Deliver the work"}</h3>
+    <p class="lead">${v > 1 ? "Version " + (v - 1) + " stays on the record. Chinedu reviews the new one." : "Chinedu reviews it, then approves and pays, or asks for changes."}</p>
+    <div class="field"><label>File</label><div class="file">${icon("file")}<div><b>mamas-kitchen-brand-kit-v${v}.pdf</b><small>4.2 MB · picked</small></div><span class="pill ok">${icon("check", "sm")}Ready</span></div></div>
+    <div class="field"><label for="dnote">Note for Chinedu</label><textarea id="dnote" maxlength="1000">${v > 1 ? "Changed the bottle label colours as you asked and added the one-colour logo for stamps." : "Logo on the takeaway box, the colour palette and both logo versions."}</textarea><div class="count"></div></div>
+    <button class="cta" id="dsend">Deliver</button>
+    <button class="ghost" id="dcancel">Cancel</button>`, (sh) => {
+    const send = $("#dsend", sh);
+    const note = reasonField(sh, (ok) => (send.disabled = !ok));
+    send.addEventListener("click", () => busy(send, "Uploading", () => { deliver(note()); viewVersion = null; closeSheet("talent"); render(); toast("talent", `Version ${S.deliveries.length} delivered`, "ok"); }));
+    $("#dcancel", sh).addEventListener("click", () => closeSheet("talent"));
+  });
+}
+function changesSheet() {
+  const last = S.changeRounds >= RULES.maxChangeRounds;
+  openSheet("client", last ? `
+    <h3>Ask a King Domain admin</h3>
+    <p class="lead">You've used both change rounds. An admin will look at every version and your requests, then decide. They can split the payment if the work is partly done. Nothing is paid out until then.</p>
+    <div class="field"><label for="creason">What's still wrong?</label><textarea id="creason" maxlength="1000"></textarea><div class="count"></div></div>
+    <button class="cta" id="csend" disabled>Send to an admin</button>
+    <button class="ghost" id="ccancel">Cancel</button>` : `
+    <h3>Ask for changes</h3>
+    <p class="lead">This is round ${S.changeRounds + 1} of 2. Ada gets 3 days to resubmit.${S.changeRounds + 1 === 2 ? " After this round, if it's still not right, an admin decides." : ""}</p>
+    <div class="field"><label for="creason">What needs changing?</label><textarea id="creason" maxlength="1000" placeholder="Be specific: what, where, and what you expected."></textarea><div class="count"></div></div>
+    <button class="cta" id="csend" disabled>Send to Ada</button>
+    <button class="ghost" id="ccancel">Cancel</button>`, (sh) => {
+    const send = $("#csend", sh);
+    const reason = reasonField(sh, (ok) => (send.disabled = !ok));
+    send.addEventListener("click", () => busy(send, "Sending", () => { requestChanges(reason()); closeSheet("client"); render(); toast("client", last ? "Sent to an admin" : "Changes requested", "ok"); }));
+    $("#ccancel", sh).addEventListener("click", () => closeSheet("client"));
+  });
+}
+function declineSheet() {
+  const e = pendingExt();
+  const leftReq = RULES.maxExtensionRequests - S.extensionsUsed;
+  openSheet("client", `
+    <h3>Decline the extension?</h3>
+    <p class="lead">The delivery date stays ${fmtDay(S.deliverByAt)}. Ada has ${leftReq} request${leftReq === 1 ? "" : "s"} left on this job.</p>
+    <div class="quote">"${escapeHtml(e.reason)}"</div>
+    <button class="cta" id="dno" style="background:var(--s3);box-shadow:none;color:var(--text)">Decline</button>
+    <button class="ghost" id="dyes">Give ${e.days} more day${e.days > 1 ? "s" : ""} instead</button>`, (sh) => {
+    $("#dno", sh).addEventListener("click", (ev) => busy(ev.currentTarget, "Declining", () => { answerExtension(false); closeSheet("client"); render(); }));
+    $("#dyes", sh).addEventListener("click", () => { answerExtension(true); closeSheet("client"); render(); });
+  });
+}
+
+/* ── Wiring ───────────────────────────────────────────────────── */
+document.getElementById("talent").addEventListener("click", (e) => {
+  const a = e.target.closest("[data-act],[data-ver]");
+  if (!a || a.disabled) return;
+  if (a.dataset.ver) { viewVersion = Number(a.dataset.ver); return render(); }
+  if (a.dataset.act === "extend") extensionSheet();
+  if (a.dataset.act === "deliver") deliverSheet();
+});
+document.getElementById("client").addEventListener("click", (e) => {
+  const a = e.target.closest("[data-act],[data-ver]");
+  if (!a || a.disabled) return;
+  if (a.dataset.ver) { viewVersion = Number(a.dataset.ver); return render(); }
+  const act = a.dataset.act;
+  if (act === "grant") busy(a, "Granting", () => { answerExtension(true); render(); toast("client", "Extension granted", "ok"); });
+  if (act === "decline") declineSheet();
+  if (act === "changes") changesSheet();
+  if (act === "approve") busy(a, "Paying Ada", () => { approve(); render(); toast("client", `Approved · ${BUDGET} on its way to Ada`, "ok"); });
+});
+document.querySelectorAll("[data-skip]").forEach((b) => b.addEventListener("click", () => {
+  // Walk forward the way the server does (a tick every few minutes), so reminders
+  // due on the way are sent instead of skipped as stale.
+  const target = offset + Number(b.dataset.skip) * HOUR;
+  while (offset < target) { offset = Math.min(target, offset + 15 * MIN); sweep(); }
+  render();
+}));
+$("#reset").addEventListener("click", () => { S = freshState(); offset = 0; viewVersion = null; seen.talent.clear(); seen.client.clear(); render(); renderLog(); closeSheet("talent"); closeSheet("client"); });
+
+/* ── Boot ─────────────────────────────────────────────────────── */
+S = freshState();
+document.querySelectorAll(".who-head .photo").forEach((el) => hydrate(el));
+render();
+renderLog();
+setInterval(() => { sweep(); render(); }, 30e3);
+</script>
+</body>
+</html>

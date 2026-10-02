@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Design Prototypes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;800&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
+<style>
+/* Brand v1 (Royal Violet). The reference the app is built against. */
+:root{color-scheme:dark;--page:#07050D;--s1:#151121;--s2:#1D182E;--text:#F2EFFA;--text2:#ABA4C3;--text3:#716A8B;--accent:#A991FF;--soft:rgba(140,108,255,.16)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--page);color:var(--text);font-family:'Public Sans',system-ui,sans-serif;line-height:1.5;padding-inline:20px;padding-block:56px}
+main{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--text3)}
+h1{font-size:34px;font-weight:800;letter-spacing:-1px;line-height:1.1;margin-top:8px;text-wrap:balance}
+p{color:var(--text2);max-width:60ch}
+.list{display:flex;flex-direction:column;gap:10px}
+a.item{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 20px;border-radius:20px;background:var(--s1);color:var(--text);text-decoration:none;transition:background-color .25s,transform .15s}
+a.item:hover{background:var(--s2)}
+a.item:active{transform:scale(.99)}
+a.item:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a.item b{display:block;font-size:16px}
+a.item small{font-size:13px;color:var(--text2)}
+.go{flex:0 0 auto;padding:6px 12px;border-radius:999px;background:var(--soft);color:var(--accent);font-size:13px;font-weight:600}
+.note{font-size:13px;color:var(--text3)}
+</style>
+</head>
+<body>
+<main>
+  <div>
+    <span class="eyebrow">Student talent marketplace</span>
+    <h1>Design prototypes</h1>
+  </div>
+  <p>The reference the mobile app is built against. If a screen in the app drifts from these, these win. Example people, work and numbers throughout; photos from Unsplash, credited on each page.</p>
+  <div class="list">
+    <a class="item" href="stage2-contract-flow.html"><div><b>Contract flow</b><small>Talent and client on one live contract: deadlines, extensions, change rounds, admin escalation, reminders</small></div><span class="go">Open</span></a>
+    <a class="item" href="palette-explorer.html"><div><b>Palette explorer</b><small>The chosen look (Royal Violet, Public Sans) across six screens, with the alternatives for comparison</small></div><span class="go">Open</span></a>
+  </div>
+  <p class="note">Best on a desktop browser; each page also works at phone width.</p>
+</main>
+</body>
+</html>
