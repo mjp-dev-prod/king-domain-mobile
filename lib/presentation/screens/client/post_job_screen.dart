@@ -16,7 +16,7 @@ import '../../widgets/kit/kd_card.dart';
 import '../../widgets/kit/kd_fields.dart';
 import '../../widgets/kit/kd_layout.dart';
 import '../../widgets/kit/kd_toast.dart';
-import '../../widgets/kit/pressable.dart';
+import '../../widgets/kit/kd_chip.dart';
 
 /// C1 — Post a job (the client's "Post" tab). Category must be one of
 /// kSkillCategories, the same list a talent verifies proof against, since
@@ -128,7 +128,7 @@ class _PostJobScreenState extends ConsumerState<PostJobScreen> {
           runSpacing: 8,
           children: [
             for (final c in kSkillCategories)
-              _Chip(label: c, selected: _category == c, onTap: () => setState(() => _category = c)),
+              KdChoiceChip(label: c, selected: _category == c, onTap: () => setState(() => _category = c)),
           ],
         ),
         const SizedBox(height: 6),
@@ -186,7 +186,7 @@ class _PostJobScreenState extends ConsumerState<PostJobScreen> {
                 runSpacing: 8,
                 children: [
                   for (final d in const [3, 5, 7, 14])
-                    _Chip(label: '$d days', selected: _deliveryDays == d, onTap: () => setState(() => _deliveryDays = d)),
+                    KdChoiceChip(label: '$d days', selected: _deliveryDays == d, onTap: () => setState(() => _deliveryDays = d)),
                 ],
               ),
               const SizedBox(height: 12),
@@ -226,51 +226,4 @@ class _Label extends StatelessWidget {
           if (error != null) Text(error!, style: AppTextStyles.hint.copyWith(color: AppColors.bad)),
         ],
       );
-}
-
-/// A selectable chip with a real selected state (violet-soft fill, violet
-/// text, a check) and a spring pop on selection.
-class _Chip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  const _Chip({required this.label, required this.selected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final reduce = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    return Pressable(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      semanticLabel: label,
-      child: AnimatedContainer(
-        duration: reduce ? Duration.zero : AppMotion.state,
-        curve: AppMotion.spring,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primarySoft : AppColors.surface1,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusPill),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (selected) ...[
-              const Icon(Icons.check_rounded, size: 16, color: AppColors.primaryText),
-              const SizedBox(width: 6),
-            ],
-            Text(
-              label,
-              style: AppTextStyles.bodySmall.copyWith(
-                fontSize: 13,
-                color: selected ? AppColors.primaryText : AppColors.text2,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

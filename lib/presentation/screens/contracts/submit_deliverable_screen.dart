@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
-import '../../../core/constants/app_motion.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/formatting/deadline.dart';
 import '../../../data/api_client.dart';
@@ -15,9 +14,9 @@ import '../../widgets/contract/contract_parts.dart';
 import '../../widgets/kit/kd_button.dart';
 import '../../widgets/kit/kd_card.dart';
 import '../../widgets/kit/kd_fields.dart';
+import '../../widgets/kit/kd_image_pick.dart';
 import '../../widgets/kit/kd_layout.dart';
 import '../../widgets/kit/kd_toast.dart';
-import '../../widgets/kit/pressable.dart';
 import '../../widgets/kit/status_pill.dart';
 
 /// Talent delivers (or re-delivers) the work. A delivery is a note for the
@@ -58,11 +57,6 @@ class _SubmitDeliverableScreenState extends ConsumerState<SubmitDeliverableScree
   String get _linkText => _link.text.trim();
   bool get _linkBad => _linkText.isNotEmpty && !SubmitDeliverableScreen.isWebLink(_linkText);
   bool get _hasWork => _file != null || (_linkText.isNotEmpty && !_linkBad);
-
-  Future<void> _pick() async {
-    final file = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 2400, imageQuality: 90);
-    if (file != null && mounted) setState(() => _file = file);
-  }
 
   Future<void> _submit(Job job) async {
     final file = _file;
@@ -132,7 +126,7 @@ class _SubmitDeliverableScreenState extends ConsumerState<SubmitDeliverableScree
               const SizedBox(height: 18),
               Text('THE WORK', style: AppTextStyles.label),
               const SizedBox(height: 8),
-              _FilePicker(file: _file, onPick: _pick, onClear: () => setState(() => _file = null)),
+              ImagePickField(file: _file, onChanged: (f) => setState(() => _file = f)),
               const SizedBox(height: 10),
               TextField(
                 controller: _link,
@@ -203,90 +197,4 @@ class _SubmitDeliverableScreenState extends ConsumerState<SubmitDeliverableScree
       ),
     );
   }
-}
-
-class _FilePicker extends StatelessWidget {
-  final XFile? file;
-  final VoidCallback onPick;
-  final VoidCallback onClear;
-  const _FilePicker({required this.file, required this.onPick, required this.onClear});
-
-  @override
-  Widget build(BuildContext context) {
-    final f = file;
-    return AnimatedSwitcher(
-      duration: AppMotion.state,
-      child: f == null
-          ? Pressable(
-              key: const ValueKey('empty'),
-              onTap: onPick,
-              semanticLabel: 'Attach an image',
-              child: Container(
-                height: 120,
-                decoration: BoxDecoration(color: AppColors.surface1, borderRadius: BorderRadius.circular(AppDimensions.radiusLg)),
-                alignment: Alignment.center,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.add_photo_alternate_outlined, color: AppColors.primaryText, size: 28),
-                    const SizedBox(height: 8),
-                    Text('Attach an image', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
-                    Text('PNG or JPG, up to 10 MB', style: AppTextStyles.hint),
-                  ],
-                ),
-              ),
-            )
-          : ClipRRect(
-              key: ValueKey(f.path),
-              borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
-              child: Stack(
-                children: [
-                  AspectRatio(
-                    aspectRatio: 4 / 3,
-                    child: Image.file(File(f.path), fit: BoxFit.cover, cacheWidth: 900, width: double.infinity),
-                  ),
-                  Positioned(
-                    left: 10,
-                    right: 10,
-                    bottom: 10,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(color: AppColors.surface3, borderRadius: BorderRadius.circular(AppDimensions.radiusPill)),
-                            child: Text(f.name, style: AppTextStyles.hint.copyWith(color: AppColors.text), maxLines: 1, overflow: TextOverflow.ellipsis),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        _ChipButton(icon: Icons.swap_horiz_rounded, label: 'Replace', onTap: onPick),
-                        const SizedBox(width: 6),
-                        _ChipButton(icon: Icons.close_rounded, label: 'Remove', onTap: onClear),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-    );
-  }
-}
-
-class _ChipButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  const _ChipButton({required this.icon, required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => Pressable(
-        onTap: onTap,
-        semanticLabel: label,
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: const BoxDecoration(color: AppColors.surface3, shape: BoxShape.circle),
-          child: Icon(icon, size: 18, color: AppColors.text),
-        ),
-      );
 }

@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_dimensions.dart';
-import '../../../core/constants/app_text_styles.dart';
 import '../../../data/api_client.dart';
 import '../../providers/auth_provider.dart';
-import '../../widgets/common/arrow_forward_button.dart';
-import '../../widgets/common/king_text_field.dart';
-import '../../widgets/common/section_label.dart';
 import '../../root_router.dart';
+import '../../widgets/contract/contract_parts.dart';
+import '../../widgets/kit/kd_auth.dart';
+import '../../widgets/kit/kd_button.dart';
+import '../../widgets/kit/kd_card.dart';
+import '../../widgets/kit/kd_toast.dart';
 import 'forgot_password_screen.dart';
 import 'sign_up_screen.dart';
 
-/// Returning-user path. Real backend now (king-domain-backend's
-/// /users/login — Sprint 1/4).
+/// Returning-user path (POST /users/login).
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -23,152 +21,93 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _submitting = false;
+  final _email = TextEditingController();
+  final _password = TextEditingController();
   String? _error;
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
+    _email.dispose();
+    _password.dispose();
     super.dispose();
   }
 
-  Future<void> _continue() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() {
-      _submitting = true;
-      _error = null;
-    });
-
+  Future<void> _signIn() async {
+    if (!_formKey.currentState!.validate()) throw const ShownError();
+    setState(() => _error = null);
     try {
-      await ref.read(authProvider.notifier).login(
-            email: _emailController.text.trim(),
-            password: _passwordController.text,
-          );
-      if (!mounted) return;
-
-      // RootRouter now shows the app, or Verify email if it isn't verified
-      // yet. Never push the app from here: it must sit on RootRouter, or
-      // signing out later leaves the user stranded inside it.
-      RootRouter.popToRoot(context);
+      await ref.read(authProvider.notifier).login(email: _email.text.trim(), password: _password.text);
     } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _submitting = false;
-        _error = e.message;
-      });
+      if (mounted) setState(() => _error = e.message);
+      throw const ShownError();
     }
+    if (!mounted) return;
+    // RootRouter now shows the app, or Verify email if it isn't verified
+    // yet. Never push the app from here: it must sit on RootRouter, or
+    // signing out later leaves the user stranded inside it.
+    RootRouter.popToRoot(context);
   }
 
   Future<void> _forgotPassword() async {
     final reset = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => ForgotPasswordScreen(initialEmail: _emailController.text.trim()),
-      ),
+      MaterialPageRoute(builder: (_) => ForgotPasswordScreen(initialEmail: _email.text.trim())),
     );
     if (reset != true || !mounted) return;
-    _passwordController.clear();
+    _password.clear();
     setState(() => _error = null);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Password reset. Sign in with your new password.')),
-    );
+    KdToast.show(context, 'Password reset. Sign in with your new password.');
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-            AppDimensions.lg,
-            AppDimensions.sm,
-            AppDimensions.lg,
-            AppDimensions.lg,
-          ),
-          child: Form(
-            key: _formKey,
+    return AuthLayout(
+      eyebrow: 'Welcome back',
+      title: 'Sign in to your account',
+      actions: [
+        KdButton(label: 'Sign in', busyLabel: 'Signing in', onPressed: _signIn),
+        AuthLink(
+          lead: 'Don\'t have an account? ',
+          action: 'Sign up',
+          onTap: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SignUpScreen())),
+        ),
+      ],
+      children: [
+        Form(
+          key: _formKey,
+          child: AutofillGroup(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SectionLabel('Welcome back'),
-                const SizedBox(height: AppDimensions.sm),
-                Text('Sign in', style: AppTextStyles.h1),
-                const SizedBox(height: AppDimensions.xxl),
-                KingTextField(
-                  controller: _emailController,
+                KdTextField(
+                  controller: _email,
                   label: 'Email',
                   keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || !value.contains('@')) {
-                      return 'Enter a valid email address.';
-                    }
-                    return null;
-                  },
+                  autofillHints: const [AutofillHints.email],
+                  textInputAction: TextInputAction.next,
+                  validator: (v) => v == null || !v.contains('@') ? 'Enter a valid email address.' : null,
                 ),
-                const SizedBox(height: AppDimensions.lg),
-                KingTextField(
-                  controller: _passwordController,
+                const SizedBox(height: 14),
+                KdTextField(
+                  controller: _password,
                   label: 'Password',
-                  hintText: 'Enter your password',
                   isPassword: true,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Enter your password.';
-                    }
-                    return null;
-                  },
-                ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: _submitting ? null : _forgotPassword,
-                    child: const Text('Forgot password?'),
-                  ),
-                ),
-                if (_error != null) ...[
-                  const SizedBox(height: AppDimensions.md),
-                  Text(
-                    _error!,
-                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.openPending),
-                  ),
-                ],
-                const SizedBox(height: AppDimensions.xl),
-                ArrowForwardButton(
-                  onPressed: _submitting ? null : _continue,
-                  loading: _submitting,
-                ),
-                const SizedBox(height: AppDimensions.lg),
-                Center(
-                  child: GestureDetector(
-                    onTap: () => Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (_) => const SignUpScreen()),
-                    ),
-                    child: Text.rich(
-                      TextSpan(
-                        style: AppTextStyles.bodySmall,
-                        children: [
-                          const TextSpan(text: "Don't have an account? "),
-                          TextSpan(
-                            text: 'Sign up',
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.gold,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  autofillHints: const [AutofillHints.password],
+                  textInputAction: TextInputAction.done,
+                  validator: (v) => v == null || v.isEmpty ? 'Enter your password.' : null,
                 ),
               ],
             ),
           ),
         ),
-      ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(onPressed: _forgotPassword, child: const Text('Forgot password?')),
+        ),
+        if (_error != null) ...[
+          const SizedBox(height: 4),
+          NoticeCard(tone: KdTone.bad, icon: Icons.error_outline_rounded, title: 'Couldn\'t sign in', body: _error),
+        ],
+      ],
     );
   }
 }

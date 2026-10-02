@@ -22,7 +22,7 @@ class EnvironmentBanner extends StatelessWidget {
     return Column(
       children: [
         Material(
-          color: AppColors.openPending,
+          color: AppColors.warn,
           child: SafeArea(
             bottom: false,
             child: SizedBox(
@@ -31,7 +31,7 @@ class EnvironmentBanner extends StatelessWidget {
               child: Center(
                 child: Text(
                   'TEST SERVER · $host',
-                  style: AppTextStyles.label.copyWith(color: AppColors.ink, fontSize: 10, letterSpacing: 1),
+                  style: AppTextStyles.label.copyWith(color: AppColors.ground, fontSize: 10, letterSpacing: 1),
                 ),
               ),
             ),

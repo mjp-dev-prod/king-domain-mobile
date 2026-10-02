@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -37,11 +36,12 @@ void main() {
     // off-screen), so ensureVisible — not scrollUntilVisible, which is for
     // not-yet-built lazy-list items and needs an unambiguous single
     // Scrollable — is the right call here.
-    await tester.ensureVisible(find.byIcon(Icons.arrow_forward));
+    await tester.ensureVisible(find.text('Create account'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.arrow_forward));
+    await tester.tap(find.text('Create account'));
     await tester.pump();
 
     expect(find.text('Enter a valid email address.'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 1)); // the button's minimum spinner hold
   });
 }

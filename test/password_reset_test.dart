@@ -63,7 +63,7 @@ Future<_FakeAuth> _toResetScreen(WidgetTester tester, {String? resetError}) asyn
   ));
   await tester.tap(find.text('open'));
   await tester.pumpAndSettle();
-  await tester.tap(find.byIcon(Icons.arrow_forward));
+  await tester.tap(find.text('Send code'));
   await tester.pumpAndSettle();
   return auth;
 }
@@ -72,7 +72,7 @@ Future<void> _fill(WidgetTester tester, {required String code, required String p
   await tester.enterText(find.widgetWithText(TextFormField, '6-digit code'), code);
   await tester.enterText(find.widgetWithText(TextFormField, 'New password'), password);
   await tester.enterText(find.widgetWithText(TextFormField, 'Confirm new password'), confirm);
-  final button = find.widgetWithText(ElevatedButton, 'Reset password');
+  final button = find.text('Reset password');
   await tester.ensureVisible(button);
   await tester.tap(button);
   await tester.pumpAndSettle();
@@ -127,5 +127,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(auth.requested, ['ada@uni.edu.ng', 'ada@uni.edu.ng']);
+    await tester.pump(const Duration(seconds: 6)); // let the toast time out
+    await tester.pumpAndSettle();
   });
 }

@@ -39,21 +39,4 @@ class AppColors {
   /// Errors, destructive actions, missed deadlines.
   static const Color bad = Color(0xFFF87171);
   static const Color badSoft = Color(0x21F87171);
-
-  // ── Legacy brand v0 names, aliased so every screen picks up v1 at once.
-  // A screen moves to the names above when it is rebuilt; delete these once
-  // nothing in lib/ uses them any more.
-  static const Color ink = ground;
-  static const Color ink2 = surface1;
-  static const Color ink3 = surface3; // v0 card outlines; v1 has none
-  static const Color paper = text;
-  static const Color paper2 = text2;
-  static const Color gold = primary; // actions; amounts should use money
-  static const Color goldSoft = primaryText;
-  static const Color signalGreen = ok;
-  static const Color greenSoft = ok;
-  static const Color slate = text2;
-  static const Color slateDim = text3;
-  static const Color openPending = warn; // errors should use bad
-  static const Color settled = ok;
 }

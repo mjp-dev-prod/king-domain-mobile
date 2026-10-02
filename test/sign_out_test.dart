@@ -13,7 +13,6 @@ import 'package:king_domain/presentation/providers/talent_profile_provider.dart'
 import 'package:king_domain/presentation/root_router.dart';
 import 'package:king_domain/presentation/screens/shell/app_shell.dart';
 import 'package:king_domain/presentation/screens/onboarding/welcome_screen.dart';
-import 'package:king_domain/presentation/widgets/common/arrow_forward_button.dart';
 
 class _Auth extends AuthNotifier {
   @override
@@ -65,7 +64,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).at(0), 'ada@uni.edu.ng');
     await tester.enterText(find.byType(TextFormField).at(1), 'correct horse battery');
-    await tester.tap(find.descendant(of: find.byType(ArrowForwardButton), matching: find.byIcon(Icons.arrow_forward)));
+    await tester.tap(find.text('Sign in'));
     await tester.pumpAndSettle();
     expect(find.byType(AppShell), findsOneWidget, reason: 'signed in');
     expect(find.byType(WelcomeScreen), findsNothing);
