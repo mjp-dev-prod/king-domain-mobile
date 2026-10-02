@@ -41,5 +41,16 @@ So surfaces 1 and 2 must not present an image *as* proof:
 
 ## Prototype images (not the real app)
 
-Prototypes need believable stand-ins for surfaces 1–4. Chosen sources and why are recorded in
-the prototype itself; any stand-in must be labelled as example content.
+Prototypes use hand-picked example photos from the **Unsplash API** (decided 2026-10-02; Picsum
+rejected as generic stock, randomuser.me rejected because its faces mostly aren't West African).
+
+- `prototypes/tools/fetch-unsplash.js` fetches a pool once; the key lives in the git-ignored
+  `.env.prototype`. Output holds no key.
+- Picked by eye from a contact sheet, locked by photo id in `prototypes/data/example-images.js`.
+  Excluded: children, real brand names (a student must never appear to have delivered a real
+  company's logo), and images that aren't design work.
+- Unsplash rules followed: images hotlinked from the API URLs, every photographer credited
+  with a link. Every prototype page says the people and work are examples.
+- Used in `prototypes/palette-explorer.html`: profile photos (surface 2), proof thumbnails on
+  the profile and on applicant cards (surface 1), the delivered brand kit with version switching
+  (surface 3). Surfaces 4 and 5 are not shown because they aren't decided.

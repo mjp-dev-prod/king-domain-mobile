@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-palette="gold" data-display="serif">
+<html lang="en" data-palette="royal" data-display="sans">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -11,6 +11,9 @@
   approved 2026-10-01. Every colour is a token; switching palettes only swaps
   the token block, so what's compared is the palette, never the layout.
   Copy and numbers are realistic examples, not live data.
+  Photos: hand-picked Unsplash examples (data/example-images.js), credited at the
+  bottom of the page. Which product surface each stands in for, and the decision
+  it traces back to: docs/features/imagery-surfaces.md.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -284,6 +287,50 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--primary-te
 .li.danger b,.li.danger .ico{color:var(--bad)}
 .chev{color:var(--text3)}
 
+/* Images: dominant-colour placeholder, fade in on load (a designed loading state) */
+.photo{position:relative;display:block;overflow:hidden;background:var(--s2)}
+.photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 450ms var(--ease)}
+.photo img.in{opacity:1}
+.av.photo{background:var(--s3)}
+.ring .photo{width:100%;height:100%;border-radius:50%;border:4px solid var(--ground)}
+.credit{position:absolute;right:8px;bottom:8px;z-index:1;font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:999px;background:rgba(0,0,0,.5);color:#fff}
+/* Proof grid (profile) */
+.proofs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.proof{display:flex;flex-direction:column;gap:6px;text-align:left}
+.proof .photo{aspect-ratio:1;border-radius:var(--r)}
+.proof small{font-size:11.5px;color:var(--text2);line-height:1.3}
+.proof .pill{height:20px;font-size:10.5px;padding:0 7px;align-self:flex-start}
+.why{font-size:12px;color:var(--text3);margin-top:10px}
+/* Applicants (client) */
+.fair{display:flex;gap:10px;align-items:flex-start;margin-top:12px;padding:12px 14px;border-radius:var(--r);background:var(--s1);font-size:12.5px;color:var(--text2)}
+.fair .i{color:var(--primary-text);margin-top:1px}
+.appl{margin-top:12px;padding:16px;border-radius:var(--r-lg);background:var(--s1)}
+.appl .head{display:flex;gap:12px;align-items:center}
+.appl .av{width:46px;height:46px;flex:0 0 auto}
+.appl .head div{flex:1;min-width:0}
+.appl b{display:block;font-size:15px}
+.appl .head small{font-size:12px;color:var(--text2)}
+.thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px}
+.thumbs .photo{aspect-ratio:4/3;border-radius:12px}
+.facts{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.rnote{margin-top:10px;font-size:12.5px;color:var(--text2);padding-left:10px;border-left:2px solid var(--s3)}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.soft{display:flex;align-items:center;justify-content:center;height:44px;border-radius:14px;background:var(--s2);font-size:14px;font-weight:600;transition:transform 140ms var(--ease)}
+.soft.brand{background:var(--primary-soft);color:var(--primary-text)}
+.soft:active{transform:scale(.97)}
+/* Review delivery (client) */
+.preview{position:relative;margin-top:12px;border-radius:var(--r-xl);overflow:hidden;aspect-ratio:4/3;background:var(--s1)}
+.preview .photo{position:absolute;inset:0}
+.file{display:flex;align-items:center;gap:12px;margin-top:10px;padding:12px 14px;border-radius:var(--r);background:var(--s1)}
+.file .ico{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:var(--s2);color:var(--text2)}
+.file div{flex:1;min-width:0}
+.file b{display:block;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file small{font-size:12px;color:var(--text2)}
+.quote{margin-top:12px;padding:14px;border-radius:var(--r);background:var(--s1);font-size:13.5px;color:var(--text2)}
+.quote b{display:block;color:var(--text);font-size:12.5px;margin-bottom:4px}
+.credits{flex-basis:100%;max-width:1100px;margin:8px auto 0;font-size:12px;color:var(--text3);line-height:1.8;text-align:center}
+.credits a{color:var(--text2)}
+
 @media (max-width:900px){
   .wrap{grid-template-columns:1fr;padding-inline:16px;gap:28px}
   .panel{position:static}
@@ -369,7 +416,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--primary-te
         <div class="scr">
           <div class="status"><span class="num">9:41</span><span><span class="bat"></span></span></div>
           <div class="top rise">
-            <div><div class="hello">Good evening, Victor</div><div class="h-title">Work that <em>pays</em> your skills</div></div>
+            <div><div class="hello">Good evening, Ada</div><div class="h-title">Work that <em>pays</em> your skills</div></div>
             <button class="iconbtn" aria-label="Notifications"><svg class="i"><use href="#i-bell"/></svg><span class="dot"></span></button>
           </div>
           <div class="search rise" style="animation-delay:60ms"><svg class="i sm"><use href="#i-search"/></svg><span>Search jobs, skills, clients</span>
@@ -408,7 +455,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--primary-te
           <div class="sec"><h3>About the job</h3></div>
           <p class="para">We sell rice bowls to students on UNILAG campus and need a logo that works on packaging, Instagram and a small banner. Deliver the logo in colour and one-colour versions, plus a simple palette and font choice.</p>
           <div class="sec"><h3>Client</h3></div>
-          <div class="client"><span class="av">CO</span><div><b>Chinedu Okafor</b><small>2 jobs paid on King Domain</small></div><svg class="i chev"><use href="#i-chev"/></svg></div>
+          <div class="client"><span class="av photo" data-img="men.0" data-label="CO"></span><div><b>Chinedu Okafor</b><small>2 jobs paid on King Domain</small></div><svg class="i chev"><use href="#i-chev"/></svg></div>
         </div>
         <div class="ctabar">
           <button class="cta" id="apply"><span class="lbl">Apply for this job</span></button>
@@ -458,8 +505,8 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--primary-te
         <div class="scr">
           <div class="status"><span class="num">9:41</span><span><span class="bat"></span></span></div>
           <div class="me">
-            <div class="ring" title="Profile 2 of 3 done"><div>V</div></div>
-            <h2>Victor Ayeni</h2>
+            <div class="ring" title="Profile 2 of 3 done"><span class="photo" data-img="women.1"></span></div>
+            <h2>Ada Obi</h2>
             <p>Brand and UI designer · UNILAG</p>
             <div class="chips">
               <span class="pill ok"><svg class="i sm"><use href="#i-shield"/></svg>Design verified</span>
@@ -471,9 +518,16 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--primary-te
             <div class="stat"><b class="num" style="color:var(--money)">₦128k</b><small>Earned</small></div>
             <div class="stat"><b class="num">100%</b><small>On time</small></div>
           </div>
+          <div class="sec"><h3>Proof of work</h3><a>Add proof</a></div>
+          <div class="proofs">
+            <button class="proof"><span class="photo" data-img="work.logo.0"></span><span class="pill ok"><svg class="i sm"><use href="#i-check"/></svg>Verified</span><small>Logo for a campus café</small></button>
+            <button class="proof"><span class="photo" data-img="work.packaging.0"></span><span class="pill ok"><svg class="i sm"><use href="#i-check"/></svg>Verified</span><small>Packaging for Mama's Kitchen</small></button>
+            <button class="proof"><span class="photo" data-img="work.appUi.1"></span><span class="pill warn">In review</span><small>Ride-share app screens</small></button>
+          </div>
+          <p class="why">Verified means a King Domain reviewer checked the work is hers. The picture alone isn't the proof.</p>
           <div class="complete"><svg class="i"><use href="#i-sparkle"/></svg><div style="flex:1"><b>Add one more proof</b><small>Verified work in Software &amp; tech opens those jobs too.</small></div><svg class="i chev"><use href="#i-chev"/></svg></div>
           <div class="list">
-            <button class="li"><span class="ico"><svg class="i"><use href="#i-bank"/></svg></span><div><b>Payout account</b><small>GTBank ••6789 · Victor Ayeni</small></div><svg class="i chev"><use href="#i-chev"/></svg></button>
+            <button class="li"><span class="ico"><svg class="i"><use href="#i-bank"/></svg></span><div><b>Payout account</b><small>GTBank ••6789 · Ada Obi</small></div><svg class="i chev"><use href="#i-chev"/></svg></button>
             <button class="li"><span class="ico"><svg class="i"><use href="#i-shield"/></svg></span><div><b>Proof of work</b><small>2 verified · 1 in review</small></div><svg class="i chev"><use href="#i-chev"/></svg></button>
             <button class="li"><span class="ico"><svg class="i"><use href="#i-bell"/></svg></span><div><b>Notifications</b><small>Deadlines, payments, messages</small></div><svg class="i chev"><use href="#i-chev"/></svg></button>
           </div>
@@ -483,9 +537,49 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--primary-te
         </div>
       </div>
     </section>
+    <!-- 5. Applicants (client): correction 02, real signals, no ranking -->
+    <section class="col" aria-label="Applicants">
+      <span class="eyebrow">05 · Applicants (client)</span>
+      <div class="ph">
+        <div class="scr">
+          <div class="status"><span class="num">9:41</span><span><span class="bat"></span></span></div>
+          <div class="back"><button class="iconbtn" aria-label="Back"><svg class="i"><use href="#i-back"/></svg></button><span class="pill"><span class="num">6</span>&nbsp;applied</span></div>
+          <div class="h-title" style="font-size:24px;margin-top:6px">Logo and brand kit</div>
+          <div class="fair"><svg class="i sm"><use href="#i-shield"/></svg><span>Everyone here is verified in Design &amp; creative. Shown newest first; King Domain doesn't rank applicants.</span></div>
+          <div id="applicants"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Review delivery (client): stage 2 immutable versions and change rounds -->
+    <section class="col" aria-label="Review delivery">
+      <span class="eyebrow">06 · Review delivery (client)</span>
+      <div class="ph">
+        <div class="scr">
+          <div class="status"><span class="num">9:41</span><span><span class="bat"></span></span></div>
+          <div class="back"><button class="iconbtn" aria-label="Back"><svg class="i"><use href="#i-back"/></svg></button><span class="pill warn"><span class="pulse"></span>Waiting on you</span></div>
+          <div class="h-title" style="font-size:24px;margin-top:6px">Review the delivery</div>
+          <div class="chips" id="vers" style="margin:12px 0 0;padding:0">
+            <button class="chip" aria-pressed="false" data-v="0">Version 1 · Sun</button>
+            <button class="chip" aria-pressed="true" data-v="1">Version 2 · today</button>
+          </div>
+          <div class="preview"><span class="photo" id="delivPhoto"></span><span class="credit" id="delivCredit"></span></div>
+          <div class="file"><span class="ico"><svg class="i"><use href="#i-file"/></svg></span><div><b id="delivFile">mamas-kitchen-brand-kit-v2.pdf</b><small>4.2 MB · logo, colours, packaging</small></div><svg class="i chev"><use href="#i-chev"/></svg></div>
+          <div class="quote"><b>Ada's note</b><span id="delivNote"></span></div>
+          <div class="facts"><span class="pill">Change round 1 of 2 used</span><span class="pill warn num">2 days 23h to review</span></div>
+        </div>
+        <div class="ctabar">
+          <button class="cta" id="approve"><span class="lbl">Approve and pay ₦45,000</span></button>
+          <button class="ghost">Ask for changes</button>
+        </div>
+      </div>
+    </section>
+
+    <p class="credits" id="credits"></p>
   </main>
 </div>
 
+<script src="data/example-images.js"></script>
 <script>
 const PALETTES = [
   { id: "gold", name: "Ink & Gold", note: "Today's brand, made to pop: deeper ink, brighter gold, four surface steps." },
@@ -589,21 +683,21 @@ $("#cats").addEventListener("click", (e) => {
 });
 
 const JOBS = [
-  { cat: "Design & creative", title: "Logo and brand kit for a campus food startup", who: "Chinedu Okafor", av: "CO", price: "₦45,000", days: 5, applied: 6, ago: "2h", tag: ["ok", "You qualify"] },
-  { cat: "Software & tech", title: "Fix checkout bugs on a Flutter shop app", who: "Aisha Bello", av: "AB", price: "₦80,000", days: 7, applied: 11, ago: "5h", tag: ["", "Needs verified proof"] },
-  { cat: "Video & media", title: "Edit three 30-second Reels for a hair salon", who: "Tola Adeyemi", av: "TA", price: "₦25,000", days: 3, applied: 2, ago: "1d", tag: ["warn", "Closes in 6h"] },
+  { cat: "Design & creative", title: "Logo and brand kit for a campus food startup", who: "Chinedu Okafor", av: "CO", img: "men.0", price: "₦45,000", days: 5, applied: 6, ago: "2h", tag: ["ok", "You qualify"] },
+  { cat: "Software & tech", title: "Fix checkout bugs on a Flutter shop app", who: "Aisha Bello", av: "AB", img: "women.0", price: "₦80,000", days: 7, applied: 11, ago: "5h", tag: ["", "Needs verified proof"] },
+  { cat: "Video & media", title: "Edit three 30-second Reels for a hair salon", who: "Tola Adeyemi", av: "TA", img: "women.4", price: "₦25,000", days: 3, applied: 2, ago: "1d", tag: ["warn", "Closes in 6h"] },
 ];
 function jobCard(j, i) {
   return `<button class="job rise" style="animation-delay:${120 + i * 70}ms">
     <div class="row"><span class="pill brand">${j.cat.replace("&", "&amp;")}</span><span class="ago">${j.ago}</span></div>
     <h4>${j.title}</h4>
-    <div class="who"><span class="av">${j.av}</span>${j.who}<span class="pill ${j.tag[0]}" style="margin-left:auto">${j.tag[1]}</span></div>
+    <div class="who"><span class="av photo" data-img="${j.img}" data-label="${j.av}"></span>${j.who}<span class="pill ${j.tag[0]}" style="margin-left:auto">${j.tag[1]}</span></div>
     <div class="meta"><span><svg class="i sm"><use href="#i-clock"/></svg><span class="num">${j.days} days</span></span><span><svg class="i sm"><use href="#i-users"/></svg><span class="num">${j.applied} applied</span></span><span class="price num">${j.price}</span></div>
   </button>`;
 }
 const skeleton = () =>
   `<div class="sk"><i style="width:34%"></i><i style="width:88%;height:16px"></i><i style="width:60%"></i><i style="width:100%;margin-top:6px"></i></div>`.repeat(3);
-function renderFeed() { $("#jobs").innerHTML = JOBS.map(jobCard).join(""); }
+function renderFeed() { $("#jobs").innerHTML = JOBS.map(jobCard).join(""); $("#jobs").querySelectorAll("[data-img]").forEach((el) => hydrate(el)); renderCredits(); }
 let feedTimer;
 function reloadFeed() {
   clearTimeout(feedTimer);
@@ -692,12 +786,74 @@ document.addEventListener("keydown", (e) => {
   if (p) setPalette(p.id);
 });
 
+/* ── example photos ───────────────────────────────────────────── */
+const IMG = window.KD_IMAGES || null;
+const used = new Map();
+const lookup = (key) => key.split(".").reduce((o, k) => (o ? o[k] : null), IMG);
+// The dominant colour shows first, then the photo fades in: a loading state, never a blank box.
+function hydrate(el, key = el.dataset.img, size = "small") {
+  const ph = IMG && key && lookup(key);
+  if (!ph) { if (el.dataset.label) el.textContent = el.dataset.label; return; }
+  used.set(ph.id, ph);
+  el.style.background = ph.color;
+  el.innerHTML = "";
+  const img = new Image();
+  img.alt = ph.alt || "";
+  img.onload = () => img.classList.add("in");
+  img.src = size === "regular" ? ph.regular : ph.small;
+  el.appendChild(img);
+}
+const photo = (key, cls = "") => `<span class="photo ${cls}" data-img="${key}"></span>`;
+
+const APPLICANTS = [
+  { name: "Ada Obi", school: "UNILAG · Mass Communication", av: "women.1", jobs: 3, work: ["work.logo.0", "work.packaging.0", "work.poster.0"], note: "Clean, consistent identity work. Source files checked." },
+  { name: "Tobi Adeleke", school: "OAU · Fine Arts", av: "men.1", jobs: 0, work: ["work.logo.1", "work.poster.1", "work.packaging.3"] },
+  { name: "Zainab Musa", school: "ABU · Architecture", av: "women.3", jobs: 1, work: ["work.packaging.1", "work.logo.3", "work.appUi.0"] },
+];
+function renderApplicants() {
+  $("#applicants").innerHTML = APPLICANTS.map((a) => `
+    <div class="appl">
+      <div class="head">${photo(a.av, "av")}<div><b>${a.name}</b><small>${a.school}</small></div></div>
+      <div class="thumbs">${a.work.map((w) => photo(w)).join("")}</div>
+      <div class="facts"><span class="pill ok"><svg class="i sm"><use href="#i-shield"/></svg>Verified in Design</span>
+        <span class="pill num">${a.jobs ? a.jobs + " job" + (a.jobs > 1 ? "s" : "") + " done" : "New to King Domain"}</span></div>
+      ${a.note ? `<p class="rnote">Reviewer's note: "${a.note}"</p>` : ""}
+      <div class="acts"><button class="soft">View profile</button><button class="soft brand">Award job</button></div>
+    </div>`).join("");
+}
+
+const VERSIONS = [
+  { key: "work.packaging.0", file: "mamas-kitchen-brand-kit-v1.pdf", note: "First pass: the logo on the takeaway box, with the colour palette." },
+  { key: "work.packaging.2", file: "mamas-kitchen-brand-kit-v2.pdf", note: "Changed the bottle label colours as you asked and added the one-colour logo for stamps." },
+];
+function showVersion(i) {
+  const v = VERSIONS[i];
+  $("#vers").querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", String(Number(c.dataset.v) === i)));
+  hydrate($("#delivPhoto"), v.key, "regular");
+  const ph = IMG && lookup(v.key);
+  $("#delivCredit").textContent = ph ? "Photo: " + ph.by : "";
+  $("#delivFile").textContent = v.file;
+  $("#delivNote").textContent = v.note;
+  renderCredits();
+}
+$("#vers").addEventListener("click", (e) => { const c = e.target.closest(".chip"); if (c) showVersion(Number(c.dataset.v)); });
+$("#approve").addEventListener("click", () => toast("Approved. Paying Ada ₦45,000"));
+
+function renderCredits() {
+  if (!IMG) { $("#credits").textContent = "Example photos didn't load (prototypes/data/example-images.js missing)."; return; }
+  const list = [...used.values()].map((p) => `<a href="${p.photoUrl}" target="_blank" rel="noopener">${p.by}</a>`).join(", ");
+  $("#credits").innerHTML = `Example photos from <a href="${IMG.unsplash}" target="_blank" rel="noopener">Unsplash</a> by ${list}. People and work shown are examples, not King Domain users.`;
+}
+
 /* ── boot ─────────────────────────────────────────────────────── */
 paintSwatches();
 const fromHash = PALETTES.find((p) => "#" + p.id === location.hash);
-setPalette(fromHash ? fromHash.id : store.get("kd-palette") || "gold");
-setFace(store.get("kd-face") || "serif");
+setPalette(fromHash ? fromHash.id : store.get("kd-palette") || "royal");
+setFace(store.get("kd-face") || "sans");
 renderFeed();
+renderApplicants();
+document.querySelectorAll("[data-img]").forEach((el) => hydrate(el));
+showVersion(1);
 tick();
 setInterval(tick, 30e3);
 </script>
