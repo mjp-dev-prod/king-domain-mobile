@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="en" data-palette="gold" data-display="serif">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>King Domain Palette Explorer</title>
+<!--
+  One page, four real screens (jobs feed, job detail, active contract, profile),
+  four colour directions switched by one control. Depth is tonal (stacked
+  surfaces, no borders), shadows only on floating things — direction A,
+  approved 2026-10-01. Every colour is a token; switching palettes only swaps
+  the token block, so what's compared is the palette, never the layout.
+  Copy and numbers are realistic examples, not live data.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* ── Palettes: the only thing that changes between options ─────────────── */
+:root,[data-palette="gold"]{
+  --page:#05070E; --ground:#0A0E1A; --s1:#111727; --s2:#182036; --s3:#212A45;
+  --line:rgba(255,255,255,.06);
+  --text:#EEF0F7; --text2:#A3AABF; --text3:#6B7390;
+  --primary:#EDBE4B; --on-primary:#1B1403; --primary-text:#EDBE4B; --primary-soft:rgba(237,190,75,.14); --glow:rgba(237,190,75,.26);
+  --money:#EDBE4B; --ok:#34D399; --ok-soft:rgba(52,211,153,.13); --warn:#F5A55B; --warn-soft:rgba(245,165,91,.13); --bad:#F87171;
+}
+[data-palette="royal"]{
+  --page:#07050D; --ground:#0D0A16; --s1:#151121; --s2:#1D182E; --s3:#27203D;
+  --line:rgba(255,255,255,.06);
+  --text:#F2EFFA; --text2:#ABA4C3; --text3:#716A8B;
+  --primary:#7451F2; --on-primary:#FFFFFF; --primary-text:#A991FF; --primary-soft:rgba(140,108,255,.16); --glow:rgba(116,81,242,.38);
+  --money:#F2C14E; --ok:#34D399; --ok-soft:rgba(52,211,153,.13); --warn:#F5A55B; --warn-soft:rgba(245,165,91,.13); --bad:#F87171;
+}
+[data-palette="emerald"]{
+  --page:#030907; --ground:#07110E; --s1:#0D1916; --s2:#13221E; --s3:#1A2C27;
+  --line:rgba(255,255,255,.06);
+  --text:#ECF6F2; --text2:#9CB5AC; --text3:#627A72;
+  --primary:#22C58B; --on-primary:#03140D; --primary-text:#3EE0A4; --primary-soft:rgba(34,197,139,.14); --glow:rgba(34,197,139,.28);
+  --money:#E9BC4C; --ok:#3EE0A4; --ok-soft:rgba(62,224,164,.13); --warn:#F5A55B; --warn-soft:rgba(245,165,91,.13); --bad:#F87171;
+}
+[data-palette="cobalt"]{
+  --page:#05070C; --ground:#0B0F17; --s1:#121722; --s2:#19202E; --s3:#222A3B;
+  --line:rgba(255,255,255,.06);
+  --text:#EEF1F6; --text2:#A2AAB9; --text3:#6A7385;
+  --primary:#3A6BF0; --on-primary:#FFFFFF; --primary-text:#7EA2FF; --primary-soft:rgba(76,125,255,.15); --glow:rgba(58,107,240,.36);
+  --money:#F2C14E; --ok:#34D399; --ok-soft:rgba(52,211,153,.13); --warn:#F5A55B; --warn-soft:rgba(245,165,91,.13); --bad:#F87171;
+}
+
+/* ── Type, radius, motion (shared) ─────────────────────────────────────── */
+:root{
+  color-scheme:dark;
+  --f-body:'Public Sans',system-ui,-apple-system,sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,monospace;
+  --f-display:'Fraunces',Georgia,serif;
+  --r-sm:12px; --r:16px; --r-lg:20px; --r-xl:28px;
+  --t-state:250ms; --t-layout:400ms; --t-arrive:560ms;
+  --ease:cubic-bezier(.22,1,.36,1); --spring:cubic-bezier(.34,1.56,.64,1);
+}
+[data-display="sans"]{--f-display:'Public Sans',system-ui,sans-serif}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{min-height:100%}
+body{background:var(--page);color:var(--text);font-family:var(--f-body);font-size:14px;line-height:1.5;
+  transition:background-color var(--t-layout) var(--ease)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--primary-text);outline-offset:2px}
+.i{width:20px;height:20px;flex:0 0 auto;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.i.sm{width:16px;height:16px}
+.mono{font-family:var(--f-mono)}
+.num{font-variant-numeric:tabular-nums}
+/* palette switches animate instead of snapping */
+.ph,.ph *{transition:background-color var(--t-layout) var(--ease),color var(--t-layout) var(--ease),box-shadow var(--t-layout) var(--ease)}
+
+/* ── Page layout: control panel + phones ───────────────────────────────── */
+.wrap{display:grid;grid-template-columns:330px 1fr;gap:36px;padding-inline:28px;padding-block:28px;max-width:2000px;margin:0 auto}
+.panel{position:sticky;top:28px;align-self:start;display:flex;flex-direction:column;gap:22px}
+.brand{display:flex;align-items:center;gap:10px}
+.mark{font-family:'Fraunces',Georgia,serif;font-weight:700;font-size:22px;color:var(--money);letter-spacing:-.5px}
+.panel h1{font-size:20px;font-weight:700;letter-spacing:-.2px}
+.lede{color:var(--text2);font-size:13.5px;max-width:40ch}
+.eyebrow{font-family:var(--f-mono);font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--text3)}
+.group{display:flex;flex-direction:column;gap:10px}
+
+.pal{display:flex;flex-direction:column;gap:8px}
+.pal button{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;text-align:left;padding:12px 14px;border-radius:var(--r);
+  background:var(--s1);transition:transform 160ms var(--ease),background-color var(--t-state)}
+.pal button:active{transform:scale(.98)}
+.pal button[aria-checked="true"]{background:var(--s2);box-shadow:inset 0 0 0 1.5px var(--primary-text)}
+.pal b{display:block;font-size:14px;font-weight:600}
+.pal small{display:block;font-size:12px;color:var(--text2);line-height:1.4}
+.sw{display:flex}
+.sw i{width:14px;height:28px;border-radius:7px;margin-right:-4px;box-shadow:0 0 0 2px var(--s1)}
+.key{font-family:var(--f-mono);font-size:11px;color:var(--text3);padding:2px 7px;border-radius:6px;background:var(--s2)}
+
+.seg{position:relative;display:grid;grid-template-columns:1fr 1fr;padding:4px;border-radius:999px;background:var(--s1)}
+.seg .thumb{position:absolute;top:4px;bottom:4px;left:4px;width:calc(50% - 4px);border-radius:999px;background:var(--s3);transition:transform var(--t-layout) var(--spring)}
+.seg[data-v="sans"] .thumb{transform:translateX(100%)}
+.seg button{position:relative;z-index:1;padding:9px 0;font-size:13px;font-weight:600;color:var(--text2)}
+.seg button[aria-pressed="true"]{color:var(--text)}
+
+.contrast{display:flex;flex-direction:column;border-radius:var(--r);background:var(--s1);padding:6px 14px}
+.contrast div{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;font-size:12.5px;color:var(--text2)}
+.contrast div+div{border-top:1px solid var(--line)}
+.contrast span:last-child{font-family:var(--f-mono);font-size:12px;color:var(--text)}
+.contrast em{font-style:normal;font-size:10.5px;font-weight:700;margin-left:6px;padding:1px 6px;border-radius:999px}
+.pass{background:var(--ok-soft);color:var(--ok)} .fail{background:rgba(248,113,113,.14);color:var(--bad)}
+
+.try{display:grid;grid-template-columns:1fr;gap:8px}
+.try button{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:var(--r-sm);background:var(--s1);font-size:13.5px;font-weight:500;text-align:left;transition:transform 160ms var(--ease),background-color var(--t-state)}
+.try button:hover{background:var(--s2)}
+.try button:active{transform:scale(.98)}
+.note{font-size:12px;color:var(--text3)}
+
+.phones{display:flex;flex-wrap:wrap;gap:36px 32px;justify-content:center;align-content:flex-start;min-width:0}
+.col{display:flex;flex-direction:column;gap:12px;width:390px;max-width:100%}
+.col > .eyebrow{padding-left:6px}
+
+/* ── Phone ─────────────────────────────────────────────────────────────── */
+.ph{position:relative;width:100%;height:812px;border-radius:46px;background:var(--ground);overflow:hidden;
+  box-shadow:0 0 0 9px #0d0f15,0 0 0 10px #22252f,0 40px 90px rgba(0,0,0,.55)}
+.scr{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding:0 18px 128px}
+.scr::-webkit-scrollbar{display:none}
+.status{display:flex;justify-content:space-between;align-items:center;height:48px;padding:6px 10px 0;font-size:14px;font-weight:600;letter-spacing:.2px}
+.status span:last-child{display:flex;gap:5px;align-items:center}
+.status .bat{width:24px;height:12px;border-radius:4px;border:1.5px solid var(--text2);position:relative}
+.status .bat::after{content:"";position:absolute;inset:1.5px 6px 1.5px 1.5px;border-radius:2px;background:var(--text)}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0 4px}
+.iconbtn{position:relative;width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:var(--s1);transition:transform 160ms var(--ease)}
+.iconbtn:active{transform:scale(.92)}
+.iconbtn .dot{position:absolute;top:11px;right:12px;width:8px;height:8px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 2px var(--s1)}
+.hello{font-size:13px;color:var(--text2)}
+.h-title{font-family:var(--f-display);font-weight:600;font-size:28px;line-height:1.15;letter-spacing:-.5px;text-wrap:balance}
+.h-title em{font-style:italic;color:var(--primary-text)}
+[data-display="sans"] .h-title{font-weight:800;letter-spacing:-.8px}
+
+.search{display:flex;align-items:center;gap:10px;height:48px;margin-top:16px;padding:0 6px 0 14px;border-radius:var(--r);background:var(--s1);color:var(--text3);font-size:14px}
+.search span{flex:1}
+.search .iconbtn{width:36px;height:36px;border-radius:11px;background:var(--s2);color:var(--text2)}
+
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:14px -18px 0;padding:0 18px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;height:36px;padding:0 14px;border-radius:999px;background:var(--s1);color:var(--text2);font-size:13px;font-weight:500;transition:transform 160ms var(--ease)}
+.chip:active{transform:scale(.94)}
+.chip[aria-pressed="true"]{background:var(--primary-soft);color:var(--primary-text);font-weight:600}
+
+.sec{display:flex;align-items:center;justify-content:space-between;margin:24px 2px 12px}
+.sec h3{font-size:15px;font-weight:700}
+.sec a{font-size:13px;font-weight:600;color:var(--primary-text);cursor:pointer}
+
+/* Job card */
+.jobs{display:flex;flex-direction:column;gap:12px}
+.job{display:block;width:100%;text-align:left;padding:16px;border-radius:var(--r-lg);background:var(--s1);transition:transform 180ms var(--ease),background-color var(--t-state)}
+.job:active{transform:scale(.985)}
+.job .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.job h4{font-size:16px;font-weight:650;font-weight:600;line-height:1.3;margin-top:10px;text-wrap:balance}
+.who{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12.5px;color:var(--text2)}
+.av{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:700;background:var(--s3);color:var(--text)}
+.meta{display:flex;align-items:center;gap:14px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--text2)}
+.meta span{display:flex;align-items:center;gap:5px}
+.price{margin-left:auto;font-size:17px;font-weight:700;color:var(--money);letter-spacing:-.2px}
+.pill{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:999px;font-size:11.5px;font-weight:600;background:var(--s2);color:var(--text2)}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.brand{background:var(--primary-soft);color:var(--primary-text)}
+.ago{font-size:12px;color:var(--text3)}
+
+/* skeleton */
+.sk{border-radius:var(--r-lg);background:var(--s1);padding:16px;display:flex;flex-direction:column;gap:10px}
+.sk i{display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,var(--s2) 0%,var(--s3) 50%,var(--s2) 100%);background-size:200% 100%;animation:shimmer 1.2s linear infinite}
+@keyframes shimmer{from{background-position:100% 0}to{background-position:-100% 0}}
+
+/* entrance */
+.rise{animation:rise var(--t-arrive) var(--ease) backwards}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+/* Floating tab bar */
+.tabbar{position:absolute;left:14px;right:14px;bottom:22px;display:grid;grid-template-columns:repeat(3,1fr);padding:7px;border-radius:24px;
+  background:var(--s2);box-shadow:0 14px 34px rgba(0,0,0,.5)}
+.tabbar .ind{position:absolute;top:7px;bottom:7px;left:7px;width:calc((100% - 14px)/3);border-radius:18px;background:var(--primary-soft);transition:transform var(--t-layout) var(--spring)}
+.tab{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;font-size:11.5px;font-weight:600;color:var(--text3)}
+.tab[aria-selected="true"]{color:var(--primary-text)}
+.tab .badge{position:absolute;top:4px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 5px;border-radius:999px;background:var(--primary);color:var(--on-primary);font-size:10px;font-weight:700;display:grid;place-items:center}
+
+/* Toast */
+.toasts{position:absolute;left:14px;right:14px;top:52px;z-index:30;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
+.toast{pointer-events:auto;display:flex;align-items:center;gap:10px;max-width:100%;padding:10px 10px 10px 14px;border-radius:16px;background:var(--s3);
+  box-shadow:0 16px 40px rgba(0,0,0,.55);font-size:13.5px;font-weight:600;animation:tIn 320ms var(--spring)}
+.toast.out{animation:tOut 260ms var(--ease) forwards}
+.toast .ic{width:26px;height:26px;border-radius:9px;display:grid;place-items:center;background:var(--ok-soft);color:var(--ok)}
+.toast.info .ic{background:var(--primary-soft);color:var(--primary-text)}
+.toast button{padding:7px 12px;border-radius:10px;background:var(--s2);color:var(--primary-text);font-size:12.5px;font-weight:700}
+@keyframes tIn{from{opacity:0;transform:translateY(-14px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes tOut{to{opacity:0;transform:translateY(-10px) scale(.97)}}
+
+/* Job detail */
+.back{display:flex;align-items:center;justify-content:space-between;padding:8px 0}
+.hero{margin-top:10px;padding:20px;border-radius:var(--r-xl);background:var(--s1)}
+.hero h2{font-family:var(--f-display);font-weight:600;font-size:25px;line-height:1.2;letter-spacing:-.4px;margin-top:10px;text-wrap:balance}
+[data-display="sans"] .hero h2{font-weight:800;letter-spacing:-.6px}
+.budget{display:flex;align-items:baseline;gap:8px;margin-top:16px}
+.budget b{font-size:32px;font-weight:800;color:var(--money);letter-spacing:-.8px}
+.budget span{font-size:12.5px;color:var(--text2)}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
+.tile{padding:12px;border-radius:var(--r);background:var(--s2)}
+.tile small{display:block;font-size:11px;color:var(--text3)}
+.tile b{display:block;font-size:15px;margin-top:2px}
+.banner{display:flex;gap:12px;align-items:flex-start;margin-top:12px;padding:14px;border-radius:var(--r-lg);background:var(--ok-soft);color:var(--ok)}
+.banner p{font-size:12.5px;color:var(--text2);margin-top:2px}
+.banner b{color:var(--text);font-size:13.5px}
+.para{font-size:14px;color:var(--text2);line-height:1.65}
+.client{display:flex;align-items:center;gap:12px;padding:14px;border-radius:var(--r-lg);background:var(--s1)}
+.client .av{width:40px;height:40px;font-size:14px}
+.client div{flex:1;min-width:0}
+.client b{display:block;font-size:14px}
+.client small{font-size:12px;color:var(--text2)}
+
+.ctabar{position:absolute;left:0;right:0;bottom:0;padding:14px 18px 28px;background:linear-gradient(to top,var(--ground) 62%,transparent)}
+.cta{position:relative;width:100%;height:56px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;gap:10px;
+  background:var(--primary);color:var(--on-primary);font-size:16px;font-weight:700;box-shadow:0 12px 28px var(--glow);overflow:hidden;
+  transition:transform 140ms var(--ease),background-color var(--t-state),box-shadow var(--t-state)}
+.cta:active{transform:scale(.97)}
+.cta.done{background:var(--ok);color:#04140D;box-shadow:0 12px 28px rgba(52,211,153,.3)}
+.cta[aria-busy="true"]{cursor:progress}
+.cta .lbl{display:flex;align-items:center;gap:10px;animation:swap 260ms var(--ease)}
+@keyframes swap{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.spin{width:18px;height:18px;border-radius:50%;border:2.5px solid currentColor;border-right-color:transparent;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ghost{width:100%;height:50px;margin-top:10px;border-radius:var(--r);background:var(--s1);font-size:15px;font-weight:600;color:var(--text);transition:transform 140ms var(--ease)}
+.ghost:active{transform:scale(.97)}
+.hint{text-align:center;font-size:12px;color:var(--text3);margin-top:8px}
+
+/* Contract */
+.due{margin-top:12px;padding:18px;border-radius:var(--r-xl);background:var(--s1)}
+.due .row{display:flex;justify-content:space-between;align-items:center}
+.count{font-size:34px;font-weight:800;letter-spacing:-1px;margin-top:6px}
+.count small{font-size:15px;font-weight:600;color:var(--text2);letter-spacing:0;margin-left:2px}
+.bar{height:8px;border-radius:999px;background:var(--s3);margin-top:14px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:999px;background:var(--primary);transition:width var(--t-arrive) var(--ease)}
+.due .foot{display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:var(--text3)}
+.steps{margin-top:12px;padding:6px 16px;border-radius:var(--r-lg);background:var(--s1)}
+.step{display:grid;grid-template-columns:30px 1fr auto;gap:12px;align-items:center;padding:11px 0;position:relative}
+.step + .step::before{content:"";position:absolute;left:14px;top:-11px;width:2px;height:22px;background:var(--s3)}
+.step.done + .step::before{background:var(--ok)}
+.node{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--s2);color:var(--text3);position:relative;z-index:1}
+.step.done .node{background:var(--ok-soft);color:var(--ok)}
+.step.now .node{background:var(--primary);color:var(--on-primary);box-shadow:0 0 0 5px var(--primary-soft)}
+.step b{font-size:14px;font-weight:600}
+.step.later b{color:var(--text3);font-weight:500}
+.step small{display:block;font-size:12px;color:var(--text2)}
+.step .side{font-size:12px;color:var(--text3)}
+.ext{margin-top:12px;padding:16px;border-radius:var(--r-lg);background:var(--warn-soft)}
+.ext .row{display:flex;align-items:center;gap:10px}
+.ext b{font-size:14px}
+.ext p{font-size:12.5px;color:var(--text2);margin-top:6px}
+.ext .wait{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--warn);font-weight:600}
+.pulse{width:8px;height:8px;border-radius:50%;background:var(--warn);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 var(--warn-soft)}50%{box-shadow:0 0 0 6px transparent}}
+
+/* Profile */
+.me{display:flex;flex-direction:column;align-items:center;text-align:center;padding:14px 0 4px}
+.ring{width:92px;height:92px;border-radius:50%;padding:4px;background:conic-gradient(var(--primary) 0 66%,var(--s3) 66% 100%)}
+.ring div{width:100%;height:100%;border-radius:50%;background:var(--s2);display:grid;place-items:center;font-family:var(--f-display);font-size:34px;font-weight:600;border:4px solid var(--ground)}
+.me h2{font-family:var(--f-display);font-weight:600;font-size:24px;letter-spacing:-.4px;margin-top:12px}
+[data-display="sans"] .me h2{font-weight:800}
+.me p{font-size:13.5px;color:var(--text2);margin-top:2px}
+.me .chips{justify-content:center;margin:12px 0 0;padding:0;flex-wrap:wrap;overflow:visible}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:18px}
+.stat{padding:14px 12px;border-radius:var(--r);background:var(--s1);text-align:left}
+.stat b{display:block;font-size:20px;font-weight:800;letter-spacing:-.4px}
+.stat small{font-size:11.5px;color:var(--text3)}
+.complete{display:flex;align-items:center;gap:14px;margin-top:12px;padding:16px;border-radius:var(--r-lg);background:var(--primary-soft)}
+.complete b{display:block;font-size:14px}
+.complete small{font-size:12.5px;color:var(--text2)}
+.complete .i{color:var(--primary-text)}
+.list{margin-top:12px;border-radius:var(--r-lg);background:var(--s1);overflow:hidden}
+.li{display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;text-align:left;transition:background-color var(--t-state)}
+.li:active{background:var(--s2)}
+.li + .li{border-top:1px solid var(--line)}
+.li .ico{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:var(--s2);color:var(--text2)}
+.li div{flex:1;min-width:0}
+.li b{display:block;font-size:14px;font-weight:600}
+.li small{font-size:12px;color:var(--text2)}
+.li.danger b,.li.danger .ico{color:var(--bad)}
+.chev{color:var(--text3)}
+
+@media (max-width:900px){
+  .wrap{grid-template-columns:1fr;padding-inline:16px;gap:28px}
+  .panel{position:static}
+}
+@media (max-width:440px){
+  .ph{height:760px;border-radius:32px;box-shadow:0 0 0 1px var(--line),0 24px 60px rgba(0,0,0,.5)}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="i-briefcase" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-bank" viewBox="0 0 24 24"><path d="M3 22h18"/><path d="M6 18v-7"/><path d="M10 18v-7"/><path d="M14 18v-7"/><path d="M18 18v-7"/><path d="M12 2 20 7H4z"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M2 14h4"/><path d="M10 8h4"/><path d="M18 16h4"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+  <symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22"/><path d="M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2"/></symbol>
+  <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M9.94 14.06 2 22"/><path d="m15 5 4 4"/><path d="M12 2v2"/><path d="M5 12H3"/><path d="M21 12h-2"/><path d="m19 5-1.4 1.4"/><path d="M12 22v-2"/><path d="m5 19 1.4-1.4"/></symbol>
+</svg>
+
+<div class="wrap">
+  <!-- ── Controls ─────────────────────────────────────────────────────── -->
+  <aside class="panel" aria-label="Palette controls">
+    <div class="group">
+      <div class="brand"><span class="mark">KD</span><h1>Palette explorer</h1></div>
+      <p class="lede">The same four screens in four colour directions. Switch palettes here, then tap around the phones to feel the motion.</p>
+    </div>
+
+    <div class="group">
+      <span class="eyebrow">Colour direction</span>
+      <div class="pal" role="radiogroup" aria-label="Colour direction" id="pal"></div>
+    </div>
+
+    <div class="group">
+      <span class="eyebrow">Headline face</span>
+      <div class="seg" id="face" data-v="serif">
+        <div class="thumb"></div>
+        <button type="button" data-v="serif" aria-pressed="true">Fraunces</button>
+        <button type="button" data-v="sans" aria-pressed="false">Public Sans</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <span class="eyebrow">Contrast (WCAG)</span>
+      <div class="contrast" id="contrast"></div>
+      <span class="note">Measured live from this palette. Text needs 4.5:1; controls 3:1.</span>
+    </div>
+
+    <div class="group">
+      <span class="eyebrow">Try the states</span>
+      <div class="try">
+        <button type="button" id="tryToast"><svg class="i sm"><use href="#i-sparkle"/></svg>Show a toast</button>
+        <button type="button" id="trySkeleton"><svg class="i sm"><use href="#i-clock"/></svg>Reload the feed (skeleton)</button>
+        <button type="button" id="tryApply"><svg class="i sm"><use href="#i-check"/></svg>Apply (loading, then done)</button>
+      </div>
+      <span class="note">Keys 1–4 switch palettes. Example data, not live.</span>
+    </div>
+  </aside>
+
+  <!-- ── Phones ───────────────────────────────────────────────────────── -->
+  <main class="phones">
+
+    <!-- 1. Jobs feed -->
+    <section class="col" aria-label="Jobs feed">
+      <span class="eyebrow">01 · Jobs feed</span>
+      <div class="ph">
+        <div class="toasts" id="toasts"></div>
+        <div class="scr">
+          <div class="status"><span class="num">9:41</span><span><span class="bat"></span></span></div>
+          <div class="top rise">
+            <div><div class="hello">Good evening, Victor</div><div class="h-title">Work that <em>pays</em> your skills</div></div>
+            <button class="iconbtn" aria-label="Notifications"><svg class="i"><use href="#i-bell"/></svg><span class="dot"></span></button>
+          </div>
+          <div class="search rise" style="animation-delay:60ms"><svg class="i sm"><use href="#i-search"/></svg><span>Search jobs, skills, clients</span>
+            <button class="iconbtn" aria-label="Filters"><svg class="i sm"><use href="#i-sliders"/></svg></button></div>
+          <div class="chips rise" style="animation-delay:100ms" id="cats"></div>
+          <div class="sec"><h3>Matched to your proof</h3><a>See all</a></div>
+          <div class="jobs" id="jobs"></div>
+        </div>
+        <nav class="tabbar" role="tablist" id="tabbar">
+          <div class="ind" id="ind"></div>
+          <button class="tab" role="tab" aria-selected="true"><svg class="i"><use href="#i-briefcase"/></svg>Jobs</button>
+          <button class="tab" role="tab" aria-selected="false"><svg class="i"><use href="#i-file"/></svg>Work<span class="badge num">1</span></button>
+          <button class="tab" role="tab" aria-selected="false"><svg class="i"><use href="#i-user"/></svg>Profile</button>
+        </nav>
+      </div>
+    </section>
+
+    <!-- 2. Job detail -->
+    <section class="col" aria-label="Job detail">
+      <span class="eyebrow">02 · Job detail</span>
+      <div class="ph">
+        <div class="scr">
+          <div class="status"><span class="num">9:41</span><span><span class="bat"></span></span></div>
+          <div class="back"><button class="iconbtn" aria-label="Back"><svg class="i"><use href="#i-back"/></svg></button><button class="iconbtn" aria-label="More"><svg class="i"><use href="#i-more"/></svg></button></div>
+          <div class="hero">
+            <div class="row" style="display:flex;justify-content:space-between;align-items:center"><span class="pill brand">Design &amp; creative</span><span class="ago">Posted 2h ago</span></div>
+            <h2>Logo and brand kit for a campus food startup</h2>
+            <div class="budget"><b class="num">₦45,000</b><span>paid when you deliver</span></div>
+            <div class="tiles">
+              <div class="tile"><small>Delivery</small><b class="num">5 days</b></div>
+              <div class="tile"><small>Applied</small><b class="num">6</b></div>
+              <div class="tile"><small>Changes</small><b class="num">Up to 2</b></div>
+            </div>
+          </div>
+          <div class="banner"><svg class="i"><use href="#i-shield"/></svg><div><b>You can apply</b><p>Your proof in Design &amp; creative is verified. The client sees it with your application.</p></div></div>
+          <div class="sec"><h3>About the job</h3></div>
+          <p class="para">We sell rice bowls to students on UNILAG campus and need a logo that works on packaging, Instagram and a small banner. Deliver the logo in colour and one-colour versions, plus a simple palette and font choice.</p>
+          <div class="sec"><h3>Client</h3></div>
+          <div class="client"><span class="av">CO</span><div><b>Chinedu Okafor</b><small>2 jobs paid on King Domain</small></div><svg class="i chev"><use href="#i-chev"/></svg></div>
+        </div>
+        <div class="ctabar">
+          <button class="cta" id="apply"><span class="lbl">Apply for this job</span></button>
+          <div class="hint">The client pays into King Domain before you start.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Active contract -->
+    <section class="col" aria-label="Active contract">
+      <span class="eyebrow">03 · Active contract</span>
+      <div class="ph">
+        <div class="scr">
+          <div class="status"><span class="num">9:41</span><span><span class="bat"></span></span></div>
+          <div class="back"><button class="iconbtn" aria-label="Back"><svg class="i"><use href="#i-back"/></svg></button><span class="pill brand"><span class="pulse" style="background:var(--primary-text)"></span>In progress</span></div>
+          <div class="h-title" style="font-size:24px;margin-top:6px">Logo and brand kit</div>
+          <div class="due">
+            <div class="row"><span class="eyebrow">Delivery due in</span><span class="pill"><svg class="i sm"><use href="#i-cal"/></svg><span id="dueDate">Tue 7 Oct</span></span></div>
+            <div class="count num" id="countdown">3d 4h<small>12m</small></div>
+            <div class="bar"><i id="dueBar" style="width:38%"></i></div>
+            <div class="foot"><span>Funded Thu 2 Oct</span><span class="num" id="dueLeft">62% of time left</span></div>
+          </div>
+          <div class="steps">
+            <div class="step done"><span class="node"><svg class="i sm"><use href="#i-check"/></svg></span><div><b>Awarded to you</b><small>Thu 2 Oct</small></div><span class="side"></span></div>
+            <div class="step done"><span class="node"><svg class="i sm"><use href="#i-lock"/></svg></span><div><b>Payment secured</b><small>₦45,000 held by King Domain</small></div><span class="side"></span></div>
+            <div class="step now"><span class="node"><svg class="i sm"><use href="#i-briefcase"/></svg></span><div><b>Working on it</b><small>Deliver by the date above</small></div><span class="side">Now</span></div>
+            <div class="step later"><span class="node"><svg class="i sm"><use href="#i-file"/></svg></span><div><b>Client reviews</b><small>3 days to approve or ask for changes</small></div><span class="side"></span></div>
+            <div class="step later"><span class="node"><svg class="i sm"><use href="#i-bank"/></svg></span><div><b>You're paid</b><small>To GTBank ••6789</small></div><span class="side"></span></div>
+          </div>
+          <div class="ext">
+            <div class="row"><svg class="i" style="color:var(--warn)"><use href="#i-hourglass"/></svg><b>You asked for 2 more days</b></div>
+            <p>"The client sent the menu photos late." If they don't answer, it's granted automatically.</p>
+            <div class="wait"><span class="pulse"></span><span class="num" id="answerBy">Waiting on the client · answer by Sat 4 Oct, 9:41</span></div>
+          </div>
+        </div>
+        <div class="ctabar">
+          <button class="cta"><span class="lbl"><svg class="i"><use href="#i-upload"/></svg>Deliver the work</span></button>
+          <button class="ghost" disabled style="opacity:.55">1 extension request left</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Profile -->
+    <section class="col" aria-label="Profile">
+      <span class="eyebrow">04 · Profile</span>
+      <div class="ph">
+        <div class="scr">
+          <div class="status"><span class="num">9:41</span><span><span class="bat"></span></span></div>
+          <div class="me">
+            <div class="ring" title="Profile 2 of 3 done"><div>V</div></div>
+            <h2>Victor Ayeni</h2>
+            <p>Brand and UI designer · UNILAG</p>
+            <div class="chips">
+              <span class="pill ok"><svg class="i sm"><use href="#i-shield"/></svg>Design verified</span>
+              <span class="pill">Software &amp; tech</span>
+            </div>
+          </div>
+          <div class="stats">
+            <div class="stat"><b class="num">3</b><small>Jobs done</small></div>
+            <div class="stat"><b class="num" style="color:var(--money)">₦128k</b><small>Earned</small></div>
+            <div class="stat"><b class="num">100%</b><small>On time</small></div>
+          </div>
+          <div class="complete"><svg class="i"><use href="#i-sparkle"/></svg><div style="flex:1"><b>Add one more proof</b><small>Verified work in Software &amp; tech opens those jobs too.</small></div><svg class="i chev"><use href="#i-chev"/></svg></div>
+          <div class="list">
+            <button class="li"><span class="ico"><svg class="i"><use href="#i-bank"/></svg></span><div><b>Payout account</b><small>GTBank ••6789 · Victor Ayeni</small></div><svg class="i chev"><use href="#i-chev"/></svg></button>
+            <button class="li"><span class="ico"><svg class="i"><use href="#i-shield"/></svg></span><div><b>Proof of work</b><small>2 verified · 1 in review</small></div><svg class="i chev"><use href="#i-chev"/></svg></button>
+            <button class="li"><span class="ico"><svg class="i"><use href="#i-bell"/></svg></span><div><b>Notifications</b><small>Deadlines, payments, messages</small></div><svg class="i chev"><use href="#i-chev"/></svg></button>
+          </div>
+          <div class="list">
+            <button class="li danger"><span class="ico"><svg class="i"><use href="#i-out"/></svg></span><div><b>Sign out</b></div></button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const PALETTES = [
+  { id: "gold", name: "Ink & Gold", note: "Today's brand, made to pop: deeper ink, brighter gold, four surface steps." },
+  { id: "royal", name: "Royal Violet", note: "Violet for actions, gold kept for money. Most 'king' of the four." },
+  { id: "emerald", name: "Emerald Ledger", note: "Green says trust and verified, but then brand and 'verified' share a colour." },
+  { id: "cobalt", name: "Midnight Cobalt", note: "Closest to Discord and Telegram: neutral blue-grey, blue actions, gold money." },
+];
+const root = document.documentElement;
+const $ = (s) => document.querySelector(s);
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+
+/* ── palette picker ───────────────────────────────────────────── */
+const pal = $("#pal");
+PALETTES.forEach((p, i) => {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.setAttribute("role", "radio");
+  b.dataset.id = p.id;
+  b.innerHTML = `<span class="sw" data-sw="${p.id}"></span><span><b>${p.name}</b><small>${p.note}</small></span><span class="key">${i + 1}</span>`;
+  b.addEventListener("click", () => setPalette(p.id));
+  pal.appendChild(b);
+});
+// Swatches read each palette's real tokens, so they can't drift from the CSS.
+function paintSwatches() {
+  for (const p of PALETTES) {
+    const probe = document.createElement("div");
+    probe.setAttribute("data-palette", p.id);
+    probe.hidden = true;
+    document.body.appendChild(probe);
+    const cs = getComputedStyle(probe);
+    const tok = (n) => cs.getPropertyValue(n).trim();
+    document.querySelector(`[data-sw="${p.id}"]`).innerHTML =
+      ["--ground", "--s2", "--primary", "--money", "--ok"].map((t) => `<i style="background:${tok(t)}"></i>`).join("");
+    probe.remove();
+  }
+}
+function setPalette(id) {
+  root.dataset.palette = id;
+  pal.querySelectorAll("button").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.id === id)));
+  store.set("kd-palette", id);
+  if (location.hash !== "#" + id) history.replaceState(null, "", "#" + id);
+  renderContrast();
+}
+
+/* ── headline face ────────────────────────────────────────────── */
+const face = $("#face");
+face.querySelectorAll("button").forEach((b) =>
+  b.addEventListener("click", () => setFace(b.dataset.v)),
+);
+function setFace(v) {
+  root.dataset.display = v;
+  face.dataset.v = v;
+  face.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === v)));
+  store.set("kd-face", v);
+}
+
+/* ── live contrast ────────────────────────────────────────────── */
+function hexRgb(h) {
+  h = h.replace("#", "");
+  return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+}
+function lum(h) {
+  const [r, g, b] = hexRgb(h).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+function ratio(a, b) {
+  const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m);
+  return (x + 0.05) / (y + 0.05);
+}
+function renderContrast() {
+  const cs = getComputedStyle(root);
+  const t = (n) => cs.getPropertyValue(n).trim();
+  const rows = [
+    ["Body text on card", t("--text"), t("--s1"), 4.5],
+    ["Secondary text on card", t("--text2"), t("--s1"), 4.5],
+    ["Button label on button", t("--on-primary"), t("--primary"), 4.5],
+    ["Accent text on page", t("--primary-text"), t("--ground"), 4.5],
+    ["Money on card", t("--money"), t("--s1"), 4.5],
+    ["Hint text on page", t("--text3"), t("--ground"), 3],
+  ];
+  $("#contrast").innerHTML = rows
+    .map(([label, fg, bg, need]) => {
+      const r = ratio(fg, bg);
+      const ok = r >= need;
+      return `<div><span>${label}</span><span>${r.toFixed(1)}:1<em class="${ok ? "pass" : "fail"}">${ok ? "pass" : "low"}</em></span></div>`;
+    })
+    .join("");
+}
+
+/* ── feed: chips, cards, skeleton ─────────────────────────────── */
+const CATS = ["For you", "Design & creative", "Software & tech", "Writing", "Video & media"];
+$("#cats").innerHTML = CATS.map((c, i) => `<button class="chip" aria-pressed="${i === 0}">${c.replace("&", "&amp;")}</button>`).join("");
+$("#cats").addEventListener("click", (e) => {
+  const c = e.target.closest(".chip");
+  if (!c) return;
+  $("#cats").querySelectorAll(".chip").forEach((x) => x.setAttribute("aria-pressed", String(x === c)));
+  reloadFeed();
+});
+
+const JOBS = [
+  { cat: "Design & creative", title: "Logo and brand kit for a campus food startup", who: "Chinedu Okafor", av: "CO", price: "₦45,000", days: 5, applied: 6, ago: "2h", tag: ["ok", "You qualify"] },
+  { cat: "Software & tech", title: "Fix checkout bugs on a Flutter shop app", who: "Aisha Bello", av: "AB", price: "₦80,000", days: 7, applied: 11, ago: "5h", tag: ["", "Needs verified proof"] },
+  { cat: "Video & media", title: "Edit three 30-second Reels for a hair salon", who: "Tola Adeyemi", av: "TA", price: "₦25,000", days: 3, applied: 2, ago: "1d", tag: ["warn", "Closes in 6h"] },
+];
+function jobCard(j, i) {
+  return `<button class="job rise" style="animation-delay:${120 + i * 70}ms">
+    <div class="row"><span class="pill brand">${j.cat.replace("&", "&amp;")}</span><span class="ago">${j.ago}</span></div>
+    <h4>${j.title}</h4>
+    <div class="who"><span class="av">${j.av}</span>${j.who}<span class="pill ${j.tag[0]}" style="margin-left:auto">${j.tag[1]}</span></div>
+    <div class="meta"><span><svg class="i sm"><use href="#i-clock"/></svg><span class="num">${j.days} days</span></span><span><svg class="i sm"><use href="#i-users"/></svg><span class="num">${j.applied} applied</span></span><span class="price num">${j.price}</span></div>
+  </button>`;
+}
+const skeleton = () =>
+  `<div class="sk"><i style="width:34%"></i><i style="width:88%;height:16px"></i><i style="width:60%"></i><i style="width:100%;margin-top:6px"></i></div>`.repeat(3);
+function renderFeed() { $("#jobs").innerHTML = JOBS.map(jobCard).join(""); }
+let feedTimer;
+function reloadFeed() {
+  clearTimeout(feedTimer);
+  $("#jobs").innerHTML = skeleton();
+  // Held long enough to read as a state, never a flash (playbook: ≥ 300–500 ms).
+  feedTimer = setTimeout(renderFeed, 1400);
+}
+
+/* ── tab bar ──────────────────────────────────────────────────── */
+const tabs = [...document.querySelectorAll("#tabbar .tab")];
+tabs.forEach((t, i) =>
+  t.addEventListener("click", () => {
+    tabs.forEach((x) => x.setAttribute("aria-selected", String(x === t)));
+    $("#ind").style.transform = `translateX(${i * 100}%)`;
+  }),
+);
+
+/* ── toast ────────────────────────────────────────────────────── */
+function toast(msg, { kind = "ok", action } = {}) {
+  const box = $("#toasts");
+  box.innerHTML = ""; // one at a time
+  const el = document.createElement("div");
+  el.className = "toast " + kind;
+  el.setAttribute("role", "status");
+  el.innerHTML = `<span class="ic"><svg class="i sm"><use href="#i-${kind === "ok" ? "check" : "sparkle"}"/></svg></span><span>${msg}</span>`;
+  if (action) {
+    const b = document.createElement("button");
+    b.textContent = action.label;
+    b.addEventListener("click", () => { action.run(); dismiss(); });
+    el.appendChild(b);
+  }
+  box.appendChild(el);
+  const dismiss = () => { el.classList.add("out"); setTimeout(() => el.remove(), 260); };
+  setTimeout(dismiss, action ? 5000 : 3200);
+}
+
+/* ── apply: idle → loading → done ─────────────────────────────── */
+const apply = $("#apply");
+let applyState = "idle";
+function setApply(state) {
+  applyState = state;
+  apply.classList.toggle("done", state === "done");
+  apply.setAttribute("aria-busy", String(state === "loading"));
+  const label = {
+    idle: `Apply for this job`,
+    loading: `<span class="spin"></span>Sending application`,
+    done: `<svg class="i"><use href="#i-check"/></svg>Applied`,
+  }[state];
+  apply.innerHTML = `<span class="lbl">${label}</span>`;
+}
+function runApply() {
+  if (applyState !== "idle") return;
+  setApply("loading");
+  setTimeout(() => {
+    setApply("done");
+    toast("Application sent to Chinedu", { action: { label: "Undo", run: () => { setApply("idle"); toast("Application withdrawn", { kind: "info" }); } } });
+  }, 1200);
+}
+apply.addEventListener("click", runApply);
+
+/* ── live deadlines (relative to now, so the page never goes stale) ─ */
+const MIN = 60e3, HOUR = 60 * MIN, DAY = 24 * HOUR;
+const fundedAt = Date.now() - 2 * DAY + 37 * MIN;
+const deliverBy = fundedAt + 5 * DAY;
+const answerBy = Date.now() + 41 * HOUR;
+const fmtDay = (t) => new Date(t).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+const fmtTime = (t) => new Date(t).toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit" });
+function tick() {
+  const left = Math.max(0, deliverBy - Date.now());
+  const d = Math.floor(left / DAY), h = Math.floor((left % DAY) / HOUR), m = Math.floor((left % HOUR) / MIN);
+  $("#countdown").innerHTML = `${d}d ${h}h<small>${m}m</small>`;
+  const pct = Math.round((left / (deliverBy - fundedAt)) * 100);
+  $("#dueBar").style.width = 100 - pct + "%";
+  $("#dueLeft").textContent = `${pct}% of time left`;
+  $("#dueDate").textContent = fmtDay(deliverBy);
+  $("#answerBy").textContent = `Waiting on the client · answer by ${fmtDay(answerBy)}, ${fmtTime(answerBy)}`;
+}
+
+/* ── controls ─────────────────────────────────────────────────── */
+$("#tryToast").addEventListener("click", () => toast("Profile saved"));
+$("#trySkeleton").addEventListener("click", reloadFeed);
+$("#tryApply").addEventListener("click", () => { if (applyState !== "idle") setApply("idle"); setTimeout(runApply, 50); });
+document.addEventListener("keydown", (e) => {
+  if (e.target.closest("input,textarea")) return;
+  const p = PALETTES[Number(e.key) - 1];
+  if (p) setPalette(p.id);
+});
+
+/* ── boot ─────────────────────────────────────────────────────── */
+paintSwatches();
+const fromHash = PALETTES.find((p) => "#" + p.id === location.hash);
+setPalette(fromHash ? fromHash.id : store.get("kd-palette") || "gold");
+setFace(store.get("kd-face") || "serif");
+renderFeed();
+tick();
+setInterval(tick, 30e3);
+</script>
+</body>
+</html>
