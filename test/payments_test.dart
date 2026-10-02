@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:king_domain/presentation/widgets/kit/kd_button.dart';
 import 'package:king_domain/core/formatting/currency.dart';
 import 'package:king_domain/data/api_client.dart';
 import 'package:king_domain/data/models/job.dart';
@@ -234,20 +235,21 @@ void main() {
     );
     const verifiedProof = [ProofItem(id: 'p1', category: 'Design & creative', title: 'Portfolio', status: ProofReviewStatus.verified)];
 
-    Future<ElevatedButton> applyButton(WidgetTester tester, TalentProfile profile) async {
+    /// The screen's main action (the last KdButton, in the sticky bar).
+    Future<KdButton> applyButton(WidgetTester tester, TalentProfile profile) async {
       await tester.pumpWidget(_host(const JobDetailScreen(jobId: 'j2'), [
         jobsProvider.overrideWith(() => _StaticJobs([openJob])),
         talentProfileProvider.overrideWith(() => _StaticProfile(profile)),
       ]));
       await _open(tester);
-      return tester.widget<ElevatedButton>(find.byType(ElevatedButton).last);
+      return tester.widget<KdButton>(find.byType(KdButton).last);
     }
 
     testWidgets('verified talent without a payout account cannot apply', (tester) async {
       final button = await applyButton(tester, const TalentProfile(proofItems: verifiedProof));
       expect(button.onPressed, isNull);
-      expect(find.text('Payout account required'), findsOneWidget);
-      expect(find.textContaining('Add a payout account to apply'), findsOneWidget);
+      expect(button.label, 'Add a payout account to apply');
+      expect(find.text('Add bank account'), findsOneWidget, reason: 'the gate offers the way through');
     });
 
     testWidgets('verified talent with a payout account can apply', (tester) async {
@@ -259,7 +261,8 @@ void main() {
         ),
       );
       expect(button.onPressed, isNotNull);
-      expect(find.text('Apply for this job'), findsOneWidget);
+      expect(button.label, 'Apply for this job');
+      expect(find.text('You can apply'), findsOneWidget);
     });
   });
 

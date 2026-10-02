@@ -160,7 +160,7 @@ class DeadlineCard extends StatelessWidget {
               const Spacer(),
               Flexible(
                 child: Text(
-                  late ? (lateNote ?? '') : (footRight ?? (used == null ? '' : '${((1 - used) * 100).round()}% of the time left')),
+                  late ? (lateNote ?? '') : (footRight ?? (used == null ? '' : '${((1 - used) * 100).round()}% left')),
                   textAlign: TextAlign.right,
                   style: AppTextStyles.hint,
                 ),
@@ -347,6 +347,10 @@ class _VersionsCardState extends State<VersionsCard> {
               key: ValueKey(v.version),
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (v.fileUrl != null && isImageUrl(v.fileUrl!)) ...[
+                  const SizedBox(height: 12),
+                  _ImagePreview(url: v.fileUrl!),
+                ],
                 if ((v.note ?? '').isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Text(v.note!, style: AppTextStyles.bodyMedium),
@@ -448,8 +452,18 @@ class ActionBar extends StatelessWidget {
         ? (text: 'Waiting for the revised version', tone: KdTone.warn)
         : (text: 'Changes requested · resubmit within ${left(job.changeDueAt, '3 days')}', tone: KdTone.warn),
     ContractStatus.disputed => (text: 'With a ${AppBrand.name} admin', tone: KdTone.bad),
-    ContractStatus.approved => (text: 'Paid', tone: KdTone.ok),
+    // The Paid pill already says it; no second line.
+    ContractStatus.approved => (text: '', tone: KdTone.ok),
     null => (text: '', tone: KdTone.plain),
+  };
+}
+
+/// List order: needs you first, then active, then finished.
+int contractSortRank(Job job, {required bool forClient}) {
+  if (contractNeedsYou(job, forClient: forClient)) return 0;
+  return switch (job.contractStatus) {
+    ContractStatus.approved || ContractStatus.disputed => 2,
+    _ => 1,
   };
 }
 
@@ -461,3 +475,34 @@ bool contractNeedsYou(Job job, {required bool forClient}) => switch (job.contrac
   ContractStatus.changesRequested => !forClient,
   _ => false,
 };
+
+/// True when a (signed) file URL points at an image we can preview inline.
+bool isImageUrl(String url) => RegExp(r'\.(png|jpe?g|webp|gif)$', caseSensitive: false).hasMatch(Uri.tryParse(url)?.path ?? '');
+
+/// Delivered work shown inline (imagery surface 3): fades in over a surface
+/// colour; a failed load falls back to the "Open the file" link below it.
+class _ImagePreview extends StatelessWidget {
+  final String url;
+  const _ImagePreview({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+      child: AspectRatio(
+        aspectRatio: 4 / 3,
+        child: Container(
+          color: AppColors.surface2,
+          child: Image.network(
+            url,
+            fit: BoxFit.cover,
+            cacheWidth: 900,
+            frameBuilder: (_, child, frame, sync) =>
+                sync ? child : AnimatedOpacity(opacity: frame == null ? 0 : 1, duration: AppMotion.layout, child: child),
+            errorBuilder: (_, _, _) => const Center(child: Icon(Icons.image_not_supported_outlined, color: AppColors.text3)),
+          ),
+        ),
+      ),
+    );
+  }
+}

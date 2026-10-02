@@ -30,7 +30,8 @@ class ClientJobsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final jobsAsync = ref.watch(jobsProvider);
     final jobs = mine(jobsAsync.valueOrNull ?? const [], ref.watch(authProvider).user?.id);
-    jobs.sort((a, b) => (contractNeedsYou(b, forClient: true) ? 1 : 0) - (contractNeedsYou(a, forClient: true) ? 1 : 0));
+    // Needing you first; open jobs (no contract) rank with the active ones.
+    jobs.sort((a, b) => (a.contractStatus == null ? 1 : contractSortRank(a, forClient: true)) - (b.contractStatus == null ? 1 : contractSortRank(b, forClient: true)));
 
     final Widget body;
     if (jobsAsync.isLoading && !jobsAsync.hasValue) {

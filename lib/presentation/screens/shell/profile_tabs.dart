@@ -135,14 +135,16 @@ class TalentProfileTab extends ConsumerWidget {
               ),
             )
           else ...[
-            GridView.count(
-              crossAxisCount: 3,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 8,
-              childAspectRatio: .62,
-              children: [for (final item in p.proofItems) _ProofThumb(item: item)],
+            // Sized by content (a grid's fixed cell height left a gap under short titles).
+            LayoutBuilder(
+              builder: (context, box) {
+                final w = (box.maxWidth - 16) / 3;
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 12,
+                  children: [for (final item in p.proofItems) SizedBox(width: w, child: _ProofThumb(item: item))],
+                );
+              },
             ),
             const SizedBox(height: 8),
             Text('Verified means a ${AppBrand.name} reviewer checked the work is yours. The picture alone isn\'t the proof.', style: AppTextStyles.hint),
@@ -211,9 +213,7 @@ class _ProofThumb extends StatelessWidget {
               ? const StatusPill('Verified', tone: KdTone.ok, icon: Icons.check_rounded)
               : const StatusPill('In review', tone: KdTone.warn),
           const SizedBox(height: 4),
-          Flexible(
-            child: Text(item.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: AppTextStyles.bodySmall.copyWith(fontSize: 11.5, height: 1.3)),
-          ),
+          Text(item.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: AppTextStyles.bodySmall.copyWith(fontSize: 11.5, height: 1.3)),
         ],
       ),
     );

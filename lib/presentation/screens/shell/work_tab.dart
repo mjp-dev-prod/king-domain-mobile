@@ -27,8 +27,8 @@ class WorkTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final jobsAsync = ref.watch(jobsProvider);
     final work = mine(jobsAsync.valueOrNull ?? const []);
-    // Needing you first, then everything else as the server ordered it.
-    work.sort((a, b) => (contractNeedsYou(b, forClient: false) ? 1 : 0) - (contractNeedsYou(a, forClient: false) ? 1 : 0));
+    // Needing you first, then active, then finished.
+    work.sort((a, b) => contractSortRank(a, forClient: false) - contractSortRank(b, forClient: false));
 
     final Widget body;
     if (jobsAsync.isLoading && !jobsAsync.hasValue) {
