@@ -60,7 +60,9 @@ class KdToast {
 
   static void _remove() {
     _timer?.cancel();
-    _entry?.remove();
+    _timer = null;
+    // The overlay may already be gone (screen closed, app restarted).
+    if (_entry?.mounted ?? false) _entry!.remove();
     _entry = null;
   }
 }

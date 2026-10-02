@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:king_domain/core/formatting/deadline.dart';
+import 'package:king_domain/data/models/contract_history.dart';
 import 'package:king_domain/data/models/job.dart';
 import 'package:king_domain/data/models/talent_profile.dart';
 import 'package:king_domain/presentation/providers/jobs_provider.dart';
 import 'package:king_domain/presentation/providers/talent_profile_provider.dart';
-import 'package:king_domain/presentation/screens/client/review_deliverable_screen.dart';
+import 'package:king_domain/presentation/screens/client/client_contract_screen.dart';
 import 'package:king_domain/presentation/screens/contracts/contract_detail_screen.dart';
 import 'package:king_domain/presentation/screens/payments/fund_contract_screen.dart';
 
@@ -49,8 +50,13 @@ Future<void> _show(WidgetTester tester, Widget screen, Job job) async {
     overrides: [
       jobsProvider.overrideWith(() => _Jobs(job)),
       talentProfileProvider.overrideWith(_Profile.new),
+      contractHistoryProvider('j1').overrideWith((ref) async => const ContractHistory()),
     ],
-    child: MaterialApp(home: screen),
+    // Reduced motion stops the looping "waiting" dot so pumpAndSettle settles.
+    child: MaterialApp(
+      builder: (context, child) => MediaQuery(data: MediaQuery.of(context).copyWith(disableAnimations: true), child: child!),
+      home: screen,
+    ),
   ));
   await tester.pumpAndSettle();
 }
@@ -139,7 +145,7 @@ void main() {
     testWidgets('warns that doing nothing releases payment, with the date', (tester) async {
       await _show(
         tester,
-        const ReviewDeliverableScreen(jobId: 'j1'),
+        const ClientContractScreen(jobId: 'j1'),
         _job(status: ContractStatus.submitted, reviewDueAt: DateTime.now().add(const Duration(days: 3))),
       );
 
@@ -147,7 +153,7 @@ void main() {
     });
 
     testWidgets('no warning when auto-release is off', (tester) async {
-      await _show(tester, const ReviewDeliverableScreen(jobId: 'j1'), _job(status: ContractStatus.submitted));
+      await _show(tester, const ClientContractScreen(jobId: 'j1'), _job(status: ContractStatus.submitted));
 
       expect(find.textContaining('If you do nothing'), findsNothing);
     });

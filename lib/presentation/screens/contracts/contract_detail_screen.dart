@@ -1,361 +1,401 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/constants/app_brand.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/formatting/currency.dart';
 import '../../../core/formatting/deadline.dart';
 import '../../../data/api_client.dart';
+import '../../../data/models/contract_history.dart';
 import '../../../data/models/job.dart';
 import '../../providers/jobs_provider.dart';
 import '../../providers/talent_profile_provider.dart';
-import '../../widgets/common/section_label.dart';
+import '../../widgets/contract/contract_parts.dart';
+import '../../widgets/kit/kd_button.dart';
+import '../../widgets/kit/kd_card.dart';
+import '../../widgets/kit/kd_fields.dart';
+import '../../widgets/kit/kd_sheet.dart';
+import '../../widgets/kit/kd_toast.dart';
+import '../../widgets/kit/motion.dart';
 import '../payments/payout_account_screen.dart';
 import 'submit_deliverable_screen.dart';
 
-/// The wedge's core screen (docs/core/vision-vs-research-reconciliation.md
-/// §2): makes payment protection legible in plain language, not a fintech
-/// dashboard. Backed by real money now — "funded" means the client's
-/// payment is confirmed by Paystack and held in King Domain's balance, and
-/// approval transfers the budget to the talent's payout account.
-class ContractDetailScreen extends ConsumerStatefulWidget {
+/// The talent's view of a contract (prototypes/stage2-contract-flow.html, left
+/// phone): what's due and when, what they asked for, what the client asked
+/// for, and the one thing to do next. Stage 2 rules:
+/// docs/features/stage-2-delivery-and-changes.md.
+class ContractDetailScreen extends ConsumerWidget {
   final String jobId;
 
   const ContractDetailScreen({super.key, required this.jobId});
 
   @override
-  ConsumerState<ContractDetailScreen> createState() => _ContractDetailScreenState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final jobsAsync = ref.watch(jobsProvider);
+    return Scaffold(
+      body: jobsAsync.when(
+        loading: () => const _Loading(),
+        error: (_, _) => _Message(
+          'Couldn\'t load this contract. Check your connection and try again.',
+          action: KdButton.secondary(label: 'Try again', onPressed: () => ref.read(jobsProvider.notifier).refresh()),
+        ),
+        data: (jobs) {
+          final job = jobs.where((j) => j.id == jobId).firstOrNull;
+          if (job == null || job.contractStatus == null) return const _Message('This job has no contract yet.');
+          return LiveClock(builder: (_) => _TalentContract(job: job));
+        },
+      ),
+    );
+  }
 }
 
-class _ContractDetailScreenState extends ConsumerState<ContractDetailScreen> {
-  bool _startingWork = false;
-  String? _error;
-
-  static const _steps = [
-    ContractStatus.funded,
-    ContractStatus.inProgress,
-    ContractStatus.submitted,
-    ContractStatus.approved,
-  ];
-
-  String _stepLabel(ContractStatus status) => switch (status) {
-    ContractStatus.awaitingPayment => 'Awaiting payment',
-    ContractStatus.funded => 'Funded',
-    ContractStatus.inProgress => 'In progress',
-    ContractStatus.submitted => 'Submitted',
-    ContractStatus.approved => 'Approved',
-  };
-
-  String _explanation(ContractStatus status, Job job) => switch (status) {
-    ContractStatus.awaitingPayment =>
-      '${job.clientName} selected you. They still need to pay before work '
-          'starts — don\'t begin until this contract shows Funded.'
-          '${job.payByAt == null ? '' : ' They have until ${formatDeadline(job.payByAt!)}; if it isn\'t paid by then the award is cancelled and you\'re back in the running.'}',
-    ContractStatus.funded =>
-      '${job.clientName} has funded this job. The money is set aside — '
-          'you\'ll be paid once they approve your delivery.',
-    ContractStatus.inProgress =>
-      'You\'ve started work. Submit your deliverable when it\'s ready for '
-          '${job.clientName} to review.',
-    ContractStatus.submitted =>
-      'Your work is with ${job.clientName} for review. You\'ll be paid as '
-          'soon as they approve it.'
-          '${job.reviewDueAt == null ? '' : ' If they don\'t respond by ${formatDeadline(job.reviewDueAt!)}, you\'re paid automatically.'}',
-    ContractStatus.approved =>
-      '${job.clientName} approved your delivery. Payment has been sent to '
-          'your payout account.',
-  };
-
-  Future<void> _startWork(String jobId) async {
-    setState(() {
-      _startingWork = true;
-      _error = null;
-    });
-    try {
-      await ref.read(jobsProvider.notifier).startWork(jobId);
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() => _error = e.message);
-    } finally {
-      if (mounted) setState(() => _startingWork = false);
-    }
-  }
+class _TalentContract extends ConsumerWidget {
+  final Job job;
+  const _TalentContract({required this.job});
 
   @override
-  Widget build(BuildContext context) {
-    final jobsAsync = ref.watch(jobsProvider);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final status = job.contractStatus!;
+    final history = ref.watch(contractHistoryProvider(job.id)).valueOrNull ?? const ContractHistory();
+    final needsPayoutAccount = status != ContractStatus.approved &&
+        ref.watch(talentProfileProvider).valueOrNull?.payoutAccount == null;
+    final held = status == ContractStatus.awaitingPayment ? formatNaira(job.budget) : '${formatNaira(job.budget)} held by ${AppBrand.name}';
 
-    return jobsAsync.when(
-      loading: () => Scaffold(
-        appBar: AppBar(),
-        body: const Center(child: CircularProgressIndicator()),
-      ),
-      error: (err, _) => Scaffold(
-        appBar: AppBar(),
-        body: Center(child: Text('Could not load this contract.', style: AppTextStyles.bodyMedium)),
-      ),
-      data: (jobs) => _buildBody(context, jobs.firstWhere((j) => j.id == widget.jobId)),
+    final cards = <Widget>[
+      ..._stateCards(context, status, history),
+      if (needsPayoutAccount)
+        NoticeCard(
+          tone: KdTone.brand,
+          icon: Icons.account_balance_outlined,
+          title: 'Add a payout account',
+          body: 'The client can\'t release your payment until you add the bank account it goes to.',
+          actions: [
+            KdButton(
+              label: 'Add bank account',
+              variant: KdButtonVariant.soft,
+              height: AppDimensions.buttonHeightSm,
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PayoutAccountScreen())),
+            ),
+          ],
+        ),
+      if (history.deliveries.isNotEmpty)
+        VersionsCard(versions: history.deliveries, title: 'What you delivered'),
+    ];
+
+    return Stack(
+      children: [
+        RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(contractHistoryProvider(job.id));
+            await ref.read(jobsProvider.notifier).refresh();
+          },
+          child: ListView(
+            padding: EdgeInsets.fromLTRB(AppDimensions.gutter, MediaQuery.paddingOf(context).top + 8, AppDimensions.gutter, 200),
+            children: [
+              ContractHeader(title: job.title, sub: '${job.clientName} · $held', pill: contractStatusPill(status)),
+              for (var i = 0; i < cards.length; i++)
+                Padding(padding: const EdgeInsets.only(top: 12), child: RiseIn(delay: Duration(milliseconds: 60 * i), child: cards[i])),
+            ],
+          ),
+        ),
+        Positioned(left: 0, right: 0, bottom: 0, child: ActionBar(children: _actions(context, ref, status, history))),
+      ],
     );
   }
 
-  Widget _buildBody(BuildContext context, Job job) {
-    final status = job.contractStatus;
+  List<Widget> _stateCards(BuildContext context, ContractStatus status, ContractHistory history) {
+    final client = job.clientName;
+    final deadline = job.deliverByAt;
+    final deadlineCard = deadline == null
+        ? null
+        : DeadlineCard(eyebrow: 'Delivery due in', deadline: deadline, start: job.fundedAt, lateNote: 'Deliver now, or ask for more time');
 
-    if (status == null) {
-      return Scaffold(
-        appBar: AppBar(),
-        body: const Center(child: Text('This job has no contract yet.')),
+    switch (status) {
+      case ContractStatus.awaitingPayment:
+        return [
+          NoticeCard(
+            tone: KdTone.warn,
+            icon: Icons.hourglass_empty_rounded,
+            title: 'Waiting for $client to pay',
+            body: '$client selected you. Don\'t start until this contract shows paid.'
+                '${job.payByAt == null ? '' : ' They have until ${formatDeadline(job.payByAt!)}; if it isn\'t paid by then the award is cancelled and you\'re back in the running.'}',
+          ),
+        ];
+      case ContractStatus.funded:
+        return [
+          NoticeCard(
+            tone: KdTone.ok,
+            icon: Icons.lock_outline_rounded,
+            title: 'Payment secured',
+            body: '$client paid ${formatNaira(job.budget)} into ${AppBrand.name}. You\'re paid it when they approve your delivery. Start when you\'re ready.',
+          ),
+          ?deadlineCard,
+          ?_extensionCard(history),
+        ];
+      case ContractStatus.inProgress:
+        return [
+          ?deadlineCard,
+          if (job.overdue)
+            const NoticeCard(
+              tone: KdTone.bad,
+              icon: Icons.error_outline_rounded,
+              title: '3 days past the delivery date',
+              body: 'Nothing has been delivered and no extension was agreed, and the client has been told. Deliver as soon as you can.',
+            ),
+          ?_extensionCard(history),
+        ];
+      case ContractStatus.submitted:
+        final rounds = job.changeRoundsLeft;
+        return [
+          NoticeCard(
+            tone: KdTone.brand,
+            icon: Icons.schedule_rounded,
+            title: 'Waiting for $client to review',
+            body: '$client can approve and pay, or ask for changes ($rounds round${rounds == 1 ? '' : 's'} left).'
+                '${job.reviewDueAt == null ? '' : ' If they don\'t respond by ${formatDeadline(job.reviewDueAt!)}, you\'re paid automatically.'}',
+          ),
+        ];
+      case ContractStatus.changesRequested:
+        final round = history.latestChangeRound;
+        final due = job.changeDueAt;
+        final last = job.changeRounds >= Job.maxChangeRounds;
+        return [
+          NoticeCard(
+            tone: KdTone.warn,
+            icon: Icons.edit_outlined,
+            title: '$client asked for changes',
+            trailing: 'Round ${job.changeRounds} of ${Job.maxChangeRounds}',
+            extra: RoundSteps(current: job.changeRounds),
+            quote: round?.reason,
+            waiting: due == null ? null : switch (timeLeft(due)) { final l? => 'Resubmit within $l', null => 'The resubmit time has run out' },
+            footnote: due == null
+                ? null
+                : 'If you don\'t resubmit by ${formatDeadline(due)}, the job goes to a ${AppBrand.name} admin.${last ? ' This is the last round.' : ''}',
+          ),
+        ];
+      case ContractStatus.disputed:
+        return [
+          const NoticeCard(
+            tone: KdTone.bad,
+            icon: Icons.balance_rounded,
+            title: 'With a ${AppBrand.name} admin',
+            body: 'An admin will look at every version and change request and decide. Nothing is paid out or refunded until then.',
+          ),
+        ];
+      case ContractStatus.approved:
+        return [
+          NoticeCard(
+            tone: KdTone.ok,
+            icon: Icons.payments_outlined,
+            title: 'You\'ve been paid ${formatNaira(job.budget)}',
+            body: 'Sent to your payout account. Transfers can take a little while to show.',
+          ),
+        ];
+    }
+  }
+
+  Widget? _extensionCard(ContractHistory history) {
+    final e = history.latestExtension;
+    if (e == null || e.status == ExtensionStatus.withdrawn) return null;
+    final days = '${e.requestedDays} more day${e.requestedDays == 1 ? '' : 's'}';
+    return switch (e.status) {
+      ExtensionStatus.pending => NoticeCard(
+        tone: KdTone.warn,
+        icon: Icons.hourglass_top_rounded,
+        title: 'You asked for $days',
+        quote: e.reason,
+        waiting: switch (timeLeft(e.answerDueAt)) { final l? => 'Waiting on ${job.clientName} · $l left to answer', null => 'Being granted now' },
+        footnote: 'If ${job.clientName} doesn\'t answer by ${formatDeadline(e.answerDueAt)}, it\'s granted automatically.',
+      ),
+      ExtensionStatus.declined => NoticeCard(
+        tone: KdTone.plain,
+        icon: Icons.info_outline_rounded,
+        title: 'Extension declined',
+        body: job.deliverByAt == null ? null : 'The delivery date stays ${formatDeadline(job.deliverByAt!)}.',
+      ),
+      _ => NoticeCard(
+        tone: KdTone.ok,
+        icon: Icons.check_rounded,
+        title: e.status == ExtensionStatus.autoGranted ? 'Extension granted automatically' : 'Extension granted',
+        body: job.deliverByAt == null ? null : '+$days. The new delivery date is ${formatDeadline(job.deliverByAt!)}.',
+      ),
+    };
+  }
+
+  /// Why the talent can't ask for more time right now, or null if they can.
+  String? _extensionBlocked(ContractHistory history) {
+    if (job.deliverByAt == null || job.deliveryDays == null) return 'This job has no delivery date';
+    if (job.overdue || DateTime.now().isAfter(job.deliverByAt!.add(const Duration(days: 3)))) return 'Too late: 3 days past the date';
+    if (history.pendingExtension != null) return 'Waiting on ${job.clientName}\'s answer';
+    if (job.extensionRequestsLeft == 0) return 'No extension requests left';
+    return null;
+  }
+
+  List<Widget> _actions(BuildContext context, WidgetRef ref, ContractStatus status, ContractHistory history) {
+    final notifier = ref.read(jobsProvider.notifier);
+    Widget askForTime() {
+      final blocked = _extensionBlocked(history);
+      final left = job.extensionRequestsLeft;
+      return KdButton.secondary(
+        label: blocked ?? 'Ask for more time · $left request${left == 1 ? '' : 's'} left',
+        onPressed: blocked == null ? () { _openExtensionSheet(context, ref); } : null,
       );
     }
 
-    // -1 for awaitingPayment: nothing lit on the stepper until money is in.
-    final stepIndex = _steps.indexOf(status);
-    final needsPayoutAccount = status != ContractStatus.approved &&
-        ref.watch(talentProfileProvider).valueOrNull?.payoutAccount == null;
+    void openSubmit() => Navigator.of(context).push(MaterialPageRoute(builder: (_) => SubmitDeliverableScreen(jobId: job.id)));
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Contract')),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(AppDimensions.lg),
-          children: [
-            SectionLabel(job.category),
-            const SizedBox(height: AppDimensions.sm),
-            Text(job.title, style: AppTextStyles.h3),
-            const SizedBox(height: AppDimensions.xl),
-
-            _StatusStepper(currentIndex: stepIndex, labels: _steps.map(_stepLabel).toList()),
-            const SizedBox(height: AppDimensions.lg),
-
-            Container(
-              padding: const EdgeInsets.all(AppDimensions.md),
-              decoration: BoxDecoration(
-                color: AppColors.ink,
-                borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        switch (status) {
-                          ContractStatus.approved => Icons.check_circle,
-                          ContractStatus.awaitingPayment => Icons.hourglass_empty,
-                          _ => Icons.shield_outlined,
-                        },
-                        size: AppDimensions.iconSm,
-                        color: switch (status) {
-                          ContractStatus.approved => AppColors.settled,
-                          ContractStatus.awaitingPayment => AppColors.openPending,
-                          _ => AppColors.gold,
-                        },
-                      ),
-                      const SizedBox(width: AppDimensions.sm),
-                      Text(
-                        formatNaira(job.budget),
-                        style: AppTextStyles.h3.copyWith(color: AppColors.paper),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppDimensions.sm),
-                  Text(
-                    _explanation(status, job),
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.slateDim,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (needsPayoutAccount) ...[
-              const SizedBox(height: AppDimensions.md),
-              _PayoutPrompt(
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const PayoutAccountScreen()),
-                ),
-              ),
-            ],
-            if (_error != null) ...[
-              const SizedBox(height: AppDimensions.md),
-              Text(
-                _error!,
-                style: AppTextStyles.bodySmall.copyWith(color: AppColors.openPending),
-              ),
-            ],
-            const SizedBox(height: AppDimensions.xl),
-
-            if (status == ContractStatus.funded)
-              ElevatedButton(
-                onPressed: _startingWork ? null : () => _startWork(job.id),
-                child: _startingWork
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          color: AppColors.ink,
-                          strokeWidth: 2.5,
-                        ),
-                      )
-                    : const Text('Start work'),
-              ),
-            if (status == ContractStatus.inProgress)
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => SubmitDeliverableScreen(jobId: job.id),
-                  ),
-                ),
-                child: const Text('Submit deliverable'),
-              ),
-            if (status == ContractStatus.submitted) ...[
-              if (job.deliverableNote != null) ...[
-                const SectionLabel('Your submission'),
-                const SizedBox(height: AppDimensions.sm),
-                Text(job.deliverableNote!, style: AppTextStyles.bodyMedium),
-                const SizedBox(height: AppDimensions.sm),
-              ],
-              if (job.deliverableFileUrl != null) ...[
-                Row(
-                  children: [
-                    Icon(Icons.attach_file, size: AppDimensions.iconSm, color: AppColors.slateDim),
-                    const SizedBox(width: AppDimensions.sm),
-                    Text('File attached', style: AppTextStyles.bodySmall),
-                  ],
-                ),
-                const SizedBox(height: AppDimensions.lg),
-              ] else
-                const SizedBox(height: AppDimensions.sm),
-              Container(
-                padding: const EdgeInsets.all(AppDimensions.md),
-                decoration: BoxDecoration(
-                  color: AppColors.openPending.withValues(alpha: 0.1),
-                  border: Border.all(color: AppColors.openPending.withValues(alpha: 0.4)),
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.hourglass_empty, size: AppDimensions.iconSm, color: AppColors.openPending),
-                    const SizedBox(width: AppDimensions.sm),
-                    Expanded(
-                      child: Text(
-                        'Waiting on ${job.clientName} to review and approve.',
-                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.openPending),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            if (status == ContractStatus.approved)
-              Container(
-                padding: const EdgeInsets.all(AppDimensions.md),
-                decoration: BoxDecoration(
-                  color: AppColors.settled.withValues(alpha: 0.1),
-                  border: Border.all(color: AppColors.settled.withValues(alpha: 0.4)),
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.check_circle, size: AppDimensions.iconSm, color: AppColors.settled),
-                    const SizedBox(width: AppDimensions.sm),
-                    Expanded(
-                      child: Text(
-                        'Payment released — this job is complete.',
-                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.settled),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          ],
+    return switch (status) {
+      ContractStatus.funded => [
+        KdButton(
+          label: 'Start work',
+          icon: Icons.play_arrow_rounded,
+          busyLabel: 'Starting',
+          onPressed: () async {
+            try {
+              await notifier.startWork(job.id);
+            } on ApiException catch (e) {
+              if (context.mounted) KdToast.show(context, e.message, kind: ToastKind.error);
+              throw const ShownError();
+            }
+          },
         ),
-      ),
-    );
-  }
-}
-
-class _PayoutPrompt extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _PayoutPrompt({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-      child: Container(
-        padding: const EdgeInsets.all(AppDimensions.md),
-        decoration: BoxDecoration(
-          color: AppColors.gold.withValues(alpha: 0.1),
-          border: Border.all(color: AppColors.gold.withValues(alpha: 0.4)),
-          borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.account_balance_outlined, size: AppDimensions.iconSm, color: AppColors.gold),
-            const SizedBox(width: AppDimensions.sm),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Add a payout account',
-                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.gold, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'The client can\'t release your payment until you add the bank account it goes to.',
-                    style: AppTextStyles.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right, size: AppDimensions.iconSm, color: AppColors.gold),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusStepper extends StatelessWidget {
-  final int currentIndex;
-  final List<String> labels;
-
-  const _StatusStepper({required this.currentIndex, required this.labels});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        for (var i = 0; i < labels.length; i++) ...[
-          Expanded(
-            child: Column(
-              children: [
-                Container(
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: i <= currentIndex ? AppColors.settled : AppColors.ink3,
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
-                  ),
-                ),
-                const SizedBox(height: AppDimensions.sm),
-                Text(
-                  labels[i],
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: i <= currentIndex ? AppColors.settled : AppColors.slateDim,
-                    fontWeight: i == currentIndex ? FontWeight.w600 : FontWeight.w400,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (i != labels.length - 1) const SizedBox(width: AppDimensions.xs),
-        ],
+        askForTime(),
       ],
+      ContractStatus.inProgress => [
+        KdButton(label: 'Deliver the work', icon: Icons.upload_rounded, onPressed: openSubmit),
+        askForTime(),
+      ],
+      ContractStatus.changesRequested => [
+        KdButton(label: 'Deliver version ${history.deliveries.length + 1}', icon: Icons.upload_rounded, onPressed: openSubmit),
+      ],
+      _ => const [],
+    };
+  }
+
+  Future<void> _openExtensionSheet(BuildContext context, WidgetRef ref) {
+    return showKdSheet(context, builder: (_) => _ExtensionSheet(job: job));
+  }
+}
+
+class _ExtensionSheet extends ConsumerStatefulWidget {
+  final Job job;
+  const _ExtensionSheet({required this.job});
+
+  @override
+  ConsumerState<_ExtensionSheet> createState() => _ExtensionSheetState();
+}
+
+class _ExtensionSheetState extends ConsumerState<_ExtensionSheet> {
+  final _reason = TextEditingController();
+  late int _days = (widget.job.deliveryDays! >= 2) ? 2 : 1;
+  bool _valid = false;
+
+  @override
+  void dispose() {
+    _reason.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final job = widget.job;
+    final left = job.extensionRequestsLeft;
+    return KdSheetBody(
+      title: 'Ask for more time',
+      lead: '${job.clientName} has 48 hours to answer. If they don\'t, it\'s granted automatically. '
+          'You have $left request${left == 1 ? '' : 's'} left on this job, and a declined one counts.',
+      children: [
+        const SizedBox(height: 16),
+        Text('Extra days (up to ${job.deliveryDays}, the job\'s original length)', style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 6),
+        DayStepper(value: _days, min: 1, max: job.deliveryDays!, onChanged: (v) => setState(() => _days = v)),
+        const SizedBox(height: 14),
+        KdCard(
+          tone: KdTone.brand,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              const Icon(Icons.event_outlined, size: 18, color: AppColors.primaryText),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'New date if granted: ${formatDeadline(job.deliverByAt!.add(Duration(days: _days)))}',
+                  style: AppTextStyles.bodyMedium.copyWith(fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+        ),
+        ReasonField(
+          controller: _reason,
+          label: 'Why do you need it?',
+          hint: 'e.g. The menu photos I need arrived two days late.',
+          onValidChanged: (v) => setState(() => _valid = v),
+        ),
+        const SizedBox(height: 18),
+        KdButton(
+          label: 'Send request',
+          busyLabel: 'Sending',
+          onPressed: !_valid
+              ? null
+              : () async {
+                  try {
+                    await ref.read(jobsProvider.notifier).requestExtension(job.id, days: _days, reason: _reason.text);
+                  } on ApiException catch (e) {
+                    if (context.mounted) KdToast.show(context, e.message, kind: ToastKind.error);
+                    throw const ShownError();
+                  }
+                  if (!context.mounted) return;
+                  Navigator.of(context).pop();
+                  KdToast.show(context, 'Request sent to ${job.clientName}');
+                },
+        ),
+        const SizedBox(height: 8),
+        KdButton.secondary(label: 'Cancel', onPressed: () => Navigator.of(context).pop()),
+      ],
+    );
+  }
+}
+
+class _Loading extends StatelessWidget {
+  const _Loading();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: EdgeInsets.fromLTRB(AppDimensions.gutter, MediaQuery.paddingOf(context).top + 70, AppDimensions.gutter, 24),
+      children: const [
+        Skeleton(height: 26, width: 220, radius: 8),
+        SizedBox(height: 20),
+        SkeletonCard(),
+        SizedBox(height: 12),
+        SkeletonCard(),
+      ],
+    );
+  }
+}
+
+class _Message extends StatelessWidget {
+  final String text;
+  final Widget? action;
+  const _Message(this.text, {this.action});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimensions.lg),
+        child: Column(
+          children: [
+            Align(alignment: Alignment.centerLeft, child: BackButton(onPressed: () => Navigator.of(context).maybePop())),
+            const Spacer(),
+            Text(text, textAlign: TextAlign.center, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.text2)),
+            if (action != null) ...[const SizedBox(height: 16), SizedBox(width: 200, child: action)],
+            const Spacer(),
+          ],
+        ),
+      ),
     );
   }
 }

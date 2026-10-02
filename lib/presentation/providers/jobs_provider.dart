@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/api_client.dart';
+import '../../data/models/contract_history.dart';
 import '../../data/models/job.dart';
 
 /// Real backend now (king-domain-backend's /jobs routes — Sprint 3). Every
@@ -75,10 +76,11 @@ class JobsNotifier extends AsyncNotifier<List<Job>> {
     required String category,
     required String description,
     required double budget,
+    required int deliveryDays,
   }) async {
     final data = await ApiClient.instance.post(
       '/jobs',
-      body: {'title': title, 'category': category, 'description': description, 'budget': budget},
+      body: {'title': title, 'category': category, 'description': description, 'budget': budget, 'deliveryDays': deliveryDays},
     );
     await refresh();
     return Job.fromJson(data['job'] as Map<String, dynamic>);
@@ -102,13 +104,50 @@ class JobsNotifier extends AsyncNotifier<List<Job>> {
       fileBytes: fileBytes,
       fileName: fileName,
     );
-    await refresh();
+    await _afterContractChange(jobId);
   }
 
   Future<void> approveDelivery(String jobId) async {
     await ApiClient.instance.post('/jobs/$jobId/contract/approve');
+    await _afterContractChange(jobId);
+  }
+
+  // ── Stage 2 (docs/features/stage-2-delivery-and-changes.md) ──────────
+
+  /// Talent: ask for [days] more (1 to the job's original duration).
+  Future<void> requestExtension(String jobId, {required int days, required String reason}) async {
+    await ApiClient.instance.post('/jobs/$jobId/contract/extension', body: {'days': days, 'reason': reason.trim()});
+    await _afterContractChange(jobId);
+  }
+
+  /// Client: grant or decline the open extension request.
+  Future<void> answerExtension(String jobId, String extensionId, {required bool grant}) async {
+    await ApiClient.instance.post(
+      '/jobs/$jobId/contract/extension/$extensionId/answer',
+      body: {'decision': grant ? 'grant' : 'decline'},
+    );
+    await _afterContractChange(jobId);
+  }
+
+  /// Client: send delivered work back. After the last round the server
+  /// escalates to an admin instead; returns true when that happened.
+  Future<bool> requestChanges(String jobId, {required String reason}) async {
+    final data = await ApiClient.instance.post('/jobs/$jobId/contract/request-changes', body: {'reason': reason.trim()});
+    await _afterContractChange(jobId);
+    return data['escalated'] == true;
+  }
+
+  Future<void> _afterContractChange(String jobId) async {
+    ref.invalidate(contractHistoryProvider(jobId));
     await refresh();
   }
 }
+
+/// Every delivery version, extension request and change round on a job's
+/// contract (client and awarded talent only).
+final contractHistoryProvider = FutureProvider.autoDispose.family<ContractHistory, String>((ref, jobId) async {
+  final data = await ApiClient.instance.get('/jobs/$jobId/contract/history');
+  return ContractHistory.fromJson(data as Map<String, dynamic>);
+});
 
 final jobsProvider = AsyncNotifierProvider<JobsNotifier, List<Job>>(JobsNotifier.new);

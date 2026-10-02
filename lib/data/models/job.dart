@@ -34,6 +34,21 @@ class Job {
   /// backend only sends it while auto-release is actually switched on, so a
   /// non-null value is always a real promise.
   final DateTime? reviewDueAt;
+  /// Days the talent has to deliver, counted from funding (stage 2). Null on
+  /// jobs posted before delivery dates existed: no deadline features.
+  final int? deliveryDays;
+  final DateTime? fundedAt;
+  /// fundedAt + deliveryDays, moved later by granted extensions.
+  final DateTime? deliverByAt;
+  /// Extension requests made on this contract (a declined one counts; max 2).
+  final int extensionsUsed;
+  /// Change rounds the client has opened (max 2; after that, an admin).
+  final int changeRounds;
+  /// While changesRequested: the talent resubmits by this or it goes to an admin.
+  final DateTime? changeDueAt;
+  /// The delivery date passed by 3 days with nothing delivered (flag only;
+  /// cancel-for-refund isn't built until stage 3).
+  final bool overdue;
   final String? deliverableNote;
   final String? deliverableUrl;
   /// A short-lived signed URL to the uploaded deliverable file, if one was
@@ -66,6 +81,13 @@ class Job {
     this.paymentFailed = false,
     this.payByAt,
     this.reviewDueAt,
+    this.deliveryDays,
+    this.fundedAt,
+    this.deliverByAt,
+    this.extensionsUsed = 0,
+    this.changeRounds = 0,
+    this.changeDueAt,
+    this.overdue = false,
     this.deliverableNote,
     this.deliverableUrl,
     this.deliverableFileUrl,
@@ -91,6 +113,13 @@ class Job {
       paymentFailed: contract?['paymentFailed'] as bool? ?? false,
       payByAt: DateTime.tryParse(contract?['payByAt'] as String? ?? ''),
       reviewDueAt: DateTime.tryParse(contract?['reviewDueAt'] as String? ?? ''),
+      deliveryDays: json['deliveryDays'] as int?,
+      fundedAt: DateTime.tryParse(contract?['fundedAt'] as String? ?? ''),
+      deliverByAt: DateTime.tryParse(contract?['deliverByAt'] as String? ?? ''),
+      extensionsUsed: contract?['extensionsUsed'] as int? ?? 0,
+      changeRounds: contract?['changeRounds'] as int? ?? 0,
+      changeDueAt: DateTime.tryParse(contract?['changeDueAt'] as String? ?? ''),
+      overdue: contract?['overdue'] as bool? ?? false,
       deliverableNote: contract?['deliverableNote'] as String?,
       deliverableUrl: contract?['deliverableUrl'] as String?,
       deliverableFileUrl: contract?['deliverableFileUrl'] as String?,
@@ -125,6 +154,13 @@ class Job {
       paymentFailed: paymentFailed,
       payByAt: payByAt,
       reviewDueAt: reviewDueAt,
+      deliveryDays: deliveryDays,
+      fundedAt: fundedAt,
+      deliverByAt: deliverByAt,
+      extensionsUsed: extensionsUsed,
+      changeRounds: changeRounds,
+      changeDueAt: changeDueAt,
+      overdue: overdue,
       deliverableNote: deliverableNote ?? this.deliverableNote,
       deliverableUrl: deliverableUrl ?? this.deliverableUrl,
       deliverableFileUrl: deliverableFileUrl ?? this.deliverableFileUrl,
@@ -134,6 +170,14 @@ class Job {
 
   /// What the client pays at checkout: budget + platform fee.
   double get clientTotal => budget + (platformFeeAmount ?? 0);
+
+  /// Agreed limits (backend contractCore RULES), mirrored so the app can say
+  /// what's left before the server has to refuse.
+  static const maxExtensionRequests = 2;
+  static const maxChangeRounds = 2;
+
+  int get extensionRequestsLeft => (maxExtensionRequests - extensionsUsed).clamp(0, maxExtensionRequests);
+  int get changeRoundsLeft => (maxChangeRounds - changeRounds).clamp(0, maxChangeRounds);
 }
 
 enum JobApplicationStatus { notApplied, pending, accepted, rejected }
@@ -162,7 +206,11 @@ JobApplicationStatus _applicationStatusFromString(String? value) {
 /// visible lifecycle. Backed by real Paystack money movement: awaitingPayment
 /// until the client pays at checkout, funded once Paystack confirms it, and
 /// approval transfers the budget to the talent's bank account.
-enum ContractStatus { awaitingPayment, funded, inProgress, submitted, approved }
+///
+/// Stage 2 adds two: changesRequested (the client sent delivered work back;
+/// the talent owes a resubmit by changeDueAt) and disputed (parked for a King
+/// Domain admin after round 2, or a missed resubmit clock; stage 3 resolves it).
+enum ContractStatus { awaitingPayment, funded, inProgress, submitted, changesRequested, disputed, approved }
 
 ContractStatus? _contractStatusFromString(String? value) {
   switch (value) {
@@ -174,6 +222,10 @@ ContractStatus? _contractStatusFromString(String? value) {
       return ContractStatus.inProgress;
     case 'submitted':
       return ContractStatus.submitted;
+    case 'changesRequested':
+      return ContractStatus.changesRequested;
+    case 'disputed':
+      return ContractStatus.disputed;
     case 'approved':
       return ContractStatus.approved;
     default:

@@ -8,6 +8,13 @@ import '../../../core/constants/app_motion.dart';
 import '../../../core/constants/app_text_styles.dart';
 import 'pressable.dart';
 
+/// Throw this from a button's action after you've shown the failure to the
+/// user (toast or inline): the button returns to idle, skips its success
+/// state, and doesn't report it as a crash.
+class ShownError implements Exception {
+  const ShownError();
+}
+
 enum KdButtonVariant {
   /// The one main action on a screen. Violet, with the only glow allowed.
   primary,
@@ -75,6 +82,8 @@ class _KdButtonState extends State<KdButton> {
     var ok = true;
     try {
       await result;
+    } on ShownError {
+      ok = false;
     } catch (error, stack) {
       ok = false;
       FlutterError.reportError(FlutterErrorDetails(exception: error, stack: stack, library: 'KdButton'));

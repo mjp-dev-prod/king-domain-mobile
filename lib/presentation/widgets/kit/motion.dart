@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
@@ -16,23 +18,24 @@ class RiseIn extends StatefulWidget {
 
 class _RiseInState extends State<RiseIn> with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(vsync: this, duration: AppMotion.arrive);
-
-  @override
-  void initState() {
-    super.initState();
-    Future.delayed(widget.delay, () {
-      if (mounted) _c.forward();
-    });
-  }
+  Timer? _start;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (MediaQuery.maybeDisableAnimationsOf(context) ?? false) _c.value = 1;
+    if (MediaQuery.maybeDisableAnimationsOf(context) ?? false) {
+      _start?.cancel();
+      _c.value = 1;
+    } else if (_c.value == 0 && _start == null) {
+      _start = Timer(widget.delay, () {
+        if (mounted) _c.forward();
+      });
+    }
   }
 
   @override
   void dispose() {
+    _start?.cancel();
     _c.dispose();
     super.dispose();
   }

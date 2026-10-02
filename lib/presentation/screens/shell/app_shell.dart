@@ -12,7 +12,8 @@ import '../../providers/jobs_provider.dart';
 import '../../providers/talent_profile_provider.dart';
 import '../client/applicants_screen.dart';
 import '../client/post_job_screen.dart';
-import '../client/review_deliverable_screen.dart';
+import '../client/client_contract_screen.dart';
+import '../../widgets/contract/contract_parts.dart';
 import '../contracts/contract_detail_screen.dart';
 import '../jobs/job_feed_screen.dart';
 import '../payments/fund_contract_screen.dart';
@@ -170,8 +171,8 @@ class _ClientJobTile extends StatelessWidget {
           MaterialPageRoute(
             builder: (_) => switch (job.contractStatus) {
               ContractStatus.awaitingPayment => FundContractScreen(jobId: job.id),
-              ContractStatus.submitted || ContractStatus.approved => ReviewDeliverableScreen(jobId: job.id),
-              _ => ApplicantsScreen(job: job),
+              null => ApplicantsScreen(job: job),
+              _ => ClientContractScreen(jobId: job.id),
             },
           ),
         ),
@@ -379,29 +380,7 @@ class _StatusBadge extends StatelessWidget {
   const _StatusBadge({required this.status});
 
   @override
-  Widget build(BuildContext context) {
-    final (label, color) = switch (status) {
-      ContractStatus.awaitingPayment => ('Awaiting payment', AppColors.openPending),
-      ContractStatus.funded => ('Funded', AppColors.openPending),
-      ContractStatus.inProgress => ('In progress', AppColors.openPending),
-      ContractStatus.submitted => ('Submitted', AppColors.openPending),
-      ContractStatus.approved => ('Approved', AppColors.settled),
-      null => ('', AppColors.slateDim),
-    };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppDimensions.sm,
-        vertical: 2,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
-        borderRadius: BorderRadius.circular(AppDimensions.radiusSm),
-      ),
-      child: Text(label, style: AppTextStyles.bodySmall.copyWith(color: color)),
-    );
-  }
+  Widget build(BuildContext context) => status == null ? const SizedBox.shrink() : contractStatusPill(status!);
 }
 
 class _ProfileTab extends ConsumerWidget {
