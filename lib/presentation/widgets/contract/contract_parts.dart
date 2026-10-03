@@ -293,10 +293,16 @@ class RoundSteps extends StatelessWidget {
 }
 
 /// Every delivery version, newest selected; older versions stay viewable.
+///
+/// Delivered files sit in private storage and are reached through links that
+/// expire after 5 minutes. A screen left open longer holds dead links, so
+/// [refreshLinks] fetches the versions again with fresh ones: on a tap of
+/// "Open the file", and once when an inline image fails to load.
 class VersionsCard extends StatefulWidget {
   final List<DeliveryVersion> versions;
   final String title;
-  const VersionsCard({super.key, required this.versions, required this.title});
+  final Future<List<DeliveryVersion>> Function()? refreshLinks;
+  const VersionsCard({super.key, required this.versions, required this.title, this.refreshLinks});
 
   @override
   State<VersionsCard> createState() => _VersionsCardState();
@@ -304,6 +310,30 @@ class VersionsCard extends StatefulWidget {
 
 class _VersionsCardState extends State<VersionsCard> {
   int? _selected;
+  /// Versions whose image already got one automatic refresh, so a file that is
+  /// genuinely broken doesn't refresh in a loop.
+  final _healed = <int>{};
+
+  Future<List<DeliveryVersion>?> _fresh() async {
+    final refresh = widget.refreshLinks;
+    if (refresh == null) return null;
+    try {
+      return await refresh();
+    } catch (_) {
+      return null; // best effort: fall back to the link we already have
+    }
+  }
+
+  Future<void> _openFile(DeliveryVersion v) async {
+    final fresh = await _fresh();
+    final url = fresh?.where((d) => d.version == v.version).firstOrNull?.fileUrl ?? v.fileUrl!;
+    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  }
+
+  void _healImage(int version) {
+    if (!_healed.add(version)) return;
+    _fresh();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -349,14 +379,15 @@ class _VersionsCardState extends State<VersionsCard> {
               children: [
                 if (v.fileUrl != null && isImageUrl(v.fileUrl!)) ...[
                   const SizedBox(height: 12),
-                  _ImagePreview(url: v.fileUrl!),
+                  _ImagePreview(url: v.fileUrl!, onFailed: () => _healImage(v.version)),
                 ],
                 if ((v.note ?? '').isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Text(v.note!, style: AppTextStyles.bodyMedium),
                 ],
-                if (v.fileUrl != null) _LinkRow(icon: Icons.attach_file_rounded, label: 'Open the file', url: v.fileUrl!),
-                if ((v.url ?? '').isNotEmpty) _LinkRow(icon: Icons.link_rounded, label: v.url!, url: v.url!),
+                if (v.fileUrl != null) _LinkRow(icon: Icons.attach_file_rounded, label: 'Open the file', onOpen: () => _openFile(v)),
+                if ((v.url ?? '').isNotEmpty)
+                  _LinkRow(icon: Icons.link_rounded, label: v.url!, onOpen: () => launchUrl(Uri.parse(v.url!), mode: LaunchMode.externalApplication)),
                 const SizedBox(height: 10),
                 Text('Delivered ${formatDeadline(v.submittedAt)} · versions are kept, never overwritten', style: AppTextStyles.hint),
               ],
@@ -371,15 +402,15 @@ class _VersionsCardState extends State<VersionsCard> {
 class _LinkRow extends StatelessWidget {
   final IconData icon;
   final String label;
-  final String url;
-  const _LinkRow({required this.icon, required this.label, required this.url});
+  final Future<void> Function() onOpen;
+  const _LinkRow({required this.icon, required this.label, required this.onOpen});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 10),
       child: Pressable(
-        onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+        onTap: () { onOpen(); },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(AppDimensions.radiusMd)),
@@ -483,7 +514,9 @@ bool isImageUrl(String url) => RegExp(r'\.(png|jpe?g|webp|gif)$', caseSensitive:
 /// colour; a failed load falls back to the "Open the file" link below it.
 class _ImagePreview extends StatelessWidget {
   final String url;
-  const _ImagePreview({required this.url});
+  /// Called when the image can't be loaded (typically an expired link).
+  final VoidCallback? onFailed;
+  const _ImagePreview({required this.url, this.onFailed});
 
   @override
   Widget build(BuildContext context) {
@@ -499,7 +532,10 @@ class _ImagePreview extends StatelessWidget {
             cacheWidth: 900,
             frameBuilder: (_, child, frame, sync) =>
                 sync ? child : AnimatedOpacity(opacity: frame == null ? 0 : 1, duration: AppMotion.layout, child: child),
-            errorBuilder: (_, _, _) => const Center(child: Icon(Icons.image_not_supported_outlined, color: AppColors.text3)),
+            errorBuilder: (_, _, _) {
+              if (onFailed != null) WidgetsBinding.instance.addPostFrameCallback((_) => onFailed!());
+              return const Center(child: Icon(Icons.image_not_supported_outlined, color: AppColors.text3));
+            },
           ),
         ),
       ),

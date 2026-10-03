@@ -80,7 +80,11 @@ class _TalentContract extends ConsumerWidget {
           ],
         ),
       if (history.deliveries.isNotEmpty)
-        VersionsCard(versions: history.deliveries, title: 'What you delivered'),
+        VersionsCard(
+          versions: history.deliveries,
+          title: 'What you delivered',
+          refreshLinks: () async => (await ref.refresh(contractHistoryProvider(job.id).future)).deliveries,
+        ),
     ];
 
     return Stack(

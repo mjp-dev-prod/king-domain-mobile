@@ -77,7 +77,11 @@ class _ClientContract extends ConsumerWidget {
     final history = ref.watch(contractHistoryProvider(job.id)).valueOrNull ?? const ContractHistory();
     final cards = <Widget>[
       ..._stateCards(context, ref, status, history),
-      if (history.deliveries.isNotEmpty) VersionsCard(versions: history.deliveries, title: 'Delivered work'),
+      if (history.deliveries.isNotEmpty) VersionsCard(
+          versions: history.deliveries,
+          title: 'Delivered work',
+          refreshLinks: () async => (await ref.refresh(contractHistoryProvider(job.id).future)).deliveries,
+        ),
     ];
 
     return Stack(
