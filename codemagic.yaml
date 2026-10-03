@@ -261,19 +261,38 @@ workflows:
           set -e
 
           APK_PATH="build/app/outputs/flutter-apk/app-staging-release.apk"
+          ls -l "$APK_PATH"
 
-          HTTP_RESPONSE=$(curl -s -w "\n%{http_code}" \
-            -H "Authorization: Bearer $CI_API_TOKEN" \
-            -F "apk=@$APK_PATH;type=application/vnd.android.package-archive" \
-            "$KING_DOMAIN_BACKEND_URL/app/release/$VERSION_NAME/upload")
-          HTTP_STATUS=$(echo "$HTTP_RESPONSE" | tail -n1)
-          RESPONSE=$(echo "$HTTP_RESPONSE" | sed '$d')
+          # The hosted staging server answered the first upload with 400 "No APK
+          # file uploaded" although the same upload from a laptop is accepted
+          # (a 1 MB and the full 49 MB file both reached the handler). So: say
+          # how many bytes curl really sent, skip the Expect: 100-continue
+          # handshake that large uploads through proxies sometimes trip on, and
+          # retry, since the free server may be restarting or just waking up.
+          UPLOADED=no
+          for ATTEMPT in 1 2 3; do
+            echo "Upload attempt $ATTEMPT of 3"
+            HTTP_RESPONSE=$(curl -sS --http1.1 -H "Expect:" \
+              -w "\n%{http_code} sent=%{size_upload}B in %{time_total}s" \
+              -H "Authorization: Bearer $CI_API_TOKEN" \
+              -F "apk=@$APK_PATH;type=application/vnd.android.package-archive" \
+              "$KING_DOMAIN_BACKEND_URL/app/release/$VERSION_NAME/upload" || true)
+            LAST_LINE=$(echo "$HTTP_RESPONSE" | tail -n1)
+            HTTP_STATUS=$(echo "$LAST_LINE" | cut -d' ' -f1)
+            RESPONSE=$(echo "$HTTP_RESPONSE" | sed '$d')
 
-          echo "POST /app/release/$VERSION_NAME/upload -> HTTP $HTTP_STATUS"
-          echo "Response body: $RESPONSE"
+            echo "POST /app/release/$VERSION_NAME/upload -> HTTP $LAST_LINE"
+            echo "Response body: $RESPONSE"
 
-          if [ "$HTTP_STATUS" != "200" ]; then
-            echo "ERROR: APK upload failed (HTTP $HTTP_STATUS)."
+            if [ "$HTTP_STATUS" = "200" ]; then
+              UPLOADED=yes
+              break
+            fi
+            [ "$ATTEMPT" -lt 3 ] && echo "Not accepted. Waiting 30s, then trying again." && sleep 30
+          done
+
+          if [ "$UPLOADED" != "yes" ]; then
+            echo "ERROR: APK upload failed after 3 attempts."
             exit 1
           fi
 
