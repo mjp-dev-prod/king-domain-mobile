@@ -170,6 +170,14 @@ workflows:
       flutter: 3.38.5
       groups:
         - king_domain_staging
+      # The permanent staging signing key, uploaded once in Codemagic (Team
+      # settings > codemagic.yaml settings > Code signing identities > Android
+      # keystores) under this reference name. Every staging build is then signed
+      # the same way, so installs update in place for everyone. Without it each
+      # build gets a new random debug key and Android refuses to update
+      # ("App not installed as package appears to be invalid").
+      android_signing:
+        - kd_staging_keystore
 
     cache:
       cache_paths:

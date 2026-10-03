@@ -48,11 +48,33 @@ android {
         }
     }
 
+    // A permanent signing key for builds that are given one (Codemagic passes it
+    // in through these CM_KEYSTORE_* variables when a workflow lists
+    // `android_signing`: docs.codemagic.io/yaml-code-signing/signing-android).
+    // Without one, every CI build makes a fresh random debug key, and Android
+    // refuses to install a build over an app signed with a different key. It
+    // reports that as "App not installed as package appears to be invalid".
+    val ciKeystorePath: String? = System.getenv("CM_KEYSTORE_PATH")
+    signingConfigs {
+        create("kdRelease") {
+            if (ciKeystorePath != null) {
+                storeFile = file(ciKeystorePath)
+                storePassword = System.getenv("CM_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("CM_KEY_ALIAS")
+                keyPassword = System.getenv("CM_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Debug keys when no permanent key is supplied, so a local
+            // `flutter run --release` still works.
+            signingConfig = if (ciKeystorePath != null) {
+                signingConfigs.getByName("kdRelease")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }
