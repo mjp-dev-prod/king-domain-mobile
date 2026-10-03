@@ -12,7 +12,10 @@ workflows:
       cancel_previous_builds: true
 
     environment:
-      flutter: stable
+      # Pinned to the version the app is developed and tested on locally, so
+      # CI builds exactly what was tested. Upgrade deliberately: Flutter 3.44+
+      # moves Material/Cupertino pieces (3.47 splits them into packages).
+      flutter: 3.38.5
       groups:
         - king_domain_backend
 
@@ -148,7 +151,10 @@ workflows:
       cancel_previous_builds: true
 
     environment:
-      flutter: stable
+      # Pinned to the version the app is developed and tested on locally, so
+      # CI builds exactly what was tested. Upgrade deliberately: Flutter 3.44+
+      # moves Material/Cupertino pieces (3.47 splits them into packages).
+      flutter: 3.38.5
       groups:
         - king_domain_staging
 

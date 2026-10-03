@@ -1,3 +1,9 @@
+// Flutter 3.44 moved CupertinoPageTransitionsBuilder from material.dart to
+// cupertino.dart (docs.flutter.dev/release/breaking-changes/decouple-page-transition-builders).
+// Importing both builds on either side of that change; on older Flutter this
+// import is unused, hence the ignore.
+// ignore: unused_import, unnecessary_import
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_dimensions.dart';
