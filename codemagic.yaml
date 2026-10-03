@@ -26,6 +26,19 @@ workflows:
         - $HOME/.pub-cache
 
     scripts:
+      - name: Production builds run on master only
+        script: |
+          # This workflow talks to the PRODUCTION backend: it takes production's
+          # newest draft release and uploads an APK to it. Started by hand on
+          # another branch (the staging branch, say), it would overwrite that
+          # draft's APK with a build production's server can't support. The
+          # staging branch has its own workflow: "King Domain - Staging".
+          if [ "$CM_BRANCH" != "master" ]; then
+            echo "REFUSING TO RUN: this is the production workflow and the branch is '$CM_BRANCH'."
+            echo "Start 'King Domain - Staging (Android)' for the staging branch."
+            exit 1
+          fi
+
       - name: Install Flutter dependencies
         script: |
           flutter pub get
