@@ -30,6 +30,24 @@ android {
         versionName = flutter.versionName
     }
 
+    // Two apps from one codebase (docs.flutter.dev/deployment/flavors).
+    // production keeps the original application ID, so installed copies keep
+    // updating. staging gets its own ID and name, so Android treats it as a
+    // separate app that installs next to production, never over it.
+    flavorDimensions += "environment"
+    productFlavors {
+        create("production") {
+            dimension = "environment"
+            resValue(type = "string", name = "app_name", value = "King Domain")
+        }
+        create("staging") {
+            dimension = "environment"
+            applicationIdSuffix = ".staging"
+            versionNameSuffix = "-staging"
+            resValue(type = "string", name = "app_name", value = "KD Staging")
+        }
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.

@@ -61,6 +61,9 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  # Plain `flutter run` / `flutter build apk` build the production app;
+  # pass --flavor staging for the staging one (android/app/build.gradle.kts).
+  default-flavor: production
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

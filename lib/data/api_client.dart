@@ -1,16 +1,19 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/services.dart' show appFlavor;
 import 'package:http/http.dart' as http;
 import 'token_store.dart';
 
-/// Defaults to the real deployed backend so a normally-built/CI-built APK
-/// works out of the box. Override with --dart-define=KD_API_BASE=... only
-/// for local development — e.g. http://10.0.2.2:4000 for the Android
-/// emulator, or the host machine's LAN IP for a physical device on the same
-/// network as a locally-running backend.
+/// Each app flavor talks to its own backend: the production app to
+/// production, the staging app (--flavor staging) to hosted staging. Override
+/// with --dart-define=KD_API_BASE=... only for local development, e.g.
+/// http://10.0.2.2:4000 for the Android emulator, or the PC's LAN IP for a
+/// phone on the same network as a locally-running backend.
 const _productionApiBase = 'https://king-domain-backend-1.onrender.com';
+const _stagingApiBase = 'https://king-domain-backend-staging.onrender.com';
 
-const _apiBase = String.fromEnvironment('KD_API_BASE', defaultValue: _productionApiBase);
+const _flavorApiBase = appFlavor == 'staging' ? _stagingApiBase : _productionApiBase;
+const _apiBase = String.fromEnvironment('KD_API_BASE', defaultValue: _flavorApiBase);
 
 /// host:port of the server the app is talking to when it is NOT production
 /// (a --dart-define=KD_API_BASE override), else null. Drives the on-screen
