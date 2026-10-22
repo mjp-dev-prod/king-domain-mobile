@@ -214,6 +214,8 @@ the doc that was wrong.
   block — what's done, what's next, what's blocked, open decisions — and paste it into
   the next session. Treat it as the source of truth over anything the model "remembers".
 - **Push before you stop.** Work isn't done until `git push` succeeds.
+- **Send the team update.** At wrap-up, post the plain-language Slack update to the shareholders
+  (`session-update` skill, [docs/core/session-updates.md](docs/core/session-updates.md)).
 
 ---
 

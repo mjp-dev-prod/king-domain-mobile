@@ -1,5 +1,29 @@
 {
   "enabledPlugins": {
     "render@claude-plugins-official": true
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/tools/session-notify/notify.js\" start",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/tools/session-notify/notify.js\" end",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
   }
 }
