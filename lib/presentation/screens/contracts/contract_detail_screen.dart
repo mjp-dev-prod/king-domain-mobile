@@ -12,6 +12,7 @@ import '../../../data/models/job.dart';
 import '../../providers/jobs_provider.dart';
 import '../../providers/talent_profile_provider.dart';
 import '../../widgets/contract/contract_parts.dart';
+import '../../widgets/contract/lifecycle_stepper.dart';
 import '../../widgets/kit/kd_button.dart';
 import '../../widgets/kit/kd_card.dart';
 import '../../widgets/kit/kd_fields.dart';
@@ -62,8 +63,14 @@ class _TalentContract extends ConsumerWidget {
         ref.watch(talentProfileProvider).valueOrNull?.payoutAccount == null;
     final held = status == ContractStatus.awaitingPayment ? formatNaira(job.budget) : '${formatNaira(job.budget)} held by ${AppBrand.name}';
 
+    final state = _stateCards(context, status, history);
     final cards = <Widget>[
-      ..._stateCards(context, status, history),
+      // The primary card first (the deadline when there is one), then the timeline,
+      // then the rest, as in prototypes/palette-explorer.html: an action card is
+      // never pushed below the fold by the stepper.
+      if (state.isNotEmpty) state.first,
+      LifecycleStepper(job: job, forClient: false),
+      ...state.skip(1),
       if (needsPayoutAccount)
         NoticeCard(
           tone: KdTone.brand,

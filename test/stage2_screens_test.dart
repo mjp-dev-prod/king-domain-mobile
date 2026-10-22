@@ -9,6 +9,7 @@ import 'package:king_domain/presentation/providers/jobs_provider.dart';
 import 'package:king_domain/presentation/providers/talent_profile_provider.dart';
 import 'package:king_domain/presentation/screens/client/client_contract_screen.dart';
 import 'package:king_domain/presentation/screens/contracts/contract_detail_screen.dart';
+import 'package:king_domain/presentation/widgets/contract/contract_parts.dart';
 
 final _now = DateTime.now();
 
@@ -147,7 +148,7 @@ void main() {
 
     testWidgets('overdue: a red notice, and asking for time is closed', (tester) async {
       await _show(tester, const ContractDetailScreen(jobId: 'j1'), _job(status: ContractStatus.inProgress, overdue: true));
-      expect(find.text('3 days past the delivery date'), findsOneWidget);
+      expect(find.descendant(of: find.byType(NoticeCard), matching: find.text('3 days past the delivery date')), findsOneWidget);
       expect(find.text('Too late: 3 days past the date'), findsOneWidget);
     });
 
@@ -186,6 +187,8 @@ void main() {
 
       expect(find.text('The talent asked for 2 more days'), findsOneWidget);
       expect(find.textContaining('or it\'s granted automatically'), findsOneWidget);
+      await tester.ensureVisible(find.text('Give 2 more days'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Give 2 more days'));
       await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();
@@ -201,6 +204,8 @@ void main() {
         history: ContractHistory(extensions: [_ext(ExtensionStatus.pending)]),
       );
 
+      await tester.ensureVisible(find.text('Decline'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Decline'));
       await tester.pumpAndSettle();
       expect(find.text('Decline the extension?'), findsOneWidget);
@@ -243,8 +248,24 @@ void main() {
 
     testWidgets('overdue: says so plainly and promises no refund yet', (tester) async {
       await _show(tester, const ClientContractScreen(jobId: 'j1'), _job(status: ContractStatus.inProgress, overdue: true));
-      expect(find.text('3 days past the delivery date'), findsOneWidget);
+      expect(find.descendant(of: find.byType(NoticeCard), matching: find.text('3 days past the delivery date')), findsOneWidget);
       expect(find.textContaining('isn\'t available in the app yet'), findsOneWidget);
+    });
+  });
+
+  group('lifecycle stepper on the contract screens', () {
+    testWidgets('the talent sees the five steps, the last one worded for the talent', (tester) async {
+      await _show(tester, const ContractDetailScreen(jobId: 'j1'), _job(status: ContractStatus.inProgress));
+      for (final label in ['Awarded', 'Working on it', 'Client reviews', 'You\'re paid']) {
+        expect(find.text(label), findsOneWidget, reason: label);
+      }
+    });
+
+    testWidgets('the client sees the same steps, the last one worded for the client', (tester) async {
+      await _show(tester, const ClientContractScreen(jobId: 'j1'), _job(status: ContractStatus.submitted));
+      for (final label in ['Awarded', 'Working on it', 'Client reviews', 'Talent is paid']) {
+        expect(find.text(label), findsOneWidget, reason: label);
+      }
     });
   });
 }

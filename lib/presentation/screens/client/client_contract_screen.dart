@@ -11,6 +11,7 @@ import '../../../data/models/contract_history.dart';
 import '../../../data/models/job.dart';
 import '../../providers/jobs_provider.dart';
 import '../../widgets/contract/contract_parts.dart';
+import '../../widgets/contract/lifecycle_stepper.dart';
 import '../../widgets/kit/kd_button.dart';
 import '../../widgets/kit/kd_card.dart';
 import '../../widgets/kit/kd_fields.dart';
@@ -75,8 +76,11 @@ class _ClientContract extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final status = job.contractStatus!;
     final history = ref.watch(contractHistoryProvider(job.id)).valueOrNull ?? const ContractHistory();
+    final state = _stateCards(context, ref, status, history);
     final cards = <Widget>[
-      ..._stateCards(context, ref, status, history),
+      if (state.isNotEmpty) state.first,
+      LifecycleStepper(job: job, forClient: true),
+      ...state.skip(1),
       if (history.deliveries.isNotEmpty) VersionsCard(
           versions: history.deliveries,
           title: 'Delivered work',

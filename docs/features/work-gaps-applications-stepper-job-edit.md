@@ -30,6 +30,10 @@ existing skeleton; an error shows Retry. Pull to refresh refreshes the shared fe
 
 ## 2. Lifecycle stepper (both contract screens, app only)
 
+Placement follows the prototype: the screen's primary card first (the deadline card when there is
+one), then the stepper, then the remaining notices and action cards, so an action is never pushed
+below the fold by the timeline.
+
 Five steps, from `prototypes/palette-explorer.html`: **Awarded, Payment secured, Working on it,
 Client reviews, Paid.** Derived only from existing contract status and dates. It changes no
 payment logic. It does not say where money is held (Paystack lists escrow services as ineligible,
