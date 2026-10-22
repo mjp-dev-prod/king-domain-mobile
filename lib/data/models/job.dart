@@ -11,6 +11,8 @@ class Job {
   final double budget;
   final String clientId;
   final String clientName;
+  /// The client's public profile photo link, or null (initials are shown instead).
+  final String? clientPhotoUrl;
   /// No reputation/rating field exists on the backend yet — client rating
   /// and completed-job count are planned additions, not real data right
   /// now. Defaults to 0/no-rating rather than a fabricated number; update
@@ -77,6 +79,7 @@ class Job {
     required this.budget,
     required this.clientId,
     required this.clientName,
+    this.clientPhotoUrl,
     this.clientRating = 0,
     this.clientCompletedJobs = 0,
     required this.postedAt,
@@ -113,6 +116,7 @@ class Job {
       budget: double.tryParse(json['budget']?.toString() ?? '') ?? 0,
       clientId: client?['id'] as String? ?? '',
       clientName: client?['fullName'] as String? ?? 'Client',
+      clientPhotoUrl: client?['photoUrl'] as String?,
       postedAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
       awardedApplicationId: json['awardedApplicationId'] as String?,
       closedAt: DateTime.tryParse(json['closedAt'] as String? ?? ''),
@@ -154,6 +158,7 @@ class Job {
       budget: budget,
       clientId: clientId,
       clientName: clientName,
+      clientPhotoUrl: clientPhotoUrl,
       clientRating: clientRating,
       clientCompletedJobs: clientCompletedJobs,
       postedAt: postedAt,
@@ -254,6 +259,8 @@ class JobApplication {
   final String jobId;
   final String talentId;
   final String talentName;
+  /// The applicant's public profile photo link, or null (initials are shown instead).
+  final String? talentPhotoUrl;
   final String status; // 'pending' | 'selected' | 'notSelected'
   final DateTime createdAt;
   /// Real facts the client weighs (no score, no rank): see ApplicantSignals.
@@ -264,6 +271,7 @@ class JobApplication {
     required this.jobId,
     required this.talentId,
     required this.talentName,
+    this.talentPhotoUrl,
     required this.status,
     required this.createdAt,
     this.signals = const ApplicantSignals(),
@@ -276,6 +284,7 @@ class JobApplication {
       jobId: json['jobId'] as String,
       talentId: talent?['id'] as String? ?? '',
       talentName: talent?['fullName'] as String? ?? 'Talent',
+      talentPhotoUrl: talent?['photoUrl'] as String?,
       status: json['status'] as String? ?? 'pending',
       createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
       signals: ApplicantSignals.fromJson(json['signals'] as Map<String, dynamic>?),

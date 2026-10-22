@@ -9,6 +9,8 @@ class AuthUser {
   final String role; // 'talent' | 'client'
   final String fullName;
   final bool emailVerified;
+  /// The permanent public link to the profile photo, or null (initials are shown instead).
+  final String? photoUrl;
 
   const AuthUser({
     required this.id,
@@ -16,6 +18,7 @@ class AuthUser {
     required this.role,
     required this.fullName,
     required this.emailVerified,
+    this.photoUrl,
   });
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
@@ -25,6 +28,7 @@ class AuthUser {
       role: json['role'] as String,
       fullName: json['fullName'] as String,
       emailVerified: json['emailVerified'] as bool? ?? false,
+      photoUrl: json['photoUrl'] as String?,
     );
   }
 }
