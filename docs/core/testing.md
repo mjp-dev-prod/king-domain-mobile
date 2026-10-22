@@ -1,6 +1,6 @@
 # Testing — what is guaranteed, and what is not
 
-**Last full run: 2026-10-22.** Backend 145/145, app 144/144, `flutter analyze` clean. (Before the work gaps: backend 108, app 83.)
+**Last full run: 2026-10-22 (after profile photos).** Backend 189/189, app 223/223, `flutter analyze` clean. (Before the work gaps: backend 108, app 83.) The backend 189 came from two runs: 174 in the full run, then `jobsRoutes.test.js` (15) re-run alone after its server failed to start twice within the 60 s wait on a slow Neon branch; it passed 15/15 and the wait is now 150 s.
 
 Evidence tags: 🟢 documented by Paystack (source named) · 🔵 observed in this repo's tests ·
 🟡 assumed, not yet seen against the real service · 🔴 not covered.
