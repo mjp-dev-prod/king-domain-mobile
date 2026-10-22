@@ -37,6 +37,8 @@ live here regardless of which sibling repo (backend, web, admin) they end up aff
   the design for three gaps found on Victor's phone and in the 2026-10-22 audit, including the race
   guards that make "edit only before the first applicant" safe. Read before touching jobs, the Work
   tab or the contract screens.
+- [Work gaps implementation plan](./features/work-gaps-implementation-plan.md) — the task-by-task
+  build plan for the design above (backend and app), each task test-first.
 - [Imagery surfaces](./features/imagery-surfaces.md) — every place images appear (proof, photos,
   deliveries, job references, illustrations), each linked to the decision it comes from. Read
   before rendering any image.
