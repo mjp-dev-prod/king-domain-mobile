@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand v1 Ground. The staging flavor overrides this with violet (src/staging/res). -->
+    <color name="ic_launcher_background">#0D0A16</color>
+</resources>

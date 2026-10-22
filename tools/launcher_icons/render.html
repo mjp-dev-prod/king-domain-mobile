@@ -1,0 +1,23 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&display=block" rel="stylesheet">
+<style>html,body{margin:0;background:transparent}canvas{display:block}</style></head>
+<body><canvas id="c" width="1024" height="1024"></canvas>
+<script>
+const q = new URLSearchParams(location.search);
+const bg = q.get('bg') || 'none', fg = q.get('fg'), ratio = parseFloat(q.get('ratio') || '0.52'), mark = q.get('mark') || 'KD';
+(async () => {
+  await document.fonts.load('700 300px "Fraunces"');
+  const c = document.getElementById('c'), x = c.getContext('2d');
+  if (bg !== 'none') { x.fillStyle = bg; x.fillRect(0, 0, 1024, 1024); }
+  x.textBaseline = 'alphabetic';
+  x.font = '700 300px "Fraunces"';
+  let m = x.measureText(mark);
+  const w = m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
+  const size = 300 * (1024 * ratio) / w;
+  x.font = `700 ${size}px "Fraunces"`;
+  m = x.measureText(mark);
+  const ww = m.actualBoundingBoxLeft + m.actualBoundingBoxRight, hh = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
+  x.fillStyle = fg;
+  x.fillText(mark, 512 - ww / 2 + m.actualBoundingBoxLeft, 512 + hh / 2 - m.actualBoundingBoxDescent);
+})();
+</script></body></html>
