@@ -190,14 +190,18 @@ class ListGroup extends StatelessWidget {
   }
 }
 
-/// Initials in a circle, with an optional ring showing progress (e.g. profile
-/// completion). Real photos replace this once profile photos exist
-/// (docs/features/imagery-surfaces.md, surface 2).
-class InitialsAvatar extends StatelessWidget {
+/// A person's circle: their profile photo when they have one, their initials when they don't (never
+/// a stock picture or a placeholder face: docs/features/imagery-surfaces.md, surface 2), with an
+/// optional ring showing progress (e.g. profile completion).
+///
+/// The initials are always drawn underneath, so they show while the photo loads and stay if it
+/// fails to load. Screen readers hear the name, once.
+class UserAvatar extends StatelessWidget {
   final String name;
+  final String? photoUrl;
   final double size;
   final double? ring; // 0..1
-  const InitialsAvatar({super.key, required this.name, this.size = 44, this.ring});
+  const UserAvatar({super.key, required this.name, this.photoUrl, this.size = 44, this.ring});
 
   String get _initials {
     final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
@@ -207,13 +211,30 @@ class InitialsAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final face = Container(
+    final initials = Container(
       width: size,
       height: size,
       alignment: Alignment.center,
       decoration: const BoxDecoration(color: AppColors.surface3, shape: BoxShape.circle),
       child: Text(_initials, style: AppTextStyles.title.copyWith(fontSize: size * .36)),
     );
+    final url = photoUrl;
+    final Widget picture = url == null || url.isEmpty
+        ? initials
+        : SizedBox(
+            width: size,
+            height: size,
+            child: ClipOval(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  initials,
+                  Image.network(url, fit: BoxFit.cover, gaplessPlayback: true, errorBuilder: (_, _, _) => const SizedBox.shrink()),
+                ],
+              ),
+            ),
+          );
+    final face = Semantics(label: name, image: true, child: ExcludeSemantics(child: picture));
     if (ring == null) return face;
     return SizedBox(
       width: size + 12,

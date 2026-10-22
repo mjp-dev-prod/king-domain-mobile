@@ -16,6 +16,7 @@ import '../../widgets/kit/pressable.dart';
 import '../../widgets/kit/status_pill.dart';
 import '../payments/payout_account_screen.dart';
 import '../profile/profile_overview_screen.dart';
+import '../profile/profile_photo_button.dart';
 
 /// Sign out asks first (it's easy to tap by accident, and it ends every
 /// in-progress screen). RootRouter takes the user back to Welcome.
@@ -77,7 +78,7 @@ class TalentProfileTab extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(AppDimensions.gutter, 20, AppDimensions.gutter, 120),
         children: [
-          Center(child: InitialsAvatar(name: name, size: 84, ring: done / steps.length)),
+          Center(child: ProfilePhotoButton(size: 84, ring: done / steps.length)),
           const SizedBox(height: 12),
           Text(name.isEmpty ? 'Your profile' : name, textAlign: TextAlign.center, style: AppTextStyles.h2),
           if (p.headline.isNotEmpty) ...[
@@ -231,7 +232,7 @@ class ClientProfileTab extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(AppDimensions.gutter, 20, AppDimensions.gutter, 120),
       children: [
-        Center(child: InitialsAvatar(name: name, size: 84)),
+        Center(child: ProfilePhotoButton(size: 84)),
         const SizedBox(height: 12),
         Text(name.isEmpty ? 'Your profile' : name, textAlign: TextAlign.center, style: AppTextStyles.h2),
         Text(user?.email ?? '', textAlign: TextAlign.center, style: AppTextStyles.bodySmall.copyWith(fontSize: 13.5)),

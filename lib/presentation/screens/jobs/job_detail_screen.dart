@@ -79,7 +79,7 @@ class JobDetailScreen extends ConsumerWidget {
       KdCard(
         child: Row(
           children: [
-            InitialsAvatar(name: job.clientName, size: 42),
+            UserAvatar(name: job.clientName, photoUrl: job.clientPhotoUrl, size: 42),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

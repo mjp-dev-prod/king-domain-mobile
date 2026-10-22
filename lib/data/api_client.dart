@@ -212,4 +212,13 @@ class ApiClient {
         fileField: fileField,
         fileName: fileName,
       );
+
+  /// One file, sent with PUT (a profile photo replaces whatever was there). The file goes in the
+  /// field the server reads, "file".
+  Future<dynamic> putMultipart(
+    String path, {
+    required List<int> fileBytes,
+    String? fileName,
+  }) =>
+      _request('PUT', path, multipart: true, fileBytes: fileBytes, fileField: 'file', fileName: fileName);
 }

@@ -139,6 +139,18 @@ class AuthNotifier extends Notifier<AuthState> {
     await TokenStore.instance.clear();
     state = const AuthState(loading: false);
   }
+
+  /// Sets (or replaces) the signed-in person's profile photo. The server checks the file and
+  /// answers with the updated user; a refusal throws an ApiException with its reason.
+  Future<void> setPhoto(List<int> bytes, String fileName) async {
+    final data = await ApiClient.instance.putMultipart('/users/me/photo', fileBytes: bytes, fileName: fileName);
+    state = state.copyWith(user: AuthUser.fromJson(data['user'] as Map<String, dynamic>));
+  }
+
+  Future<void> removePhoto() async {
+    final data = await ApiClient.instance.delete('/users/me/photo');
+    state = state.copyWith(user: AuthUser.fromJson(data['user'] as Map<String, dynamic>));
+  }
 }
 
 final authProvider = NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);
