@@ -22,8 +22,17 @@ always receives the full posted budget.
 | 3b | Client | May ask for changes (max 2 rounds, 3 days each to resubmit); still unhappy after round 2 → an admin | `changesRequested` → `submitted`, or `disputed` |
 | 4 | Client | Approves, **or does nothing for 3 days and payment releases automatically** (once switched on). Backend transfers the **budget only** to the talent's bank | `approved` |
 
-There is no escrow product: between steps 2 and 4 the money sits in King Domain's own Paystack
-balance. The fee simply never leaves it.
+There is no escrow product: between steps 2 and 4 King Domain (MJP Productions) holds the client's
+money itself. **Where, exactly, is NOT settled (corrected 2026-10-22):** this doc used to say it
+sits in King Domain's own Paystack balance. Paystack's docs say otherwise by default: a payment is
+queued as a pending payout and **settled to the payout bank account on a schedule**, while the
+Balance that Transfers draw from is **funded separately by top-up** and is Registered-only
+(https://support.paystack.com/en/articles/2125314, .../2130114, .../2132866). Paystack's
+"Manual Payouts" (collections stay in the Balance) is documented for Ghana and Kenya; nothing found
+confirms it for Nigeria. 🔴 Until Paystack answers in writing, the approve-then-transfer step may
+fail for lack of Balance on the first real job, and the fee never "staying" in a balance is an
+assumption. Related risk: Paystack lists "escrow services" as an ineligible business
+(https://support.paystack.com/en/articles/2127042). The fee still never leaves King Domain.
 
 ## The clocks (src/contractLifecycle.js)
 
