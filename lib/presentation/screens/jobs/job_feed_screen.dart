@@ -11,9 +11,13 @@ import '../../providers/auth_provider.dart';
 import '../../providers/jobs_provider.dart';
 import '../../providers/talent_profile_provider.dart';
 import '../../widgets/kit/kd_card.dart';
+import '../../widgets/kit/kd_chip.dart';
 import '../../widgets/kit/kd_layout.dart';
+import '../../widgets/kit/kd_sheet.dart';
 import '../../widgets/kit/motion.dart';
+import '../../widgets/kit/pressable.dart';
 import '../../widgets/kit/status_pill.dart';
+import 'feed_filter.dart';
 import 'job_detail_screen.dart';
 
 /// T4 — Job feed (prototypes/palette-explorer.html, screen 01). Open jobs,
@@ -30,6 +34,57 @@ class JobFeedScreen extends ConsumerStatefulWidget {
 class _JobFeedScreenState extends ConsumerState<JobFeedScreen> {
   /// null = every category.
   String? _category;
+  final _search = TextEditingController();
+  String _query = '';
+  FeedSort _sort = FeedSort.newest;
+  /// Show only jobs this talent is verified to apply for.
+  bool _canApplyOnly = false;
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _clearSearch() {
+    _search.clear();
+    setState(() => _query = '');
+  }
+
+  void _clearFilters() {
+    _search.clear();
+    setState(() {
+      _query = '';
+      _canApplyOnly = false;
+    });
+  }
+
+  void _openSort() {
+    showKdSheet(
+      context,
+      builder: (sheet) => KdSheetBody(
+        title: 'Sort jobs',
+        children: [
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final s in FeedSort.values)
+                KdChoiceChip(
+                  label: s.label,
+                  selected: _sort == s,
+                  onTap: () {
+                    setState(() => _sort = s);
+                    Navigator.of(sheet).pop();
+                  },
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   String _greeting() {
     final h = DateTime.now().hour;
@@ -44,16 +99,32 @@ class _JobFeedScreenState extends ConsumerState<JobFeedScreen> {
     final profile = ref.watch(talentProfileProvider).valueOrNull;
     // Open jobs, plus any this talent applied to (so they can see how it went).
     // A closed job stays only for someone who applied to it.
-    final visible = (jobsAsync.valueOrNull ?? const <Job>[])
+    final inCategory = (jobsAsync.valueOrNull ?? const <Job>[])
         .where((j) => (j.awardedApplicationId == null && !j.closed) || j.applicationStatus != JobApplicationStatus.notApplied)
         .where((j) => _category == null || j.category == _category)
         .toList();
+    final visible = filterAndSortJobs(
+      inCategory,
+      query: _query,
+      sort: _sort,
+      canApplyOnly: _canApplyOnly,
+      canApply: (j) => profile?.isVerifiedIn(j.category) ?? false,
+    );
+    final filtering = _query.trim().isNotEmpty || _canApplyOnly;
 
     final Widget body;
     if (jobsAsync.isLoading && !jobsAsync.hasValue) {
       body = const Column(children: [SkeletonCard(), SizedBox(height: 12), SkeletonCard(), SizedBox(height: 12), SkeletonCard()]);
     } else if (jobsAsync.hasError && !jobsAsync.hasValue) {
       body = ErrorState(message: 'Couldn\'t load jobs. Check your connection and try again.', onRetry: () => ref.read(jobsProvider.notifier).refresh());
+    } else if (visible.isEmpty && filtering) {
+      body = EmptyState(
+        icon: Icons.search_off_rounded,
+        title: 'No jobs match',
+        body: 'Try different words, or clear the filters.',
+        actionLabel: 'Clear filters',
+        onAction: _clearFilters,
+      );
     } else if (visible.isEmpty) {
       body = EmptyState(
         icon: Icons.work_outline_rounded,
@@ -89,6 +160,68 @@ class _JobFeedScreenState extends ConsumerState<JobFeedScreen> {
         children: [
           ScreenHeader(over: _greeting(), title: 'Jobs for you'),
           const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _search,
+                  onChanged: (v) => setState(() => _query = v),
+                  textInputAction: TextInputAction.search,
+                  style: AppTextStyles.bodyMedium,
+                  decoration: InputDecoration(
+                    hintText: 'Search jobs',
+                    prefixIcon: const Icon(Icons.search_rounded, color: AppColors.text3),
+                    suffixIcon: _query.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: 'Clear search',
+                            icon: const Icon(Icons.close_rounded, color: AppColors.text3),
+                            onPressed: _clearSearch,
+                          ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Tooltip(
+                message: 'Sort jobs',
+                child: Pressable(
+                  onTap: _openSort,
+                  semanticLabel: 'Sort jobs',
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: _sort == FeedSort.newest ? AppColors.surface1 : AppColors.primarySoft,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(Icons.swap_vert_rounded, color: _sort == FeedSort.newest ? AppColors.text2 : AppColors.primaryText),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // On = only the jobs this talent is verified to apply for.
+              Tooltip(
+                message: 'Only jobs I can apply for',
+                child: Semantics(
+                  toggled: _canApplyOnly,
+                  child: Pressable(
+                    onTap: () => setState(() => _canApplyOnly = !_canApplyOnly),
+                    semanticLabel: 'Only jobs I can apply for',
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: _canApplyOnly ? AppColors.primarySoft : AppColors.surface1,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(Icons.verified_outlined, color: _canApplyOnly ? AppColors.primaryText : AppColors.text2),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             clipBehavior: Clip.none,
