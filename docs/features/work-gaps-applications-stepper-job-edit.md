@@ -20,7 +20,7 @@ under Awarded (existing `WorkTab.mine`).
 
 | Application | Job state | Status line | Tone |
 |---|---|---|---|
-| pending | open | Waiting for the client to pick | amber (waiting) |
+| pending | open | Waiting for {client name} to pick | amber (waiting) |
 | notSelected | awarded to someone else | Not picked | neutral |
 | notSelected | closed by the client | Closed by the client | neutral |
 
