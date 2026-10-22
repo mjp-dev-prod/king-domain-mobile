@@ -1,6 +1,6 @@
 # Work gaps: my applications, lifecycle stepper, edit or close a job
 
-**Status: planned (design approved by Victor 2026-10-22; not built).**
+**Status: built and tested on local branches `work-gaps` (both repos), NOT deployed (design approved by Victor 2026-10-22).** Staging needs the additive schema push, then the backend, then an app build.
 Scope is everything here except money: no payment, refund, payout or cancel-after-award
 behaviour changes. Brand v1 applies (amber = waiting, green = done, red = missed, gold = money
 only; no emoji, no decorative gradients, no glow).

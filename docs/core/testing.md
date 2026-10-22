@@ -1,6 +1,6 @@
 # Testing — what is guaranteed, and what is not
 
-**Last run: 2026-10-01.** Backend 93/93, app 30/30.
+**Last full run: 2026-10-22.** Backend 145/145, app 144/144, `flutter analyze` clean. (Before the work gaps: backend 108, app 83.)
 
 Evidence tags: 🟢 documented by Paystack (source named) · 🔵 observed in this repo's tests ·
 🟡 assumed, not yet seen against the real service · 🔴 not covered.
@@ -90,7 +90,45 @@ running their two calls one after the other, so a barrier now holds racing calls
 The "late resubmission" test was found not to exercise the clock guard at all (the status condition
 covers that case), so the "stale read" test was added for the case the clock guard actually protects.
 
-## App ledger — `flutter test` (30)
+## Backend ledger — work gaps (edit, close, apply, award)
+
+Files: `jobs.test.js` (service level) and `jobsRoutes.test.js` (real HTTP, port 4613). Design:
+[work-gaps spec](../features/work-gaps-applications-stepper-job-edit.md). All 🔵.
+
+| Area | Guarantee |
+|---|---|
+| Input | `validateJobInput` trims and refuses each bad field with its own message (the same messages `POST /jobs` always gave). |
+| Edit | Owner only; changes every field and bumps `revision`; refused with a code once anyone applied (`has_applicants`, including applications that pre-date `lastAppliedAt`), once awarded (`awarded`), once closed (`closed`); invalid input changes nothing. |
+| Close | Owner only; final; marks every pending application `notSelected`; refused once awarded or closed. A closed job leaves other talents' feeds and stays for its owner and for talents who applied. |
+| Apply | Stamps `lastAppliedAt`; accepts a missing `revision` (older app builds); a stale revision is `terms_changed` and creates nothing; closed is 409 `closed`, awarded is 400 `awarded`; a second application is 409 `already_applied`. Verified-in-category is still 403. |
+| Award | Behaviour unchanged for an open job (characterised over HTTP before the refactor: selected, others not selected, contract `awaitingPayment`, fee frozen, 24 h pay window, `awarded` event); a closed job can't be awarded and no contract is made. |
+| Races | Edit vs apply: exactly one wins and an application never lands on edited terms. Close vs apply: the job ends closed with no pending application, whichever runs first. Close vs award: exactly one wins, never both. Two edits at once both land and the revision counts both. Each uses `barrierPrisma` and runs 6 rounds, because the winner is decided by timing. |
+
+**Deliberate breakages.** Each guard was removed and the named race test failed in round 0, then
+passed once restored: the edit guard (`lastAppliedAt: null`, `applications: none`), the apply claim's
+`closedAt: null`, and the award claim's `closedAt: null`. The close transaction's sweep of pending
+applications is exercised by "close vs apply" but was not separately broken.
+
+**Not guaranteed:** the races are modelled in one process against one Postgres, not load-tested
+across several server instances. 🟡 The guards rely on Postgres re-checking a row's columns after
+waiting for its row lock (READ COMMITTED), which is documented behaviour and is what the race tests
+observe, but a different isolation setting would change it.
+
+## App ledger — work gaps
+
+`job_model_test` (closedAt, revision, `ApiException.code`), `work_applied_test` (Applied segment:
+filter, order, status lines, empty, error, open), `lifecycle_stepper_test` (every status for both
+viewers, tone, subtitles incl. no wording about where money is held, accessibility labels, pulse and
+reduced motion), `edit_close_job_test` (manage menu and its locked state, close confirmation and
+refusal, closed views, edit mode, closed tile and order), `job_detail_closed_test` (closed job, the
+revision sent with an application, `terms_changed`, the feed). Existing `stage2_screens_test` gained
+the stepper on both screens; four of its assertions were made precise (see below). 🔵 all.
+
+Changes to existing tests, so nothing is silently weaker: the overdue tests now look for the notice
+specifically (the stepper repeats the same words); two client extension tests scroll to the button
+as a user would (the stepper made the screen taller).
+
+## App ledger — `flutter test` (30, before the work gaps)
 
 `payments_test` (10: payout account and funding screens), `password_reset_test` (5),
 `environment_banner_test` (3), `payment_timers_test` (deadline text; the 24 h and 3-day screens,
@@ -112,8 +150,8 @@ including no automatic-payment promise while auto-release is off), `widget_test`
   conditional `updateMany`/`deleteMany` commit points make a second instance safe in principle
   (no test removes them and races them).
 - 🔴 **No CI.** The suites run when someone runs them. Nothing blocks a push.
-- 🔴 **Stage 2 in the apps.** The backend exists; no app screen calls it yet. The current app's
-  post-job form fails against this backend (it doesn't send `deliveryDays`).
+- 🟡 **Stage 2 in the apps.** The screens exist and are widget-tested against a fake provider; they
+  have been walked on a phone against staging only by hand (2026-10-03), not by an automated test.
 - 🔴 **Push notifications** don't exist. Stage 2 reminders are email plus in-app countdowns only.
 - 🔴 **Admin handling of escalations.** `disputed` is a parking state; the only admin signal is an
   email to owner admins. Stage 3 builds the screen.
