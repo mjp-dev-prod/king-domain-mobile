@@ -9,6 +9,7 @@ import '../../../core/constants/app_text_styles.dart';
 import '../../../core/constants/skill_categories.dart';
 import '../../../core/formatting/deadline.dart';
 import '../../../data/api_client.dart';
+import '../../../data/models/job.dart';
 import '../../providers/jobs_provider.dart';
 import '../../widgets/contract/contract_parts.dart';
 import '../../widgets/kit/kd_button.dart';
@@ -17,6 +18,7 @@ import '../../widgets/kit/kd_fields.dart';
 import '../../widgets/kit/kd_layout.dart';
 import '../../widgets/kit/kd_toast.dart';
 import '../../widgets/kit/kd_chip.dart';
+import '../../widgets/kit/status_pill.dart';
 
 /// C1 — Post a job (the client's "Post" tab). Category must be one of
 /// kSkillCategories, the same list a talent verifies proof against, since
@@ -26,7 +28,12 @@ class PostJobScreen extends ConsumerStatefulWidget {
   /// screen lives in a tab, so it must not pop a route.
   final VoidCallback? onPosted;
 
-  const PostJobScreen({super.key, this.onPosted});
+  /// When set, this is the edit form for an open job nobody has applied to
+  /// (the server locks the terms once someone applies): it opens filled with
+  /// the job, is its own route with a back button, and saves instead of posting.
+  final Job? editing;
+
+  const PostJobScreen({super.key, this.onPosted, this.editing});
 
   @override
   ConsumerState<PostJobScreen> createState() => _PostJobScreenState();
@@ -49,6 +56,15 @@ class _PostJobScreenState extends ConsumerState<PostJobScreen> {
   @override
   void initState() {
     super.initState();
+    final job = widget.editing;
+    if (job != null) {
+      _title.text = job.title;
+      _description.text = job.description;
+      _budget.text = job.budget.round().toString();
+      _category = job.category;
+      _deliveryDays = job.deliveryDays ?? 7;
+      _descriptionValid = ReasonField.isValid(job.description, min: 20, max: 4000);
+    }
     _title.addListener(_changed);
     _budget.addListener(_changed);
   }
@@ -80,19 +96,36 @@ class _PostJobScreenState extends ConsumerState<PostJobScreen> {
     }
     setState(() => _error = null);
     final category = _category!;
+    final editing = widget.editing;
     try {
-      await ref.read(jobsProvider.notifier).postJob(
-            title: _title.text.trim(),
-            category: category,
-            description: _description.text.trim(),
-            budget: _budgetValue!,
-            deliveryDays: _deliveryDays,
-          );
+      if (editing != null) {
+        await ref.read(jobsProvider.notifier).editJob(
+              editing.id,
+              title: _title.text.trim(),
+              category: category,
+              description: _description.text.trim(),
+              budget: _budgetValue!,
+              deliveryDays: _deliveryDays,
+            );
+      } else {
+        await ref.read(jobsProvider.notifier).postJob(
+              title: _title.text.trim(),
+              category: category,
+              description: _description.text.trim(),
+              budget: _budgetValue!,
+              deliveryDays: _deliveryDays,
+            );
+      }
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
       throw const ShownError();
     }
     if (!mounted) return;
+    if (editing != null) {
+      KdToast.show(context, 'Job updated.');
+      Navigator.of(context).pop();
+      return;
+    }
     KdToast.show(context, 'Job posted. Students verified in $category can apply now.');
     FocusScope.of(context).unfocus();
     setState(() {
@@ -114,12 +147,16 @@ class _PostJobScreenState extends ConsumerState<PostJobScreen> {
   @override
   Widget build(BuildContext context) {
     final due = DateTime.now().add(Duration(days: _deliveryDays));
-    return ListView(
+    final editing = widget.editing != null;
+    final form = ListView(
       controller: _scroll,
-      padding: const EdgeInsets.fromLTRB(AppDimensions.gutter, 8, AppDimensions.gutter, 140),
+      padding: EdgeInsets.fromLTRB(AppDimensions.gutter, editing ? MediaQuery.paddingOf(context).top + 8 : 8, AppDimensions.gutter, 140),
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       children: [
-        const ScreenHeader(over: 'New job', title: 'Post a job'),
+        if (editing)
+          const ContractHeader(title: 'Edit job', sub: 'The terms lock once someone applies.', pill: StatusPill('Open', tone: KdTone.brand))
+        else
+          const ScreenHeader(over: 'New job', title: 'Post a job'),
         const SizedBox(height: 18),
         _Label('Category', error: _tried && _category == null ? 'Pick one' : null),
         const SizedBox(height: 8),
@@ -201,16 +238,17 @@ class _PostJobScreenState extends ConsumerState<PostJobScreen> {
         ),
         if (_error != null) ...[
           const SizedBox(height: 14),
-          NoticeCard(tone: KdTone.bad, icon: Icons.error_outline_rounded, title: 'Couldn\'t post the job', body: _error),
+          NoticeCard(tone: KdTone.bad, icon: Icons.error_outline_rounded, title: editing ? 'Couldn\'t save the changes' : 'Couldn\'t post the job', body: _error),
         ],
         const SizedBox(height: 22),
-        KdButton(label: 'Post job', busyLabel: 'Posting', onPressed: _submit),
+        KdButton(label: editing ? 'Save changes' : 'Post job', busyLabel: editing ? 'Saving' : 'Posting', onPressed: _submit),
         if (_tried && !_valid) ...[
           const SizedBox(height: 8),
-          Text('Fill in the marked fields to post.', style: AppTextStyles.hint.copyWith(color: AppColors.bad), textAlign: TextAlign.center),
+          Text(editing ? 'Fill in the marked fields to save.' : 'Fill in the marked fields to post.', style: AppTextStyles.hint.copyWith(color: AppColors.bad), textAlign: TextAlign.center),
         ],
       ],
     );
+    return editing ? Scaffold(body: form) : form;
   }
 }
 

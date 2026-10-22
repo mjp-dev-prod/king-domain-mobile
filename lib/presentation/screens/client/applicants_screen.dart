@@ -17,8 +17,10 @@ import '../../widgets/kit/kd_layout.dart';
 import '../../widgets/kit/kd_sheet.dart';
 import '../../widgets/kit/kd_toast.dart';
 import '../../widgets/kit/motion.dart';
+import '../../widgets/kit/pressable.dart';
 import '../../widgets/kit/status_pill.dart';
 import '../payments/fund_contract_screen.dart';
+import 'post_job_screen.dart';
 
 /// C2 — Applicants and the single award (prototypes/palette-explorer.html,
 /// screen 05). Real signals only, everyone on equal footing, in the order
@@ -41,8 +43,10 @@ class _ApplicantsScreenState extends ConsumerState<ApplicantsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final job = widget.job;
+    // The live copy, so an edit or a close shows here without reopening the screen.
+    final job = ref.watch(jobsProvider).valueOrNull?.where((j) => j.id == widget.job.id).firstOrNull ?? widget.job;
     final awarded = job.awardedApplicationId != null;
+    final closed = job.closed;
     return Scaffold(
       body: FutureBuilder<List<JobApplication>>(
         future: _future,
@@ -56,11 +60,17 @@ class _ApplicantsScreenState extends ConsumerState<ApplicantsScreen> {
               onRetry: () async => setState(() => _future = _load()),
             );
           } else if (snap.data!.isEmpty) {
-            body = const EmptyState(
-              icon: Icons.people_outline_rounded,
-              title: 'No applicants yet',
-              body: 'Students verified in this category can apply. You\'ll see each one here with their verified work.',
-            );
+            body = closed
+                ? const EmptyState(
+                    icon: Icons.people_outline_rounded,
+                    title: 'Nobody applied',
+                    body: 'Nobody applied before the job was closed.',
+                  )
+                : const EmptyState(
+                    icon: Icons.people_outline_rounded,
+                    title: 'No applicants yet',
+                    body: 'Students verified in this category can apply. You\'ll see each one here with their verified work.',
+                  );
           } else {
             final apps = snap.data!;
             body = Column(
@@ -73,7 +83,7 @@ class _ApplicantsScreenState extends ConsumerState<ApplicantsScreen> {
                       child: _ApplicantCard(
                         app: apps[i],
                         awardedHere: apps[i].id == job.awardedApplicationId,
-                        canAward: !awarded,
+                        canAward: !awarded && !closed,
                         onAward: () { _confirmAward(apps[i]); },
                       ),
                     ),
@@ -93,7 +103,9 @@ class _ApplicantsScreenState extends ConsumerState<ApplicantsScreen> {
                 ContractHeader(
                   title: job.title,
                   sub: '${formatNaira(job.budget)} · ${job.deliveryDays == null ? job.category : '${job.deliveryDays} days to deliver'}',
-                  pill: StatusPill('$count applied'),
+                  pill: closed ? const StatusPill('Closed') : StatusPill('$count applied'),
+                  // Awarded and closed jobs can't be changed: the menu is only for open ones.
+                  action: awarded || closed ? null : _menuButton(job),
                 ),
                 const SizedBox(height: 12),
                 KdCard(
@@ -105,9 +117,11 @@ class _ApplicantsScreenState extends ConsumerState<ApplicantsScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          awarded
-                              ? 'You picked someone for this job.'
-                              : 'Shown in the order they applied. ${AppBrand.name} doesn\'t rank applicants: compare their verified work and pick.',
+                          closed
+                              ? 'You closed this job. Applicants can see that it was closed.'
+                              : awarded
+                                  ? 'You picked someone for this job.'
+                                  : 'Shown in the order they applied. ${AppBrand.name} doesn\'t rank applicants: compare their verified work and pick.',
                           style: AppTextStyles.bodySmall.copyWith(fontSize: 13),
                         ),
                       ),
@@ -120,6 +134,97 @@ class _ApplicantsScreenState extends ConsumerState<ApplicantsScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _menuButton(Job job) => Tooltip(
+        message: 'Manage this job',
+        child: Pressable(
+          onTap: () => _openMenu(job),
+          semanticLabel: 'Manage this job',
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(color: AppColors.surface1, borderRadius: BorderRadius.circular(14)),
+            child: const Icon(Icons.more_horiz_rounded, color: AppColors.text),
+          ),
+        ),
+      );
+
+  /// Edit (only while nobody has applied: the server locks the terms then) and Close.
+  void _openMenu(Job job) {
+    showKdSheet(
+      context,
+      builder: (sheet) => KdSheetBody(
+        title: 'Manage this job',
+        children: [
+          const SizedBox(height: 14),
+          if (job.applicationCount == 0)
+            KdButton(
+              label: 'Edit job',
+              variant: KdButtonVariant.soft,
+              onPressed: () {
+                Navigator.of(sheet).pop();
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => PostJobScreen(editing: job)));
+              },
+            )
+          else
+            const NoticeCard(
+              tone: KdTone.plain,
+              icon: Icons.lock_outline_rounded,
+              title: 'Terms are locked',
+              body: 'Someone has already applied, so the details can\'t change under them. Close it and post a new one to change them.',
+            ),
+          const SizedBox(height: 10),
+          KdButton(
+            label: 'Close job',
+            variant: KdButtonVariant.danger,
+            onPressed: () {
+              Navigator.of(sheet).pop();
+              _confirmClose(job);
+            },
+          ),
+          const SizedBox(height: 8),
+          KdButton.secondary(label: 'Never mind', onPressed: () => Navigator.of(sheet).pop()),
+        ],
+      ),
+    );
+  }
+
+  void _confirmClose(Job job) {
+    final n = job.applicationCount;
+    showKdSheet(
+      context,
+      builder: (sheet) => KdSheetBody(
+        title: 'Close this job?',
+        lead: n == 0
+            ? 'Nobody has applied yet. A closed job can\'t be undone: post a new one if you change your mind.'
+            : '$n applicant${n == 1 ? '' : 's'} will see that it was closed. A closed job can\'t be undone: post a new one if you change your mind.',
+        children: [
+          const SizedBox(height: 18),
+          KdButton(
+            label: 'Close job',
+            busyLabel: 'Closing',
+            variant: KdButtonVariant.danger,
+            onPressed: () async {
+              final sheetNav = Navigator.of(sheet);
+              final nav = Navigator.of(context);
+              try {
+                await ref.read(jobsProvider.notifier).closeJob(job.id);
+              } on ApiException catch (e) {
+                if (sheet.mounted) KdToast.show(sheet, e.message, kind: ToastKind.error);
+                throw const ShownError();
+              }
+              if (!mounted) return;
+              sheetNav.pop();
+              KdToast.show(context, 'Job closed.');
+              nav.pop();
+            },
+          ),
+          const SizedBox(height: 8),
+          KdButton.secondary(label: 'Keep it open', onPressed: () => Navigator.of(sheet).pop()),
+        ],
       ),
     );
   }

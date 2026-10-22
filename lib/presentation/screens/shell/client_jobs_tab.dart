@@ -26,12 +26,22 @@ class ClientJobsTab extends ConsumerWidget {
 
   static List<Job> mine(List<Job> jobs, String? clientId) => jobs.where((j) => j.clientId == clientId).toList();
 
+  /// Needing you first; open jobs (no contract) rank with the active ones; closed
+  /// jobs go last. Stable for equal ranks.
+  static List<Job> sorted(List<Job> jobs) {
+    int rank(Job j) => j.closed ? 3 : (j.contractStatus == null ? 1 : contractSortRank(j, forClient: true));
+    final indexed = [for (var i = 0; i < jobs.length; i++) (i, jobs[i])];
+    indexed.sort((a, b) {
+      final r = rank(a.$2) - rank(b.$2);
+      return r != 0 ? r : a.$1 - b.$1;
+    });
+    return [for (final e in indexed) e.$2];
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final jobsAsync = ref.watch(jobsProvider);
-    final jobs = mine(jobsAsync.valueOrNull ?? const [], ref.watch(authProvider).user?.id);
-    // Needing you first; open jobs (no contract) rank with the active ones.
-    jobs.sort((a, b) => (a.contractStatus == null ? 1 : contractSortRank(a, forClient: true)) - (b.contractStatus == null ? 1 : contractSortRank(b, forClient: true)));
+    final jobs = sorted(mine(jobsAsync.valueOrNull ?? const [], ref.watch(authProvider).user?.id));
 
     final Widget body;
     if (jobsAsync.isLoading && !jobsAsync.hasValue) {
@@ -85,7 +95,7 @@ class ClientJobsTab extends ConsumerWidget {
               children: [
                 Expanded(child: Text(job.title, style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w700, height: 1.3))),
                 const SizedBox(width: 10),
-                const StatusPill('Open', tone: KdTone.brand),
+                job.closed ? const StatusPill('Closed') : const StatusPill('Open', tone: KdTone.brand),
               ],
             ),
             const SizedBox(height: 4),
@@ -102,12 +112,14 @@ class ClientJobsTab extends ConsumerWidget {
               children: [
                 Expanded(
                   child: Text(
-                    job.applicationCount == 0
-                        ? 'No applicants yet'
-                        : '${job.applicationCount} applicant${job.applicationCount == 1 ? '' : 's'} · pick one',
+                    job.closed
+                        ? (job.applicationCount == 0 ? 'Closed' : 'Closed · ${job.applicationCount} applicant${job.applicationCount == 1 ? '' : 's'}')
+                        : job.applicationCount == 0
+                            ? 'No applicants yet'
+                            : '${job.applicationCount} applicant${job.applicationCount == 1 ? '' : 's'} · pick one',
                     style: AppTextStyles.bodySmall.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: job.applicationCount == 0 ? AppColors.text3 : AppColors.primaryText,
+                      color: job.closed || job.applicationCount == 0 ? AppColors.text3 : AppColors.primaryText,
                     ),
                   ),
                 ),

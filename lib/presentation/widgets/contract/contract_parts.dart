@@ -56,7 +56,9 @@ class ContractHeader extends StatelessWidget {
   final String title;
   final String sub;
   final StatusPill pill;
-  const ContractHeader({super.key, required this.title, required this.sub, required this.pill});
+  /// Optional control after the pill (the applicants screen's "manage" menu).
+  final Widget? action;
+  const ContractHeader({super.key, required this.title, required this.sub, required this.pill, this.action});
 
   @override
   Widget build(BuildContext context) {
@@ -79,6 +81,7 @@ class ContractHeader extends StatelessWidget {
               ),
             const Spacer(),
             pill,
+            if (action != null) ...[const SizedBox(width: 8), action!],
           ],
         ),
         const SizedBox(height: 14),
