@@ -39,6 +39,8 @@ live here regardless of which sibling repo (backend, web, admin) they end up aff
   tab or the contract screens.
 - [Work gaps implementation plan](./features/work-gaps-implementation-plan.md) — the task-by-task
   build plan for the design above (backend and app), each task test-first.
+- [Profile photos](./features/profile-photos.md) — public photos: where they show, what is stored, the
+  rules the server enforces, and why they are public while proofs stay private.
 - [Imagery surfaces](./features/imagery-surfaces.md) — every place images appear (proof, photos,
   deliveries, job references, illustrations), each linked to the decision it comes from. Read
   before rendering any image.

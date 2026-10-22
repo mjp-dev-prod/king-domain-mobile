@@ -10,7 +10,7 @@ This is imagery surface 2 in [imagery-surfaces.md](./imagery-surfaces.md) ("prof
 |---|---|
 | Who sees a photo? | **Everyone**, where the app shows a person today: their own profile, the applicant list and the client card on a job. Contract headers show no avatar yet, so none was added there. |
 | How is it stored? | In a **public** storage bucket (`avatars`). The link never expires and needs no sign-in, so it loads fast, can be cached, and cannot hit the expired-link problem proof thumbnails have. |
-| What do people without a photo see? | Their initials, as today (`InitialsAvatar`). **No stock photos and no placeholder faces**, including on the demo accounts. |
+| What do people without a photo see? | Their initials, as before (drawn by `UserAvatar`). **No stock photos and no placeholder faces**, including on the demo accounts. |
 | Who can set one? | Talents and clients, for their own account only. |
 
 **What "public" means in practice:** anyone who has the exact link can open the picture, inside or
@@ -39,7 +39,7 @@ the database never stores a link that could go stale.
 ## App
 
 - `UserAvatar(name, photoUrl, size)`: the photo when there is one, the initials when there is not,
-  and the initials again if the picture fails to load. Replaces `InitialsAvatar` where a person is shown.
+  and the initials again if the picture fails to load. It replaced `InitialsAvatar`.
 - On the profile: tapping the avatar opens a sheet (Choose from gallery, Take a photo, Remove photo when
   one exists). The picked image is resized on the phone (about 800 px, quality 85) before upload, so
   files stay small. A toast confirms; failures show the server's reason.
