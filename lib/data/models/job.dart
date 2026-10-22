@@ -19,6 +19,12 @@ class Job {
   final int clientCompletedJobs;
   final DateTime postedAt;
   final String? awardedApplicationId;
+  /// Set when the client closed the job before awarding it. A closed job takes
+  /// no applications and cannot be reopened.
+  final DateTime? closedAt;
+  /// Bumped on every edit. Sent with an application so the server can tell the
+  /// talent read older terms (the client edited the job since).
+  final int revision;
   final int applicationCount;
   final ContractStatus? contractStatus;
   /// 10% of budget, frozen onto the contract at award time — see backend
@@ -75,6 +81,8 @@ class Job {
     this.clientCompletedJobs = 0,
     required this.postedAt,
     this.awardedApplicationId,
+    this.closedAt,
+    this.revision = 0,
     this.applicationCount = 0,
     this.contractStatus,
     this.platformFeeAmount,
@@ -107,6 +115,8 @@ class Job {
       clientName: client?['fullName'] as String? ?? 'Client',
       postedAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
       awardedApplicationId: json['awardedApplicationId'] as String?,
+      closedAt: DateTime.tryParse(json['closedAt'] as String? ?? ''),
+      revision: json['revision'] as int? ?? 0,
       applicationCount: json['applicationCount'] as int? ?? 0,
       contractStatus: contract != null ? _contractStatusFromString(contract['status'] as String?) : null,
       platformFeeAmount: double.tryParse(contract?['platformFeeAmount']?.toString() ?? ''),
@@ -148,6 +158,8 @@ class Job {
       clientCompletedJobs: clientCompletedJobs,
       postedAt: postedAt,
       awardedApplicationId: awardedApplicationId ?? this.awardedApplicationId,
+      closedAt: closedAt,
+      revision: revision,
       applicationCount: applicationCount ?? this.applicationCount,
       contractStatus: contractStatus ?? this.contractStatus,
       platformFeeAmount: platformFeeAmount,
@@ -167,6 +179,8 @@ class Job {
       applicationStatus: applicationStatus ?? this.applicationStatus,
     );
   }
+
+  bool get closed => closedAt != null;
 
   /// What the client pays at checkout: budget + platform fee.
   double get clientTotal => budget + (platformFeeAmount ?? 0);

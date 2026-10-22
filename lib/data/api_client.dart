@@ -28,7 +28,22 @@ String _hostAndPort(String url) {
 class ApiException implements Exception {
   final String message;
   final int status;
-  ApiException(this.message, this.status);
+  /// A stable machine-readable reason when the server sends one ('terms_changed'),
+  /// so the app can react without matching message text.
+  final String? code;
+  ApiException(this.message, this.status, {this.code});
+
+  /// Builds the exception for a non-2xx response: the server's `error` text and
+  /// optional `code`, or a plain message when the body isn't JSON.
+  factory ApiException.fromResponse(int status, String body) {
+    Map<String, dynamic>? data;
+    try {
+      data = body.isEmpty ? null : jsonDecode(body) as Map<String, dynamic>;
+    } catch (_) {
+      data = null;
+    }
+    return ApiException((data?['error'] as String?) ?? 'Something went wrong.', status, code: data?['code'] as String?);
+  }
 
   @override
   String toString() => message;
@@ -168,10 +183,7 @@ class ApiClient {
     }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw ApiException(
-        (data?['error'] as String?) ?? 'Something went wrong.',
-        response.statusCode,
-      );
+      throw ApiException.fromResponse(response.statusCode, response.body);
     }
 
     return data;

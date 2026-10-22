@@ -28,8 +28,33 @@ class JobsNotifier extends AsyncNotifier<List<Job>> {
     return Job.fromJson(data['job'] as Map<String, dynamic>);
   }
 
-  Future<void> applyTo(String jobId) async {
-    await ApiClient.instance.post('/jobs/$jobId/apply');
+  /// [revision] is the job revision the talent read: the server refuses the
+  /// application (code 'terms_changed') if the client edited the job since.
+  Future<void> applyTo(String jobId, {int? revision}) async {
+    await ApiClient.instance.post('/jobs/$jobId/apply', body: revision == null ? null : {'revision': revision});
+    await refresh();
+  }
+
+  /// Client: change an open job nobody has applied to yet.
+  Future<Job> editJob(
+    String jobId, {
+    required String title,
+    required String category,
+    required String description,
+    required double budget,
+    required int deliveryDays,
+  }) async {
+    final data = await ApiClient.instance.patch(
+      '/jobs/$jobId',
+      body: {'title': title, 'category': category, 'description': description, 'budget': budget, 'deliveryDays': deliveryDays},
+    );
+    await refresh();
+    return Job.fromJson(data['job'] as Map<String, dynamic>);
+  }
+
+  /// Client: close an open job for good. Pending applicants see that it closed.
+  Future<void> closeJob(String jobId) async {
+    await ApiClient.instance.post('/jobs/$jobId/close');
     await refresh();
   }
 
