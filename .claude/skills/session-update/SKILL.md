@@ -53,3 +53,31 @@ error; do not retry in a loop. If Slack is not configured, say so and point at t
 A posted update cannot be recalled by a webhook, so read the text once more before sending.
 
 If no update is sent, the SessionEnd hook posts the commit facts alone when the session closes.
+
+A posted update is also saved to `~/.claude/kd-updates.jsonl`, so the history outlives Slack's free
+90-day window.
+
+## 4. Tell the Personal Manager
+
+Victor's Telegram bot does not read Slack. Its weekly review ("Moved forward", Sunday 20:00 or `/review`)
+and its daily wrap-up list **commitments marked done**, titles only, and at most 6 per week. So what
+shipped has to be written there, or his week looks empty. Rules are in the hive:
+`C:\mobile-projects\flutter\hive\projects\personal-manager.md` and `C:\projects\personal-manager\spec\AGENT_API.md`.
+Never print or commit `.agent.json`.
+
+```
+node C:\projects\personal-manager\scripts\agent.ts <action> --agent "claude:king-domain-mobile" --notify false --why "<one line>" ...
+```
+
+1. `list --query "King Domain"` first. If the work finished an open commitment, `complete --id N --note "what shipped, and where it stands"`. If one is blocked or changed shape, `note --id N --text "..."`.
+2. For a real milestone that was not a commitment, `add --title "..." --kind task --area "King Domain"` and then `complete --id <new id> --note "..."`. **One to three per session, milestone level, not per commit**: the review shows only 6 a week.
+3. Titles are read cold on a phone, so they must stand alone and be honest about status: "Built profile photos (not deployed)", "Put job search on staging". Deploying later is its own item.
+4. Do not add things that only you wanted done, and do not add future work: only Victor's own asks or dated items.
+5. Finish with one `announce --text "<project>: marked N done, noted M. <what matters most>"` (3 to 400 characters).
+
+## Weekly summary (for presenting)
+
+When Victor asks for his week, run `node tools/session-notify/notify.js digest --days 7` (any number of
+days). It prints the updates already sent plus the commits per repo, all branches. Write the summary from
+that in plain terms, in the order he would present: what shipped, what is in progress, what is blocked or
+needs a decision. State what is deployed and what is not. Do not post it to Slack unless he asks.

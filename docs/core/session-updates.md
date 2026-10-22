@@ -23,6 +23,31 @@ until the webhook below is created.
 
 Hooks always exit 0 and never slow a session beyond a few seconds. With no webhook configured they do nothing.
 
+## One wrap-up, three readers
+
+| Reader | Gets | From |
+|---|---|---|
+| Shareholders, collaborators | the plain-language update | Slack `#updates` (live since 2026-10-22) |
+| Victor's Personal Manager (Telegram) | done items, so `/review` and the daily wrap-up show what shipped | `agent.ts complete/add` at wrap-up. The bot does not read Slack; its review lists commitments marked done, titles only, max 6 a week |
+| Victor, presenting | a week rebuilt from the saved updates and the commits | `node tools/session-notify/notify.js digest --days 7` |
+
+Every posted update is also saved to `~/.claude/kd-updates.jsonl` (Slack's free plan hides history after 90 days).
+The Personal Manager step is in the `session-update` skill; its API and rules are in
+`C:\projects\personal-manager\spec\AGENT_API.md`.
+
+## Channels (workspace "MJP Productions Limited")
+
+The webhook is tied to one channel, `#updates`. The others are for people, until there is a reason to automate them
+(each automation needs its own webhook).
+
+| Channel | For |
+|---|---|
+| `#updates` | only the automatic end-of-session updates |
+| `#decisions` | one post per open product decision, linking the ledger item; the decision itself lives in the ledger |
+| `#meetings` | agenda before, notes and action items after |
+| `#builds` | a new staging app version is ready |
+| `#feedback` | bugs and reactions from testers, a thread per issue |
+
 ## One-time setup (Victor)
 
 1. Create the Slack workspace (free plan is enough).
@@ -64,6 +89,7 @@ meetings (Google Calendar is one of the 10 apps and can post meeting reminders).
 
 ## Tests
 
-`node --test tools/session-notify/notify.test.js` (19 tests: real script and git repos, fake Slack on
+`node --test tools/session-notify/notify.test.js` (22 tests: real script and git repos, fake Slack on
 localhost). Covers: start state, post content and escaping, redaction, block limits, dry-run, Slack
-refusing, unset or non-Slack webhook, and the safety net's quiet cases.
+refusing, unset or non-Slack webhook, the update log and digest, and the safety net's quiet cases.
+The Personal Manager step is a written procedure for Claude, not code, so it has no test.

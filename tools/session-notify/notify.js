@@ -189,6 +189,49 @@ function pruneOldState() {
   } catch {}
 }
 
+// ---------- update log ----------
+// Every posted update is also kept here, so the plain-language history outlives Slack's free 90-day window
+// and `digest` can rebuild a week from it.
+
+const logFile = () => process.env.KD_NOTIFY_LOG || path.join(claudeDir(), "kd-updates.jsonl");
+
+function appendLog(entry) {
+  try {
+    fs.mkdirSync(path.dirname(logFile()), { recursive: true });
+    fs.appendFileSync(logFile(), JSON.stringify(entry) + "\n");
+  } catch {}
+}
+
+function readLog() {
+  try {
+    return fs.readFileSync(logFile(), "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
+  } catch {
+    return [];
+  }
+}
+
+const day = (d) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+
+/** Markdown for presenting or summarising a period: the updates that were sent, then the commits per repo. */
+function digest(days) {
+  const since = new Date(Date.now() - days * 86400000);
+  const out = [`# King Domain: last ${days} days (${day(since)} to ${day(Date.now())})`, "", "## Updates sent"];
+  const updates = readLog().filter((e) => new Date(e.at) >= since);
+  if (!updates.length) out.push("", "None were sent in this period.");
+  for (const u of updates) out.push("", `### ${day(u.at)}: ${u.title}`, "", u.summary);
+  out.push("", "## Commits by repo (all branches, merges left out)");
+  for (const p of repoPaths()) {
+    const log = git(p, "log", "--all", `--since=${since.toISOString()}`, "--no-merges", "--max-count=40", "--date=short", "--format=%h\t%ad\t%s");
+    if (!log) continue;
+    out.push("", `### ${path.basename(p)}`);
+    for (const l of log.split("\n")) {
+      const [sha, date, ...subject] = l.split("\t");
+      out.push(`- ${date} \`${sha}\` ${clean(subject.join("\t"))}`);
+    }
+  }
+  return out.join("\n") + "\n";
+}
+
 // ---------- commands ----------
 
 const readStdin = () => {
@@ -236,7 +279,14 @@ async function cmdPost() {
   const res = await send(payload);
   if (!res.ok) return fail(res.error);
   if (state) saveState(id, { ...state, summaryPostedAt: new Date().toISOString() });
+  appendLog({ at: new Date().toISOString(), session: id || null, title: payload.text.split(" · ")[0], summary: clean(summary).trim() });
   process.stdout.write("Posted to Slack.\n");
+}
+
+function cmdDigest() {
+  const days = Number(arg("days") || 7);
+  if (!Number.isFinite(days) || days <= 0) return fail("--days must be a positive number");
+  process.stdout.write(digest(days));
 }
 
 async function cmdEnd() {
@@ -259,11 +309,12 @@ function fail(message) {
 async function main() {
   const cmd = process.argv[2];
   if (cmd === "post") return cmdPost();
+  if (cmd === "digest") return cmdDigest();
   // Hooks must never break or slow a session: swallow everything and exit 0.
   try {
     if (cmd === "start") cmdStart();
     else if (cmd === "end") await cmdEnd();
-    else fail("usage: notify.js start|post|end");
+    else fail("usage: notify.js start|post|end|digest");
   } catch {}
   if (cmd === "start" || cmd === "end") process.exitCode = 0;
 }

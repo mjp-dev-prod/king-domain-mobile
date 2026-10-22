@@ -35,6 +35,7 @@ const baseEnv = () => ({
   ...process.env,
   KD_NOTIFY_REPOS: [repoA, repoB].join(path.delimiter),
   KD_NOTIFY_STATE_DIR: stateDir,
+  KD_NOTIFY_LOG: path.join(stateDir, "updates.jsonl"),
   KD_NOTIFY_ALLOW_ANY_URL: "1",
   KD_SLACK_WEBHOOK_URL: `http://127.0.0.1:${slack.address().port}/hook`,
   HOME: tmp,
@@ -202,6 +203,36 @@ describe("post", () => {
     const r = await run(["post"], { input: "  \n" });
     assert.equal(r.status, 1);
     assert.equal(received.length, 0);
+  });
+});
+
+describe("the update log and digest", () => {
+  it("keeps every posted update, and digest rebuilds the period from it plus the commits", async () => {
+    await hook("start", { session_id: "s1" });
+    commit(repoA, "Add photos");
+    await run(["post", "--session", "s1", "--title", "Photos"], { input: "*Photos are built.* Not deployed." });
+    const logged = fs.readFileSync(path.join(stateDir, "updates.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
+    assert.equal(logged.length, 1);
+    assert.equal(logged[0].title, "Photos");
+    assert.match(logged[0].summary, /Photos are built/);
+    const d = await run(["digest", "--days", "7"]);
+    assert.equal(d.status, 0, d.stderr);
+    assert.match(d.stdout, /## Updates sent/);
+    assert.match(d.stdout, /Photos are built/);
+    assert.match(d.stdout, /### repo-a/);
+    assert.match(d.stdout, /Add photos/);
+  });
+
+  it("does not log an update Slack refused", async () => {
+    slackStatus = 400;
+    await run(["post"], { input: "Update." });
+    assert.equal(fs.existsSync(path.join(stateDir, "updates.jsonl")), false);
+  });
+
+  it("says so when nothing was sent, and rejects a bad --days", async () => {
+    const d = await run(["digest"]);
+    assert.match(d.stdout, /None were sent in this period/);
+    assert.equal((await run(["digest", "--days", "abc"])).status, 1);
   });
 });
 
