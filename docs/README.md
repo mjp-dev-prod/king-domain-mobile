@@ -33,6 +33,10 @@ live here regardless of which sibling repo (backend, web, admin) they end up aff
 - [Stage 2 — delivery dates, extensions, change rounds](./features/stage-2-delivery-and-changes.md) —
   approved design for the second stage of the payment rules, with the clarifications Victor
   settled that the ledger text doesn't state.
+- [Work gaps: my applications, lifecycle stepper, edit or close a job](./features/work-gaps-applications-stepper-job-edit.md) —
+  the design for three gaps found on Victor's phone and in the 2026-10-22 audit, including the race
+  guards that make "edit only before the first applicant" safe. Read before touching jobs, the Work
+  tab or the contract screens.
 - [Imagery surfaces](./features/imagery-surfaces.md) — every place images appear (proof, photos,
   deliveries, job references, illustrations), each linked to the decision it comes from. Read
   before rendering any image.
