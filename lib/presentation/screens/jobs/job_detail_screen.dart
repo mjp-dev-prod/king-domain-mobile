@@ -61,6 +61,7 @@ class JobDetailScreen extends ConsumerWidget {
     final hasPayout = profile?.payoutAccount != null;
     final applied = job.applicationStatus != JobApplicationStatus.notApplied;
     final filled = job.awardedApplicationId != null;
+    final closed = job.closed;
 
     final cards = <Widget>[
       _Hero(job: job),
@@ -94,12 +95,14 @@ class JobDetailScreen extends ConsumerWidget {
       ),
     ];
 
-    final StatusPill? appliedPill = switch (job.applicationStatus) {
-      JobApplicationStatus.pending => const StatusPill('Applied', tone: KdTone.brand),
-      JobApplicationStatus.accepted => const StatusPill('You were selected', tone: KdTone.ok, icon: Icons.check_rounded),
-      JobApplicationStatus.rejected => const StatusPill('Not selected'),
-      JobApplicationStatus.notApplied => null,
-    };
+    final StatusPill? appliedPill = closed
+        ? const StatusPill('Closed')
+        : switch (job.applicationStatus) {
+            JobApplicationStatus.pending => const StatusPill('Applied', tone: KdTone.brand),
+            JobApplicationStatus.accepted => const StatusPill('You were selected', tone: KdTone.ok, icon: Icons.check_rounded),
+            JobApplicationStatus.rejected => const StatusPill('Not selected'),
+            JobApplicationStatus.notApplied => null,
+          };
 
     return Scaffold(
       body: Stack(
@@ -122,7 +125,7 @@ class JobDetailScreen extends ConsumerWidget {
             bottom: 0,
             child: ActionBar(
               children: [
-                if (!applied && !filled)
+                if (!applied && !filled && !closed)
                   KdButton(
                     label: !verified ? 'Verified proof needed to apply' : !hasPayout ? 'Add a payout account to apply' : 'Apply for this job',
                     onPressed: verified && hasPayout ? () { _confirmApply(context, ref, job, profile!); } : null,
@@ -139,6 +142,14 @@ class JobDetailScreen extends ConsumerWidget {
 
   /// The one thing standing between this talent and applying, if anything.
   Widget? _gate(BuildContext context, Job job, {required bool verified, required bool hasPayout, required bool applied}) {
+    if (job.closed) {
+      return NoticeCard(
+        tone: KdTone.plain,
+        icon: Icons.block_outlined,
+        title: 'This job is closed',
+        body: '${job.clientName} closed it, so it isn\'t taking applications.',
+      );
+    }
     if (applied) return null;
     if (!verified) {
       return NoticeCard(
@@ -210,8 +221,17 @@ class JobDetailScreen extends ConsumerWidget {
             busyLabel: 'Sending',
             onPressed: () async {
               try {
-                await ref.read(jobsProvider.notifier).applyTo(job.id);
+                // The revision of the job as read: the server refuses it if the client
+                // edited the job since, so nobody applies to terms they never saw.
+                await ref.read(jobsProvider.notifier).applyTo(job.id, revision: job.revision);
               } on ApiException catch (e) {
+                if (e.code == 'terms_changed') {
+                  await ref.read(jobsProvider.notifier).refresh();
+                  if (!sheet.mounted) return;
+                  Navigator.of(sheet).pop();
+                  KdToast.show(sheet, 'This job was just edited. Check the new details, then apply again.');
+                  return;
+                }
                 if (sheet.mounted) KdToast.show(sheet, e.message, kind: ToastKind.error);
                 throw const ShownError();
               }

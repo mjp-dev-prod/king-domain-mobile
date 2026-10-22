@@ -43,8 +43,9 @@ class _JobFeedScreenState extends ConsumerState<JobFeedScreen> {
     final jobsAsync = ref.watch(jobsProvider);
     final profile = ref.watch(talentProfileProvider).valueOrNull;
     // Open jobs, plus any this talent applied to (so they can see how it went).
+    // A closed job stays only for someone who applied to it.
     final visible = (jobsAsync.valueOrNull ?? const <Job>[])
-        .where((j) => j.awardedApplicationId == null || j.applicationStatus != JobApplicationStatus.notApplied)
+        .where((j) => (j.awardedApplicationId == null && !j.closed) || j.applicationStatus != JobApplicationStatus.notApplied)
         .where((j) => _category == null || j.category == _category)
         .toList();
 
