@@ -4,7 +4,9 @@
 deployed.** Decided by Victor 2026-10-22: deleting an account is **blocked while the person has an active
 contract** (as client or talent); the company named in the policy is **MJP Productions Limited**. Everything else
 below is my proposal, marked **[confirm]**. Deploy needs: `User.deletedAt` pushed to staging (and later production),
-backend and app builds, the web branch `privacy-pages` merged, and the lawyer's review of the policy first.
+backend and app builds, and the web branch `privacy-pages` merged. Victor's call 2026-10-24: no lawyer review is
+required to publish (none is legally required; Google Play needs a public policy, not a reviewed one), and the
+company's CAC status is not stated on the page. A lawyer stays optional.
 
 Why now: Google Play requires an in-app deletion path **and** a public web page where someone can ask for deletion
 without the app, plus a public privacy policy link. Nigeria's NDPA 2023 gives people a right to have their data
@@ -79,12 +81,11 @@ published draft would settle those decisions by accident.
 
 ## Not in this work, and flags
 
-- **Lawyer review** of the policy and of retention periods, and whether MJP must register with the NDPC as a
-  data controller of major importance (needs a lawyer or the NDPC's thresholds, not a guess).
-- **Things the policy states that Victor must confirm before it goes live:** the contact email, "within 30 days" for
-  email requests, that MJP Productions Limited is "registered in Nigeria" (the CAC filing is still being corrected),
-  and that there is **no age rule** written anywhere. Whether under-18s may sign up is a product and legal decision;
-  the policy is silent on it, which a lawyer will likely want filled.
+- **Optional, not blocking:** a lawyer's read of the policy and retention wording, and whether MJP must register
+  with the NDPC as a data controller of major importance (depends on the NDPC's thresholds as users grow).
+- **Confirmed by Victor 2026-10-24:** the contact email is kingdomainapp@gmail.com. **Still his call:** "within 30
+  days" for email requests (my number), and that there is **no age rule** written anywhere. Whether under-18s may
+  sign up is a product decision; the policy is silent on it.
 - **Emails are shown to the other side** (verified in `jobsRoutes.js`): every student who views a job gets the client's
   name, photo **and email**; a client gets an applicant's. The policy says so because it is true. A product decision
   whether to show email only after an award would let the policy say less.
