@@ -15,6 +15,8 @@ import '../../widgets/kit/motion.dart';
 import '../../widgets/kit/pressable.dart';
 import '../../widgets/kit/status_pill.dart';
 import '../payments/payout_account_screen.dart';
+import '../profile/delete_account_sheet.dart';
+import '../profile/privacy_link.dart';
 import '../profile/profile_overview_screen.dart';
 import '../profile/profile_photo_button.dart';
 
@@ -42,6 +44,22 @@ void confirmSignOut(BuildContext context, WidgetRef ref) {
       ],
     ),
   );
+}
+
+/// Privacy policy, Sign out and Delete account: the same three rows at the foot of both profile tabs.
+class _AccountGroup extends ConsumerWidget {
+  const _AccountGroup();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListGroup(
+      rows: [
+        ListRow(icon: Icons.privacy_tip_outlined, title: 'Privacy policy', sub: 'How we handle your data', onTap: () => openPrivacyPolicy(context)),
+        ListRow(icon: Icons.logout_rounded, title: 'Sign out', danger: true, onTap: () => confirmSignOut(context, ref)),
+        ListRow(icon: Icons.person_remove_outlined, title: 'Delete account', danger: true, onTap: () => showDeleteAccountSheet(context)),
+      ],
+    );
+  }
 }
 
 void _open(BuildContext context, Widget screen) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
@@ -166,7 +184,7 @@ class TalentProfileTab extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 12),
-          ListGroup(rows: [ListRow(icon: Icons.logout_rounded, title: 'Sign out', danger: true, onTap: () => confirmSignOut(context, ref))]),
+          const _AccountGroup(),
         ],
       ),
     );
@@ -237,7 +255,7 @@ class ClientProfileTab extends ConsumerWidget {
         Text(name.isEmpty ? 'Your profile' : name, textAlign: TextAlign.center, style: AppTextStyles.h2),
         Text(user?.email ?? '', textAlign: TextAlign.center, style: AppTextStyles.bodySmall.copyWith(fontSize: 13.5)),
         const SizedBox(height: 24),
-        ListGroup(rows: [ListRow(icon: Icons.logout_rounded, title: 'Sign out', danger: true, onTap: () => confirmSignOut(context, ref))]),
+        const _AccountGroup(),
       ],
     );
   }

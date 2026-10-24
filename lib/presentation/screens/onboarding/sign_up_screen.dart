@@ -13,6 +13,7 @@ import '../../widgets/kit/kd_auth.dart';
 import '../../widgets/kit/kd_button.dart';
 import '../../widgets/kit/kd_card.dart';
 import '../../widgets/kit/pressable.dart';
+import '../profile/privacy_link.dart';
 import 'login_screen.dart';
 
 /// T1 — Sign up (POST /users/signup), as a student (talent) or a client.
@@ -71,6 +72,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       lead: Text(talent ? 'Prove your skills, get hired, and get paid safely.' : 'Post jobs and hire students whose work has been checked.'),
       actions: [
         KdButton(label: 'Create account', busyLabel: 'Creating', onPressed: _create),
+        AuthLink(lead: 'By signing up you acknowledge our ', action: 'Privacy policy', onTap: () => openPrivacyPolicy(context)),
         AuthLink(
           lead: 'Already have an account? ',
           action: 'Sign in',

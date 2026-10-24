@@ -57,4 +57,5 @@ fallback, semantics), the sheet and its three actions, upload error shown, appli
 
 Cropping UI, stripping EXIF location data from the file (the phone-side resize re-encodes the image,
 which usually drops it, but this is not guaranteed and not tested), reporting or moderating photos,
-and photos on the public waitlist site. Account deletion (a separate item) must delete the photo.
+and photos on the public waitlist site. Account deletion removes the photo too
+([account-deletion-and-privacy.md](./account-deletion-and-privacy.md)).

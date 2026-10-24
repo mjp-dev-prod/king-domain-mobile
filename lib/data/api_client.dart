@@ -31,7 +31,10 @@ class ApiException implements Exception {
   /// A stable machine-readable reason when the server sends one ('terms_changed'),
   /// so the app can react without matching message text.
   final String? code;
-  ApiException(this.message, this.status, {this.code});
+  /// The rest of the server's answer, for refusals that carry more than a message (the jobs that
+  /// block an account deletion).
+  final Map<String, dynamic>? data;
+  ApiException(this.message, this.status, {this.code, this.data});
 
   /// Builds the exception for a non-2xx response: the server's `error` text and
   /// optional `code`, or a plain message when the body isn't JSON.
@@ -42,7 +45,7 @@ class ApiException implements Exception {
     } catch (_) {
       data = null;
     }
-    return ApiException((data?['error'] as String?) ?? 'Something went wrong.', status, code: data?['code'] as String?);
+    return ApiException((data?['error'] as String?) ?? 'Something went wrong.', status, code: data?['code'] as String?, data: data);
   }
 
   @override
@@ -143,7 +146,7 @@ class ApiClient {
                 .patch(uri, headers: headers, body: encoded)
                 .timeout(_requestTimeout);
           case 'DELETE':
-            response = await http.delete(uri, headers: headers).timeout(_requestTimeout);
+            response = await http.delete(uri, headers: headers, body: encoded).timeout(_requestTimeout);
           default:
             throw ApiException('Unsupported method $method', 0);
         }
@@ -194,7 +197,8 @@ class ApiClient {
       _request('POST', path, body: body);
   Future<dynamic> patch(String path, {Map<String, dynamic>? body}) =>
       _request('PATCH', path, body: body);
-  Future<dynamic> delete(String path) => _request('DELETE', path);
+  Future<dynamic> delete(String path, {Map<String, dynamic>? body}) =>
+      _request('DELETE', path, body: body);
 
   Future<dynamic> postMultipart(
     String path, {

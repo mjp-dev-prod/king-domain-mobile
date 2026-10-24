@@ -43,6 +43,9 @@ live here regardless of which sibling repo (backend, web, admin) they end up aff
   build plan for the design above (backend and app), each task test-first.
 - [Profile photos](./features/profile-photos.md) — public photos: where they show, what is stored, the
   rules the server enforces, and why they are public while proofs stay private.
+- [Account deletion and privacy](./features/account-deletion-and-privacy.md) — what deleting an account removes
+  and keeps, why it is blocked during a contract, the race safety, the policy and web pages, and what Victor
+  and a lawyer must confirm before they go live.
 - [Imagery surfaces](./features/imagery-surfaces.md) — every place images appear (proof, photos,
   deliveries, job references, illustrations), each linked to the decision it comes from. Read
   before rendering any image.

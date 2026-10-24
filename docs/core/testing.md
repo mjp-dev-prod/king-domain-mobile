@@ -1,5 +1,9 @@
 # Testing — what is guaranteed, and what is not
 
+**Since then, targeted runs only (2026-10-24, account deletion):** backend `accountDeletion.test.js` 16/16, `jobs.test.js` +
+`jobsRoutes.test.js` 37/37; app `delete_account_test.dart` 10, `api_client_delete_test.dart` 5, `photo_usage_test.dart`, `shell_tabs_test.dart`;
+`tools/session-notify` 22/22. No full suite has run since the line below.
+
 **Last full run: 2026-10-22 (after profile photos).** Backend 189/189, app 223/223, `flutter analyze` clean. (Before the work gaps: backend 108, app 83.) The backend 189 came from two runs: 174 in the full run, then `jobsRoutes.test.js` (15) re-run alone after its server failed to start twice within the 60 s wait on a slow Neon branch; it passed 15/15 and the wait is now 150 s.
 
 Evidence tags: 🟢 documented by Paystack (source named) · 🔵 observed in this repo's tests ·

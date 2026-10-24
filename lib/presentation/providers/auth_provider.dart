@@ -147,6 +147,13 @@ class AuthNotifier extends Notifier<AuthState> {
     state = state.copyWith(user: AuthUser.fromJson(data['user'] as Map<String, dynamic>));
   }
 
+  /// Asks the server to delete this account, proving it with the password. Only the request: when it
+  /// succeeds the caller closes its sheet and then calls [logout], which clears this phone's tokens
+  /// (its own server call finds the session already gone, and is ignored). A refusal throws an
+  /// ApiException: 403 `wrong_password`, or 409 `active_contracts` with the jobs in `data`.
+  Future<void> deleteAccount(String password) =>
+      ApiClient.instance.delete('/users/me', body: {'password': password});
+
   Future<void> removePhoto() async {
     final data = await ApiClient.instance.delete('/users/me/photo');
     state = state.copyWith(user: AuthUser.fromJson(data['user'] as Map<String, dynamic>));

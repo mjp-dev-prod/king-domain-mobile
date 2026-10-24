@@ -6,4 +6,9 @@ class AppBrand {
 
   static const String name = 'King Domain';
   static const String mark = 'KD';
+
+  /// Public pages on the website (king-domain-web, public/privacy and public/delete-account). They
+  /// move with the website's address, so they live here and not in the screens.
+  static const String privacyUrl = 'https://king-domain.vercel.app/privacy/';
+  static const String deleteAccountUrl = 'https://king-domain.vercel.app/delete-account/';
 }
