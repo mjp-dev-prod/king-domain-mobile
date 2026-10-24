@@ -39,6 +39,11 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
+# Firebase client config. The repo is public, so it is injected at build time (Codemagic) and kept
+# only on developer machines: docs/features/push-notifications.md.
+android/app/google-services.json
+android/app/src/*/google-services.json
+
 # Android Studio will place build artifacts here
 /android/app/debug
 /android/app/profile

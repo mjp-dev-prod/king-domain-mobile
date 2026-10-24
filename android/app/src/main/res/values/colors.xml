@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Violet: tints the small notification icon (brand v1 action colour). -->
+    <color name="kd_notification">#7451F2</color>
+</resources>

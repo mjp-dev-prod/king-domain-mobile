@@ -106,6 +106,19 @@ workflows:
 
           echo "VERSION_NAME=$VERSION_NAME" >> $CM_ENV
 
+      - name: Write the Firebase config (production project)
+        script: |
+          # See the staging workflow: the file is not in the repo, it comes from an encrypted variable.
+          if [ -z "$GOOGLE_SERVICES_PRODUCTION_B64" ]; then
+            echo "ERROR: GOOGLE_SERVICES_PRODUCTION_B64 is not set (group king_domain_backend)."
+            echo "Add it: base64 -w0 google-services.json of the king-domain-8878e Firebase project."
+            exit 1
+          fi
+          mkdir -p android/app/src/production
+          echo "$GOOGLE_SERVICES_PRODUCTION_B64" | base64 --decode > android/app/src/production/google-services.json
+          grep -q '"package_name": "com.kingdomain.king_domain"' android/app/src/production/google-services.json \
+            || { echo "ERROR: the production config is not for com.kingdomain.king_domain"; exit 1; }
+
       - name: Build APK
         script: |
           # Debug signing for now — internal-testing distribution only, no
@@ -252,6 +265,22 @@ workflows:
           cat pubspec.yaml | grep "^version:"
 
           echo "VERSION_NAME=$VERSION_NAME" >> $CM_ENV
+
+      - name: Write the Firebase config (staging project)
+        script: |
+          # google-services.json is not in the repo (it is public). It comes from an encrypted
+          # Codemagic variable holding the file, base64-encoded. Without it the build would fail
+          # later with a confusing Gradle message, so fail here with the real reason.
+          if [ -z "$GOOGLE_SERVICES_STAGING_B64" ]; then
+            echo "ERROR: GOOGLE_SERVICES_STAGING_B64 is not set (group king_domain_staging)."
+            echo "Add it: base64 -w0 google-services.json of the king-domain-staging Firebase project."
+            exit 1
+          fi
+          mkdir -p android/app/src/staging
+          echo "$GOOGLE_SERVICES_STAGING_B64" | base64 --decode > android/app/src/staging/google-services.json
+          # Prove it is the right project for this flavor without printing anything secret.
+          grep -q '"package_name": "com.kingdomain.king_domain.staging"' android/app/src/staging/google-services.json \
+            || { echo "ERROR: the staging config is not for com.kingdomain.king_domain.staging"; exit 1; }
 
       - name: Build APK
         script: |

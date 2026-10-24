@@ -1,5 +1,10 @@
 # Testing — what is guaranteed, and what is not
 
+**Push notifications (2026-10-24, targeted runs):** backend `push.test.js` 30/30 plus `reminders`, `changes`, `deliveryDates`,
+`lifecycle` (the `HTTP routes` suite) and `accountDeletion` all pass; app `push_service_test` 11, `push_ui_test` 11,
+`android_manifest_test`, `api_client_delete_test` and the shell/profile/logout tests pass; `dart analyze` clean; Android resources
+(both flavors) and Kotlin compile with Gradle. Needs a phone to go further: see push-notifications.md.
+
 **Since then, targeted runs only (2026-10-24, account deletion):** backend `accountDeletion.test.js` 16/16, `jobs.test.js` +
 `jobsRoutes.test.js` 37/37; app `delete_account_test.dart` 10, `api_client_delete_test.dart` 5, `photo_usage_test.dart`, `shell_tabs_test.dart`;
 `tools/session-notify` 22/22. No full suite has run since the line below.

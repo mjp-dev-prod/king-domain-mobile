@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/api_client.dart';
 import '../../data/token_store.dart';
+import 'push_service.dart';
 
 /// Mirrors king-domain-backend's publicUser() shape (src/user/routes.js).
 class AuthUser {
@@ -130,6 +131,11 @@ class AuthNotifier extends Notifier<AuthState> {
       );
 
   Future<void> logout() async {
+    // First, while the sign-in still works: take this phone off the account, so the next person on it
+    // never receives this person's pushes. Best-effort and silent (PushService never throws).
+    try {
+      await ref.read(pushServiceProvider).unregister();
+    } catch (_) {}
     final refreshToken = await TokenStore.instance.getRefreshToken();
     try {
       await ApiClient.instance.post('/users/auth/logout', body: {'refreshToken': refreshToken});

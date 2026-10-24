@@ -46,6 +46,8 @@ live here regardless of which sibling repo (backend, web, admin) they end up aff
 - [Account deletion and privacy](./features/account-deletion-and-privacy.md) — what deleting an account removes
   and keeps, why it is blocked during a contract, the race safety, the policy and web pages, and what Victor
   and a lawyer must confirm before they go live.
+- [Push notifications](./features/push-notifications.md) — what gets pushed and to whom, the outbox design,
+  token handling, what Victor sets up (Render, Codemagic), and what only a phone can confirm.
 - [Imagery surfaces](./features/imagery-surfaces.md) — every place images appear (proof, photos,
   deliveries, job references, illustrations), each linked to the decision it comes from. Read
   before rendering any image.

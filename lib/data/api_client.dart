@@ -145,6 +145,10 @@ class ApiClient {
             response = await http
                 .patch(uri, headers: headers, body: encoded)
                 .timeout(_requestTimeout);
+          case 'PUT':
+            response = await http
+                .put(uri, headers: headers, body: encoded)
+                .timeout(_requestTimeout);
           case 'DELETE':
             response = await http.delete(uri, headers: headers, body: encoded).timeout(_requestTimeout);
           default:
@@ -197,6 +201,8 @@ class ApiClient {
       _request('POST', path, body: body);
   Future<dynamic> patch(String path, {Map<String, dynamic>? body}) =>
       _request('PATCH', path, body: body);
+  Future<dynamic> put(String path, {Map<String, dynamic>? body}) =>
+      _request('PUT', path, body: body);
   Future<dynamic> delete(String path, {Map<String, dynamic>? body}) =>
       _request('DELETE', path, body: body);
 

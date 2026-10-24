@@ -1,13 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/jobs_provider.dart';
+import '../../providers/push_gateway.dart';
+import '../../providers/push_service.dart';
 import '../../widgets/contract/contract_parts.dart';
 import '../../widgets/kit/kd_tab_bar.dart';
+import '../../widgets/kit/kd_toast.dart';
 import '../client/post_job_screen.dart';
 import '../jobs/job_feed_screen.dart';
+import '../profile/notifications_sheet.dart';
 import 'client_jobs_tab.dart';
 import 'profile_tabs.dart';
+import 'push_navigation.dart';
 import 'work_tab.dart';
 
 /// Post-sign-in shell with the floating tab bar (prototypes/palette-explorer.html).
@@ -23,8 +30,55 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell> {
   int _index = 0;
+  final _pushSubscriptions = <StreamSubscription<PushMessage>>[];
 
   void _go(int i) => setState(() => _index = i);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startPush());
+  }
+
+  @override
+  void dispose() {
+    for (final s in _pushSubscriptions) {
+      s.cancel();
+    }
+    super.dispose();
+  }
+
+  /// Push notifications (docs/features/push-notifications.md): listen for pushes, register this phone
+  /// when allowed, open the job a launching push was about, and offer the one-time explanation.
+  Future<void> _startPush() async {
+    if (!mounted) return;
+    final gateway = ref.read(pushGatewayProvider);
+    final service = ref.read(pushServiceProvider);
+    _pushSubscriptions
+      ..add(gateway.foreground.listen(_showForeground))
+      ..add(gateway.opened.listen(_openFromPush));
+    await service.registerIfAllowed();
+    final launch = await gateway.launchMessage();
+    if (launch != null) unawaited(_openFromPush(launch));
+    if (mounted && await service.shouldPrompt() && mounted) showPushPrompt(context, service);
+  }
+
+  /// Android shows nothing itself while the app is open, so the push appears as a toast.
+  void _showForeground(PushMessage m) {
+    if (mounted) KdToast.show(context, '${m.title}. ${m.body}');
+  }
+
+  Future<void> _openFromPush(PushMessage m) async {
+    final jobId = m.jobId;
+    if (jobId == null) return;
+    // Refresh first: the push is about something that just changed, and the list may be older than that.
+    await ref.read(jobsProvider.notifier).refresh();
+    if (!mounted) return;
+    final jobs = ref.read(jobsProvider).valueOrNull ?? const [];
+    final job = jobs.where((j) => j.id == jobId).firstOrNull;
+    final screen = screenForPush(role: ref.read(authProvider).user?.role, job: job);
+    if (screen != null) unawaited(Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen)));
+  }
 
   @override
   Widget build(BuildContext context) {
