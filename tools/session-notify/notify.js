@@ -295,7 +295,9 @@ async function cmdEnd() {
   if (!id || ["clear", "resume"].includes(input.reason)) return; // not the end of the work
   const state = loadState(id);
   if (!state || state.summaryPostedAt || state.endPostedAt) return;
-  const changes = changesSince(state.repos);
+  // Only finished work is worth an automatic post: an edited-but-uncommitted file (often one left over
+  // from long ago) is not news to the team, and it made this post fire at every session end.
+  const changes = changesSince(state.repos).filter((c) => c.commits.length);
   if (!changes.length) return;
   const res = await send(buildPayload({ title: "King Domain session ended", summary: "", changes, auto: true }));
   if (res.ok) saveState(id, { ...state, endPostedAt: new Date().toISOString() });

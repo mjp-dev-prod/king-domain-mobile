@@ -257,6 +257,20 @@ describe("end (the safety net)", () => {
     assert.equal(received.length, 1);
   });
 
+  it("stays quiet when the only change is an uncommitted file, and leaves such repos out when there is real work", async () => {
+    await hook("start", { session_id: "s1" });
+    fs.writeFileSync(path.join(repoA, "wip.txt"), "unfinished");
+    await hook("end", { session_id: "s1", reason: "other" });
+    assert.equal(received.length, 0, "an edited file alone is not news");
+
+    commit(repoB, "Real work");
+    await hook("end", { session_id: "s1", reason: "other" });
+    assert.equal(received.length, 1);
+    const t = texts(received[0]);
+    assert.match(t, /Real work/);
+    assert.doesNotMatch(t, /repo-a/, "the repo with only an unfinished file is not mentioned");
+  });
+
   it("stays quiet when nothing changed", async () => {
     await hook("start", { session_id: "s1" });
     await hook("end", { session_id: "s1", reason: "other" });

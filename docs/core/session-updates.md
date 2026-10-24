@@ -18,7 +18,7 @@ until the webhook below is created.
   tells Claude the session id. Posts nothing.
 - **post** (Claude, when Victor says to wrap up): sends the written update, with the commits since `start`
   listed underneath (per repo: how many, and pushed or not). Marks the session as reported.
-- **end** (hook, safety net): if no written update went out and something changed, posts the commit facts
+- **end** (hook, safety net): if no written update went out and there are new commits, posts the commit facts
   alone, labelled as automatic. Stays quiet on `/clear`, on resume, and when nothing changed.
 
 Hooks always exit 0 and never slow a session beyond a few seconds. With no webhook configured they do nothing.
