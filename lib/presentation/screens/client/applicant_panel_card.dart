@@ -20,8 +20,9 @@ class ApplicantPanelCard extends StatelessWidget {
   final VoidCallback onShortlist;
   final VoidCallback onDecline;
   final VoidCallback? onOpenProfile;
+  final VoidCallback? onMessage;
 
-  const ApplicantPanelCard({super.key, required this.app, required this.awardedHere, required this.canAct, required this.onPick, required this.onShortlist, required this.onDecline, this.onOpenProfile});
+  const ApplicantPanelCard({super.key, required this.app, required this.awardedHere, required this.canAct, required this.onPick, required this.onShortlist, required this.onDecline, this.onOpenProfile, this.onMessage});
 
   @override
   Widget build(BuildContext context) {
@@ -107,6 +108,10 @@ class ApplicantPanelCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(q.answer, style: AppTextStyles.bodyMedium)),
               ],
+            ],
+            if (onMessage != null && !declined) ...[
+              const SizedBox(height: 6),
+              KdButton.secondary(label: 'Message ${t.fullName.split(' ').first}', icon: Icons.chat_bubble_outline_rounded, height: AppDimensions.buttonHeightSm, onPressed: onMessage),
             ],
             if (canAct && !declined && !notSelected) ...[
               const SizedBox(height: 6),

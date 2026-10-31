@@ -242,6 +242,7 @@ class TalentCardView extends StatelessWidget {
             if (t.educationText != null && t.educationText!.isNotEmpty) StatusPill(t.educationText!),
             if (t.regionText != null && t.regionText!.isNotEmpty) StatusPill(t.regionText!),
             StatusPill(t.lastActiveText),
+            if (t.responseTime != null) StatusPill('Replies ${t.responseTime}'),
           ]),
           if (onInvite != null) ...[
             const SizedBox(height: 12),

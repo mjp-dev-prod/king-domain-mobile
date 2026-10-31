@@ -286,6 +286,9 @@ class TalentCard {
   final bool identityVerified;
   final bool saved;
 
+  /// "within an hour" and so on: the median of real first replies, shown only after 3 conversations (D24).
+  final String? responseTime;
+
   const TalentCard({
     required this.id,
     required this.fullName,
@@ -299,6 +302,7 @@ class TalentCard {
     required this.lastActive,
     required this.identityVerified,
     required this.saved,
+    this.responseTime,
   });
 
   factory TalentCard.fromJson(Map<String, dynamic> j) {
@@ -325,6 +329,7 @@ class TalentCard {
       lastActive: j['lastActive'] as String? ?? 'earlier',
       identityVerified: j['identityVerified'] as bool? ?? false,
       saved: j['saved'] as bool? ?? false,
+      responseTime: (j['responseTime'] as Map?)?['label'] as String?,
     );
   }
 
@@ -348,6 +353,7 @@ class TalentCard {
     lastActive: lastActive,
     identityVerified: identityVerified,
     saved: saved ?? this.saved,
+    responseTime: responseTime,
   );
 }
 

@@ -17,6 +17,8 @@ import '../../widgets/kit/kd_layout.dart';
 import '../../widgets/kit/kd_toast.dart';
 import '../../widgets/kit/motion.dart';
 import '../../widgets/kit/status_pill.dart';
+import '../messages/conversation_screen.dart';
+import '../../providers/messaging_provider.dart';
 import 'invite_sheet.dart';
 
 /// A talent as a client sees them (PRD §5): the facts, then the verified work itself. No score, no rank.
@@ -31,6 +33,16 @@ class TalentProfileScreen extends ConsumerWidget {
     try {
       await ref.read(discoveryActionsProvider).setSaved(t.id, saved: !t.saved);
       if (context.mounted) KdToast.show(context, t.saved ? 'Removed from saved talents' : 'Saved. Find them in Saved talents.');
+    } on ApiException catch (e) {
+      if (context.mounted) KdToast.show(context, e.message, kind: ToastKind.error);
+    }
+  }
+
+  Future<void> _message(BuildContext context, WidgetRef ref) async {
+    try {
+      final id = await startConversation(ref, talentId);
+      if (!context.mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => ConversationScreen(conversationId: id)));
     } on ApiException catch (e) {
       if (context.mounted) KdToast.show(context, e.message, kind: ToastKind.error);
     }
@@ -68,6 +80,8 @@ class TalentProfileScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               if (forJob != null) KdButton(label: 'Invite to "${forJob!.title}"', icon: Icons.mail_outline_rounded, onPressed: () => showInviteSheet(context, ref, job: forJob!, talent: t)),
               if (forJob != null) const SizedBox(height: 8),
+              KdButton.secondary(label: 'Message ${t.fullName.split(' ').first}', icon: Icons.chat_bubble_outline_rounded, onPressed: () => _message(context, ref)),
+              const SizedBox(height: 8),
               KdButton.secondary(label: t.saved ? 'Saved. Tap to remove' : 'Save this talent', icon: t.saved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded, onPressed: () => _toggleSave(context, ref, t)),
               const SizedBox(height: 20),
               Text('Verified work', style: AppTextStyles.title),

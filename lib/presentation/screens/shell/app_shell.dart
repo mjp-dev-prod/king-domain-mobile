@@ -11,6 +11,8 @@ import '../../widgets/kit/kd_tab_bar.dart';
 import '../../widgets/kit/kd_toast.dart';
 import '../client/post_job_flow.dart';
 import '../discovery/browse_talents_screen.dart';
+import '../messages/messages_screen.dart';
+import '../../providers/messaging_provider.dart';
 import '../jobs/job_feed_screen.dart';
 import '../profile/notifications_sheet.dart';
 import 'client_jobs_tab.dart';
@@ -86,24 +88,27 @@ class _AppShellState extends ConsumerState<AppShell> {
     final user = ref.watch(authProvider).user;
     final isClient = user?.role == 'client';
     final jobs = ref.watch(jobsProvider).valueOrNull ?? const [];
+    final unread = ref.watch(unreadMessagesProvider);
 
     final List<Widget> screens;
     final List<KdTab> tabs;
     if (isClient) {
       final needs = ClientJobsTab.mine(jobs, user?.id).where((j) => contractNeedsYou(j, forClient: true)).length;
-      screens = [ClientJobsTab(onPostJob: () => _go(2)), const BrowseTalentsScreen(), PostJobFlow(onPosted: () => _go(0)), const ClientProfileTab()];
+      screens = [ClientJobsTab(onPostJob: () => _go(2)), const BrowseTalentsScreen(), PostJobFlow(onPosted: () => _go(0)), const MessagesScreen(), const ClientProfileTab()];
       tabs = [
         KdTab(icon: Icons.work_outline_rounded, activeIcon: Icons.work_rounded, label: 'My jobs', badge: needs),
         const KdTab(icon: Icons.groups_outlined, activeIcon: Icons.groups_rounded, label: 'Talents'),
         const KdTab(icon: Icons.add_circle_outline_rounded, activeIcon: Icons.add_circle_rounded, label: 'Post'),
+        KdTab(icon: Icons.chat_bubble_outline_rounded, activeIcon: Icons.chat_bubble_rounded, label: 'Messages', badge: unread),
         const KdTab(icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded, label: 'Profile'),
       ];
     } else {
       final needs = WorkTab.mine(jobs).where((j) => contractNeedsYou(j, forClient: false)).length;
-      screens = [const JobFeedScreen(), WorkTab(onBrowseJobs: () => _go(0)), const TalentProfileTab()];
+      screens = [const JobFeedScreen(), WorkTab(onBrowseJobs: () => _go(0)), const MessagesScreen(), const TalentProfileTab()];
       tabs = [
         const KdTab(icon: Icons.search_rounded, activeIcon: Icons.search_rounded, label: 'Jobs'),
         KdTab(icon: Icons.assignment_outlined, activeIcon: Icons.assignment_rounded, label: 'Work', badge: needs),
+        KdTab(icon: Icons.chat_bubble_outline_rounded, activeIcon: Icons.chat_bubble_rounded, label: 'Messages', badge: unread),
         const KdTab(icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded, label: 'Profile'),
       ];
     }

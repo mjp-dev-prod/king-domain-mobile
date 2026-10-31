@@ -23,6 +23,8 @@ import '../../widgets/kit/status_pill.dart';
 import '../payments/fund_contract_screen.dart';
 import '../discovery/browse_talents_screen.dart';
 import '../discovery/talent_profile_screen.dart';
+import '../messages/conversation_screen.dart';
+import '../../providers/messaging_provider.dart';
 import 'applicant_panel_card.dart';
 import 'post_job_flow.dart';
 import 'post_job_screen.dart';
@@ -93,6 +95,7 @@ class _ApplicantsScreenState extends ConsumerState<ApplicantsScreen> {
                               onPick: () { _confirmAward(apps[i]); },
                               onShortlist: () => _shortlist(apps[i]),
                               onDecline: () => _confirmDecline(apps[i]),
+                              onMessage: () => _message(apps[i]),
                               onOpenProfile: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TalentProfileScreen(talentId: apps[i].talentId, forJob: job))),
                             )
                           : _ApplicantCard(
@@ -206,6 +209,16 @@ class _ApplicantsScreenState extends ConsumerState<ApplicantsScreen> {
     try {
       await ref.read(discoveryActionsProvider).shortlistApplicant(widget.job.id, app.id, on: app.status != 'shortlisted');
       setState(() => _future = _load());
+    } on ApiException catch (e) {
+      if (mounted) KdToast.show(context, e.message, kind: ToastKind.error);
+    }
+  }
+
+  Future<void> _message(JobApplication app) async {
+    try {
+      final id = await startConversation(ref, app.talentId);
+      if (!mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => ConversationScreen(conversationId: id)));
     } on ApiException catch (e) {
       if (mounted) KdToast.show(context, e.message, kind: ToastKind.error);
     }
