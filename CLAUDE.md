@@ -119,9 +119,12 @@ in `lib/core/constants/` move to these values when the UI rebuild starts.
   verification mechanics, progression scoring, payment provider, dispute rules, monetisation)
   are deliberately still open and tracked in a decision ledger. Do not let an implementation
   choice quietly settle one of them — flag it instead.
-- **Database is not chosen yet.** The backend currently persists the waitlist to a JSON file on
-  purpose, to avoid locking a data-layer decision ahead of domain modelling. Leaning is
-  Postgres + Prisma when real entities exist, but that is not decided.
+- **Every screen is thought through. No dead ends, blanks or skipped pages** (Victor, 2026-10-30).
+  A screen is designed as a step in a journey, not on its own. Before building one, answer: where the
+  person came from, what they decide here, what happens next, and what they see when it is empty,
+  loading, failed, waiting on someone else, rejected or done. Every state offers a next step. No
+  placeholder or "coming soon" pages, no step skipped or cut because it is complex.
+- **Database:** Postgres through Prisma (production on Supabase, staging and tests on Neon).
 
 ---
 

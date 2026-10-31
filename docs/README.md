@@ -14,12 +14,12 @@ live here regardless of which sibling repo (backend, web, admin) they end up aff
 
 ## Current docs
 
-- [Backend + Frontend Sprint Plan](./research/BACKEND_SPRINT_PLAN.md) —
-  **the current build order.** 6 sprints (schema+auth → profile/proof/review →
-  jobs/applications/contracts → frontend wiring → payment → client-side experience),
-  each depending only on the sprint(s) before it. Owner decision 2026-09-17: build the
-  real product now, not a narrowed wedge — this supersedes the "narrower first slice"
-  framing in the reconciliation doc below.
+- [Product requirements (PRD)](./core/prd.md) — **start here: what King Domain is, for whom, every
+  journey and screen, the quality bar, the build slices S0–S8, and the register of decisions D1–D46.**
+  Written 2026-10-31 from the eleven research topics below. It replaces the sprint plan as the build order.
+- [Backend + Frontend Sprint Plan](./research/BACKEND_SPRINT_PLAN.md) — the September build order
+  (6 sprints, now largely built); superseded as the order by the PRD's slices. Kept for the history of how
+  the backend was sequenced.
 - [Vision vs. Research Reconciliation](./core/vision-vs-research-reconciliation.md) —
   reconciles the original product vision against the 2026-09-12 market validation
   research, section by section. Still the reference for *what* to build; the sprint
@@ -71,6 +71,39 @@ reference the sprint plan's Prisma schema and endpoints are built against.
 - [UI/UX audit 2026-10-01](./research/ui-audit-2026-10-01.md) — what the app looks and feels like today,
   the defects found, and what Pendu, Discord, Telegram and the platform guidelines actually do.
   Read before any UI redesign.
+- [Job types (2026-10-30)](./research/job-types-2026-10-30.md) — PRD research topic 1: the four shapes
+  remote work comes in (one delivery, milestones, monthly, hourly), how Upwork, Fiverr and Contra run each,
+  Nigerian payment norms, why no contests, and the decisions it raises. Read before touching jobs or contracts.
+- [Proof verification and the start proof (2026-10-30)](./research/proof-verification-2026-10-30.md) — PRD
+  research topic 2: the verification protocol (evidence pack, walkthrough video, authenticity check, two
+  practising reviewers, reasons shown, Verified then Proven levels) and the start-proof formats per skill.
+  Read before touching proof, review or payouts.
+- [Identity, student status and age (2026-10-30)](./research/student-identity-verification-2026-10-30.md) —
+  PRD research topic 3: NIN + live selfie for both sides, current-session documents for student status,
+  renewal each session, the under-18 question under the NDPA, and what waits on CAC.
+- [Client trust and student safety (2026-10-30)](./research/client-trust-and-safety-2026-10-30.md) — PRD
+  research topic 4: what clients fear, the scams aimed at young Nigerian job seekers, how Upwork, Fiverr and
+  Airbnb keep contact on-platform, and the proposed protections both ways.
+- [Discovery (2026-10-30)](./research/discovery-2026-10-30.md) — PRD research topic 5: job feed and alerts,
+  the 50-applicant / 5-day soft cap, talent browsing without scores, invitations, packages, and the
+  "find someone for me" shortlist.
+- [Messaging (2026-10-30)](./research/messaging-2026-10-30.md) — PRD research topic 6: one conversation per
+  relationship with the job's events as cards, voice notes and calls, built light on data, safety and
+  record-keeping rules.
+- [Reviews and reputation (2026-10-30)](./research/reviews-reputation-2026-10-30.md) — PRD research topic 7:
+  why star averages fail, hidden-until-both reviews, the private rehire question, system-measured facts, and
+  the Proven level.
+- [Disputes, refunds and chargebacks (2026-10-31)](./research/disputes-2026-10-31.md) — PRD research topic
+  8: the eBay-style staircase, free rulings with reasons, per-job-type rules, and Paystack's 16-hour
+  chargeback deadline.
+- [Money (2026-10-31)](./research/money-2026-10-31.md) — PRD research topic 9: naira and dollar pricing,
+  naira-only payouts, worked fee examples, premium under Google Play Billing, and the tax questions for an
+  accountant.
+- [Training camps (2026-10-31)](./research/training-camps-2026-10-31.md) — PRD research topic 10: cohorts
+  in the app, hybrid in person and online, attested final projects, the first-job track, and why Andela's
+  junior programme failed.
+- [Admin tools (2026-10-31)](./research/admin-tools-2026-10-31.md) — PRD research topic 11: the team inbox,
+  queue targets and defaults, roles, second-person approval for money, audit log, alerts and on-call.
 - [Market Validation Research](./research/market-validation-2026-09-12.md) — the
   adversarial research pass behind the reconciliation doc above.
 - [Shareholder Decisions](./features/shareholder-decisions.md) — async decision-making
