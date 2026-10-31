@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/debug_log.dart';
 import '../../../data/api_client.dart';
 import '../../../data/models/skill_submission.dart';
 import '../../providers/skill_submissions_provider.dart';
@@ -74,6 +75,7 @@ class _FileSectionState extends ConsumerState<FileSection> {
     final problems = <String>[];
     for (final f in picked) {
       final bad = _check(f);
+      kdLog('files', '${widget.role.name}: picked ${f.name} ${f.size} bytes ${f.contentType} -> ${bad ?? 'ok'}');
       if (bad != null) {
         problems.add(bad);
         continue;

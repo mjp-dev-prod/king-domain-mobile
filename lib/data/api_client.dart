@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/services.dart' show appFlavor;
 import 'package:http/http.dart' as http;
+import '../core/debug_log.dart';
 import 'token_store.dart';
 
 /// Each app flavor talks to its own backend: the production app to
@@ -120,6 +121,7 @@ class ApiClient {
         path.startsWith('/users/auth/');
 
     http.Response response;
+    final started = DateTime.now();
 
     try {
       if (multipart && (fileBytes != null || parts != null)) {
@@ -172,9 +174,21 @@ class ApiClient {
         }
       }
     } on TimeoutException {
+      kdLog('api', '$method $path -> TIMEOUT after ${DateTime.now().difference(started).inMilliseconds} ms (host $_apiBase)');
       throw ApiException('Could not reach the server.', 0);
-    } on http.ClientException {
+    } on http.ClientException catch (e) {
+      kdLog('api', '$method $path -> NO CONNECTION (${e.message}) (host $_apiBase)');
       throw ApiException('Could not reach the server.', 0);
+    }
+
+    final ms = DateTime.now().difference(started).inMilliseconds;
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      kdLog('api', '$method $path -> ${response.statusCode} in $ms ms');
+    } else {
+      // The body decides what the app shows. A non-JSON body (an HTML 404 from a server that has no such route)
+      // is why a screen says only "Something went wrong", so show its start here.
+      final body = response.body.length > 300 ? '${response.body.substring(0, 300)}...' : response.body;
+      kdLog('api', '$method $path -> ${response.statusCode} in $ms ms${isRetry ? ' (retry after refresh)' : ''} host=$_apiBase body=$body');
     }
 
     if (response.statusCode == 401 && !isRetry && !isAuthEndpoint) {

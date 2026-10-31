@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import '../../core/debug_log.dart';
 import '../../data/api_client.dart';
 import '../../data/models/skill_submission.dart';
 import 'auth_provider.dart';
@@ -126,7 +127,10 @@ class HttpBlobUploader implements BlobUploader {
 
   @override
   Future<void> put(String url, Map<String, String> headers, Stream<List<int>> data, int length, {void Function(double fraction)? onProgress}) async {
-    final request = http.StreamedRequest('PUT', Uri.parse(url))
+    final target = Uri.parse(url);
+    kdLog('upload', 'PUT ${target.host}${target.path} $length bytes, headers ${headers.keys.join(',')}');
+    final started = DateTime.now();
+    final request = http.StreamedRequest('PUT', target)
       ..headers.addAll(headers)
       ..contentLength = length;
     var sent = 0;
@@ -139,14 +143,18 @@ class HttpBlobUploader implements BlobUploader {
     );
     try {
       final response = await request.send().timeout(const Duration(minutes: 20));
+      kdLog('upload', 'storage answered ${response.statusCode} after ${DateTime.now().difference(started).inSeconds} s');
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw ApiException('The upload was refused (${response.statusCode}). Try adding the file again.', response.statusCode);
       }
     } on TimeoutException {
+      kdLog('upload', 'timed out after ${DateTime.now().difference(started).inSeconds} s');
       throw ApiException('The upload took too long. Check your connection and try again.', 0);
-    } on http.ClientException {
+    } on http.ClientException catch (e) {
+      kdLog('upload', 'interrupted: ${e.message}');
       throw ApiException('The upload was interrupted. Check your connection and try again.', 0);
-    } on SocketException {
+    } on SocketException catch (e) {
+      kdLog('upload', 'socket error: ${e.message}');
       throw ApiException('The upload was interrupted. Check your connection and try again.', 0);
     }
   }
@@ -214,10 +222,13 @@ class SubmissionActions {
       'sizeBytes': file.size,
     }) as Map<String, dynamic>;
     final ticket = UploadTicket.fromJson(json);
+    kdLog('upload', 'ticket for ${file.name} (${file.size} bytes, ${file.contentType}) as ${role.name}: file=${ticket.file.id}');
     try {
       await _ref.read(blobUploaderProvider).put(ticket.url, ticket.headers, file.open(), file.size, onProgress: onProgress);
       await _api.post('/users/me/submissions/$id/files/${ticket.file.id}/complete');
-    } catch (_) {
+      kdLog('upload', 'confirmed file=${ticket.file.id}: the server read it back from storage');
+    } catch (e) {
+      kdLog('upload', 'FAILED file=${ticket.file.id} ${file.name}: $e. Removing the half-made file.');
       try {
         await _api.delete('/users/me/submissions/$id/files/${ticket.file.id}');
       } catch (_) {
