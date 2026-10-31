@@ -18,6 +18,7 @@ import '../../widgets/kit/pressable.dart';
 import '../../widgets/kit/status_pill.dart';
 import '../payments/payout_account_screen.dart';
 import '../identity/identity_rows.dart';
+import '../skills/skills_row.dart';
 import '../profile/delete_account_sheet.dart';
 import '../profile/notifications_sheet.dart';
 import '../profile/privacy_link.dart';
@@ -196,6 +197,8 @@ class TalentProfileTab extends ConsumerWidget {
             Text('Verified means a ${AppBrand.name} reviewer checked the work is yours. The picture alone isn\'t the proof.', style: AppTextStyles.hint),
           ],
           const SizedBox(height: 20),
+          const SkillsRow(),
+          const SizedBox(height: 12),
           const IdentityGroup(),
           const SizedBox(height: 12),
           ListGroup(

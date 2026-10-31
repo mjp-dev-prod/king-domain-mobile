@@ -80,6 +80,8 @@ class KdTextField extends StatefulWidget {
   final Iterable<String>? autofillHints;
   final TextInputAction? textInputAction;
   final ValueChanged<String>? onSubmitted;
+  /// Lines the field shows. More than one makes it a multi-line box (a brief, a note).
+  final int maxLines;
 
   const KdTextField({
     super.key,
@@ -92,6 +94,7 @@ class KdTextField extends StatefulWidget {
     this.autofillHints,
     this.textInputAction,
     this.onSubmitted,
+    this.maxLines = 1,
   });
 
   @override
@@ -106,7 +109,9 @@ class _KdTextFieldState extends State<KdTextField> {
     return TextFormField(
       controller: widget.controller,
       obscureText: _obscure,
-      keyboardType: widget.keyboardType,
+      maxLines: widget.isPassword ? 1 : widget.maxLines,
+      minLines: widget.isPassword ? 1 : (widget.maxLines > 1 ? 3 : 1),
+      keyboardType: widget.maxLines > 1 ? TextInputType.multiline : widget.keyboardType,
       autofillHints: widget.autofillHints,
       textInputAction: widget.textInputAction,
       onFieldSubmitted: widget.onSubmitted,

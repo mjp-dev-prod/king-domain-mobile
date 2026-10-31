@@ -5,7 +5,9 @@ import 'package:king_domain/core/theme/app_theme.dart';
 import 'package:king_domain/data/models/job.dart';
 import 'package:king_domain/data/models/talent_profile.dart';
 import 'package:king_domain/presentation/providers/auth_provider.dart';
+import 'package:king_domain/data/models/skill_submission.dart';
 import 'package:king_domain/presentation/providers/identity_provider.dart';
+import 'package:king_domain/presentation/providers/skill_submissions_provider.dart';
 import 'package:king_domain/data/models/identity.dart';
 import 'package:king_domain/presentation/providers/jobs_provider.dart';
 import 'package:king_domain/presentation/providers/talent_profile_provider.dart';
@@ -71,6 +73,7 @@ Future<_Auth> _shell(WidgetTester tester, List<Job> jobs) async {
       talentProfileProvider.overrideWith(_Profile.new),
       identityProvider.overrideWith((ref) async => const IdentitySummary(status: IdentityStatus.notStarted, minor: false, guardianNeeded: false, canTransact: false, requiredForPaidActions: false)),
       aboutYouProvider.overrideWith((ref) async => const AboutYou()),
+      skillHubProvider.overrideWith((ref) async => const SkillHub(skills: [], uploadsAvailable: true)),
     ],
     child: MaterialApp(
       theme: AppTheme.theme,

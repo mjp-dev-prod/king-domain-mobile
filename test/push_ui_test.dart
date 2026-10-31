@@ -7,7 +7,9 @@ import 'package:king_domain/data/models/contract_history.dart';
 import 'package:king_domain/data/models/job.dart';
 import 'package:king_domain/data/models/talent_profile.dart';
 import 'package:king_domain/presentation/providers/auth_provider.dart';
+import 'package:king_domain/data/models/skill_submission.dart';
 import 'package:king_domain/presentation/providers/identity_provider.dart';
+import 'package:king_domain/presentation/providers/skill_submissions_provider.dart';
 import 'package:king_domain/data/models/identity.dart';
 import 'package:king_domain/presentation/providers/jobs_provider.dart';
 import 'package:king_domain/presentation/providers/push_gateway.dart';
@@ -74,6 +76,7 @@ Future<void> _shell(WidgetTester tester, {String role = 'talent', List<Job>? job
       talentProfileProvider.overrideWith(_Profile.new),
       identityProvider.overrideWith((ref) async => const IdentitySummary(status: IdentityStatus.notStarted, minor: false, guardianNeeded: false, canTransact: false, requiredForPaidActions: false)),
       aboutYouProvider.overrideWith((ref) async => const AboutYou()),
+      skillHubProvider.overrideWith((ref) async => const SkillHub(skills: [], uploadsAvailable: true)),
       pushGatewayProvider.overrideWithValue(_gateway),
       pushServerProvider.overrideWithValue(_server),
       contractHistoryProvider('j1').overrideWith((ref) async => const ContractHistory()),
