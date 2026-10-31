@@ -17,6 +17,10 @@ live here regardless of which sibling repo (backend, web, admin) they end up aff
 - [Product requirements (PRD)](./core/prd.md) — **start here: what King Domain is, for whom, every
   journey and screen, the quality bar, the build slices S0–S8, and the register of decisions D1–D46.**
   Written 2026-10-31 from the eleven research topics below. It replaces the sprint plan as the build order.
+- [Sample data while the backend catches up](./core/sample-data.md) — the store-interface convention and the
+  "Sample data" strip for screens built before their endpoint exists; read before building such a screen.
+- [S0 foundations plan](./superpowers/plans/2026-10-31-s0-foundations.md) — the task-by-task plan for slice S0
+  (skills, roles, audit log, inbox, alerts, shared kit pieces).
 - [Backend + Frontend Sprint Plan](./research/BACKEND_SPRINT_PLAN.md) — the September build order
   (6 sprints, now largely built); superseded as the order by the PRD's slices. Kept for the history of how
   the backend was sequenced.
