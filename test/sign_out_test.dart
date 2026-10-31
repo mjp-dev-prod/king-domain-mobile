@@ -8,6 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:king_domain/data/models/job.dart';
 import 'package:king_domain/data/models/talent_profile.dart';
 import 'package:king_domain/presentation/providers/auth_provider.dart';
+import 'package:king_domain/presentation/providers/identity_provider.dart';
+import 'package:king_domain/data/models/identity.dart';
 import 'package:king_domain/presentation/providers/jobs_provider.dart';
 import 'package:king_domain/presentation/providers/talent_profile_provider.dart';
 import 'package:king_domain/presentation/root_router.dart';
@@ -51,6 +53,8 @@ void main() {
         authProvider.overrideWith(() => auth),
         jobsProvider.overrideWith(_Jobs.new),
         talentProfileProvider.overrideWith(_Profile.new),
+        identityProvider.overrideWith((ref) async => const IdentitySummary(status: IdentityStatus.notStarted, minor: false, guardianNeeded: false, canTransact: false, requiredForPaidActions: false)),
+        aboutYouProvider.overrideWith((ref) async => const AboutYou()),
       ],
       child: MaterialApp(
         builder: (context, child) => MediaQuery(data: MediaQuery.of(context).copyWith(disableAnimations: true), child: child!),

@@ -17,6 +17,7 @@ import '../../widgets/kit/motion.dart';
 import '../../widgets/kit/pressable.dart';
 import '../../widgets/kit/status_pill.dart';
 import '../payments/payout_account_screen.dart';
+import '../identity/identity_rows.dart';
 import '../profile/delete_account_sheet.dart';
 import '../profile/notifications_sheet.dart';
 import '../profile/privacy_link.dart';
@@ -195,6 +196,8 @@ class TalentProfileTab extends ConsumerWidget {
             Text('Verified means a ${AppBrand.name} reviewer checked the work is yours. The picture alone isn\'t the proof.', style: AppTextStyles.hint),
           ],
           const SizedBox(height: 20),
+          const IdentityGroup(),
+          const SizedBox(height: 12),
           ListGroup(
             rows: [
               ListRow(
@@ -281,6 +284,8 @@ class ClientProfileTab extends ConsumerWidget {
         Text(name.isEmpty ? 'Your profile' : name, textAlign: TextAlign.center, style: AppTextStyles.h2),
         Text(user?.email ?? '', textAlign: TextAlign.center, style: AppTextStyles.bodySmall.copyWith(fontSize: 13.5)),
         const SizedBox(height: 24),
+        const IdentityGroup(),
+        const SizedBox(height: 12),
         const _AccountGroup(),
       ],
     );

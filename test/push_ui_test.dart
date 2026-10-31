@@ -7,6 +7,8 @@ import 'package:king_domain/data/models/contract_history.dart';
 import 'package:king_domain/data/models/job.dart';
 import 'package:king_domain/data/models/talent_profile.dart';
 import 'package:king_domain/presentation/providers/auth_provider.dart';
+import 'package:king_domain/presentation/providers/identity_provider.dart';
+import 'package:king_domain/data/models/identity.dart';
 import 'package:king_domain/presentation/providers/jobs_provider.dart';
 import 'package:king_domain/presentation/providers/push_gateway.dart';
 import 'package:king_domain/presentation/providers/push_service.dart';
@@ -70,6 +72,8 @@ Future<void> _shell(WidgetTester tester, {String role = 'talent', List<Job>? job
       authProvider.overrideWith(() => _Auth(role)),
       jobsProvider.overrideWith(() => _Jobs(jobs ?? [_job('j1')])),
       talentProfileProvider.overrideWith(_Profile.new),
+      identityProvider.overrideWith((ref) async => const IdentitySummary(status: IdentityStatus.notStarted, minor: false, guardianNeeded: false, canTransact: false, requiredForPaidActions: false)),
+      aboutYouProvider.overrideWith((ref) async => const AboutYou()),
       pushGatewayProvider.overrideWithValue(_gateway),
       pushServerProvider.overrideWithValue(_server),
       contractHistoryProvider('j1').overrideWith((ref) async => const ContractHistory()),
@@ -124,6 +128,7 @@ void main() {
       await tester.tap(find.text('Profile'));
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(find.text('Sign out'), 200, scrollable: find.byType(Scrollable).last);
+      await tester.ensureVisible(find.text('Sign out'));
       expect(find.text('Notifications'), findsNothing);
     });
   });
@@ -181,6 +186,7 @@ void main() {
       await tester.tap(find.text('Profile'));
       await tester.pumpAndSettle();
       // The list builds rows beyond the screen, so "found" is not "on screen": bring it into view.
+      await tester.scrollUntilVisible(find.text('Notifications'), 200, scrollable: find.byType(Scrollable).last);
       await tester.ensureVisible(find.text('Notifications'));
       await tester.pumpAndSettle();
     }

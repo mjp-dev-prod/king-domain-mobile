@@ -5,6 +5,8 @@ import 'package:king_domain/core/theme/app_theme.dart';
 import 'package:king_domain/data/api_client.dart';
 import 'package:king_domain/data/models/talent_profile.dart';
 import 'package:king_domain/presentation/providers/auth_provider.dart';
+import 'package:king_domain/presentation/providers/identity_provider.dart';
+import 'package:king_domain/data/models/identity.dart';
 import 'package:king_domain/presentation/providers/talent_profile_provider.dart';
 import 'package:king_domain/presentation/screens/onboarding/sign_up_screen.dart';
 import 'package:king_domain/presentation/screens/shell/profile_tabs.dart';
@@ -41,6 +43,8 @@ Future<ProviderContainer> _show(WidgetTester tester, Widget screen, {String role
   final container = ProviderContainer(overrides: [
     authProvider.overrideWith(() => _Auth(role)),
     talentProfileProvider.overrideWith(_Profile.new),
+    identityProvider.overrideWith((ref) async => const IdentitySummary(status: IdentityStatus.notStarted, minor: false, guardianNeeded: false, canTransact: false, requiredForPaidActions: false)),
+    aboutYouProvider.overrideWith((ref) async => const AboutYou()),
   ]);
   addTearDown(container.dispose);
   await tester.pumpWidget(UncontrolledProviderScope(

@@ -64,6 +64,14 @@ const _requestTimeout = Duration(seconds: 12);
 /// refresh-and-retry, same shape as king-domain-admin's api.ts, with
 /// concurrent requests sharing one in-flight refresh so a burst of 401s
 /// doesn't fire the refresh endpoint multiple times at once.
+/// One file of a multi-file upload: the form field it goes in, its bytes and its name.
+class UploadPart {
+  final String field;
+  final List<int> bytes;
+  final String name;
+  const UploadPart({required this.field, required this.bytes, required this.name});
+}
+
 class ApiClient {
   ApiClient._();
   static final ApiClient instance = ApiClient._();
@@ -101,6 +109,8 @@ class ApiClient {
     List<int>? fileBytes,
     String? fileField,
     String? fileName,
+    List<UploadPart>? parts,
+    Duration? timeout,
     bool isRetry = false,
   }) async {
     final uri = Uri.parse('$_apiBase$path');
@@ -112,20 +122,26 @@ class ApiClient {
     http.Response response;
 
     try {
-      if (multipart && fileBytes != null) {
+      if (multipart && (fileBytes != null || parts != null)) {
         final request = http.MultipartRequest(method, uri);
         if (accessToken != null) {
           request.headers['Authorization'] = 'Bearer $accessToken';
         }
         body?.forEach((key, value) => request.fields[key] = value.toString());
-        request.files.add(
-          http.MultipartFile.fromBytes(
-            fileField ?? 'file',
-            fileBytes,
-            filename: fileName ?? 'upload',
-          ),
-        );
-        final streamed = await request.send().timeout(_requestTimeout);
+        if (fileBytes != null) {
+          request.files.add(
+            http.MultipartFile.fromBytes(
+              fileField ?? 'file',
+              fileBytes,
+              filename: fileName ?? 'upload',
+            ),
+          );
+        }
+        // Built fresh on every attempt: a MultipartFile can only be sent once, and a 401 retries.
+        for (final p in parts ?? const <UploadPart>[]) {
+          request.files.add(http.MultipartFile.fromBytes(p.field, p.bytes, filename: p.name));
+        }
+        final streamed = await request.send().timeout(timeout ?? _requestTimeout);
         response = await http.Response.fromStream(streamed);
       } else {
         final headers = <String, String>{
@@ -173,6 +189,8 @@ class ApiClient {
           fileBytes: fileBytes,
           fileField: fileField,
           fileName: fileName,
+          parts: parts,
+          timeout: timeout,
           isRetry: true,
         );
       } catch (_) {
@@ -222,6 +240,16 @@ class ApiClient {
         fileField: fileField,
         fileName: fileName,
       );
+
+  /// Several files in one request (an identity document and a selfie video). Videos are big and
+  /// phones are slow, so the caller can allow far longer than a normal request.
+  Future<dynamic> postMultipartParts(
+    String path, {
+    required Map<String, dynamic> fields,
+    required List<UploadPart> parts,
+    Duration timeout = const Duration(minutes: 3),
+  }) =>
+      _request('POST', path, body: fields, multipart: true, parts: parts, timeout: timeout);
 
   /// One file, sent with PUT (a profile photo replaces whatever was there). The file goes in the
   /// field the server reads, "file".
