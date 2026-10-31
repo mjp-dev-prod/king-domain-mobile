@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'discovery_test_support.dart';
 import 'package:king_domain/core/theme/app_theme.dart';
 import 'package:king_domain/data/models/job.dart';
 import 'package:king_domain/data/models/talent_profile.dart';
@@ -58,7 +59,7 @@ Future<void> _show(WidgetTester tester, JobsNotifier jobs, {VoidCallback? onBrow
   tester.view.devicePixelRatio = 3.0;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(ProviderScope(
-    overrides: [jobsProvider.overrideWith(() => jobs), talentProfileProvider.overrideWith(_Profile.new)],
+    overrides: [jobsProvider.overrideWith(() => jobs), talentProfileProvider.overrideWith(_Profile.new), ...discoveryStubs()],
     child: MaterialApp(
       theme: AppTheme.theme,
       builder: (context, child) => MediaQuery(data: MediaQuery.of(context).copyWith(disableAnimations: true), child: child!),

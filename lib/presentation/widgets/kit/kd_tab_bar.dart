@@ -112,7 +112,8 @@ class _TabItem extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 2),
-        Text(tab.label, style: AppTextStyles.bodySmall.copyWith(fontSize: 11.5, fontWeight: FontWeight.w600, color: color)),
+        // One line always: four tabs are narrower than three, and a wrapped label would push the bar taller.
+        Text(tab.label, maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis, style: AppTextStyles.bodySmall.copyWith(fontSize: 11.5, fontWeight: FontWeight.w600, color: color)),
       ],
     );
   }

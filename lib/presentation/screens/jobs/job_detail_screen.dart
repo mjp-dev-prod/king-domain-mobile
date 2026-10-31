@@ -7,9 +7,12 @@ import '../../../core/constants/app_text_styles.dart';
 import '../../../core/formatting/currency.dart';
 import '../../../core/formatting/deadline.dart';
 import '../../../data/api_client.dart';
+import '../../../data/models/discovery.dart';
 import '../../../data/models/job.dart';
 import '../../../data/models/talent_profile.dart';
+import '../../providers/discovery_provider.dart';
 import '../../providers/jobs_provider.dart';
+import '../../providers/skill_submissions_provider.dart';
 import '../../providers/talent_profile_provider.dart';
 import '../../widgets/contract/contract_parts.dart';
 import '../../widgets/kit/kd_button.dart';
@@ -19,7 +22,10 @@ import '../../widgets/kit/kd_sheet.dart';
 import '../../widgets/kit/kd_toast.dart';
 import '../../widgets/kit/motion.dart';
 import '../../widgets/kit/status_pill.dart';
+import '../discovery/apply_screen.dart';
+import '../skills/skills_hub_screen.dart';
 import '../payments/payout_account_screen.dart';
+import 'job_feed_screen.dart' show canApplyTo;
 import '../profile/profile_overview_screen.dart';
 
 /// T5 — Job detail (prototypes/palette-explorer.html, screen 02). What the
@@ -36,20 +42,34 @@ class JobDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final jobsAsync = ref.watch(jobsProvider);
-    final job = jobsAsync.valueOrNull?.where((j) => j.id == jobId).firstOrNull;
+    final cached = jobsAsync.valueOrNull?.where((j) => j.id == jobId).firstOrNull;
+    // A job the talent has not applied to is not in their own list: fetch it. A structured job also brings the
+    // client's facts and any invitation, so it is fetched even when cached.
+    final fetch = (cached == null && !jobsAsync.isLoading) || (cached?.isStructured ?? false);
+    final detailAsync = fetch ? ref.watch(jobDetailProvider(jobId)) : null;
+    final detail = detailAsync?.valueOrNull;
+    final job = detail?.job ?? cached;
     final profile = ref.watch(talentProfileProvider).valueOrNull;
+    final hub = ref.watch(skillHubProvider).valueOrNull;
 
     if (job == null) {
+      final loading = jobsAsync.isLoading || (detailAsync?.isLoading ?? false);
       return Scaffold(
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(AppDimensions.gutter),
-            child: jobsAsync.isLoading
+            child: loading
                 ? const Column(children: [SizedBox(height: 60), SkeletonCard(), SizedBox(height: 12), SkeletonCard()])
                 : Column(
                     children: [
                       Align(alignment: Alignment.centerLeft, child: BackButton(onPressed: () => Navigator.of(context).maybePop())),
-                      ErrorState(message: 'Couldn\'t load this job.', onRetry: () => ref.read(jobsProvider.notifier).refresh()),
+                      ErrorState(
+                        message: 'Couldn\'t load this job.',
+                        onRetry: () async {
+                          ref.invalidate(jobDetailProvider(jobId));
+                          await ref.read(jobsProvider.notifier).refresh();
+                        },
+                      ),
                     ],
                   ),
           ),
@@ -57,7 +77,7 @@ class JobDetailScreen extends ConsumerWidget {
       );
     }
 
-    final verified = profile?.isVerifiedIn(job.category) ?? false;
+    final verified = canApplyTo(job, hub: hub, legacyVerifiedIn: (c) => profile?.isVerifiedIn(c) ?? false);
     final hasPayout = profile?.payoutAccount != null;
     final applied = job.applicationStatus != JobApplicationStatus.notApplied;
     final filled = job.awardedApplicationId != null;
@@ -65,7 +85,9 @@ class JobDetailScreen extends ConsumerWidget {
 
     final cards = <Widget>[
       _Hero(job: job),
-      ?_gate(context, job, verified: verified, hasPayout: hasPayout, applied: applied),
+      ?_invitationBanner(detail?.invitation),
+      ?_gate(context, job, verified: verified, hasPayout: hasPayout, applied: applied, invited: detail?.invitation != null),
+      if (job.isStructured) _BriefCard(job: job),
       KdCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -77,22 +99,29 @@ class JobDetailScreen extends ConsumerWidget {
         ),
       ),
       KdCard(
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            UserAvatar(name: job.clientName, photoUrl: job.clientPhotoUrl, size: 42),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(job.clientName, style: AppTextStyles.title),
-                  Text('Client · pays into ${AppBrand.name} before you start', style: AppTextStyles.bodySmall),
-                ],
-              ),
+            Row(
+              children: [
+                UserAvatar(name: job.clientName, photoUrl: job.clientPhotoUrl, size: 42),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(job.clientName, style: AppTextStyles.title),
+                      Text('Client · pays into ${AppBrand.name} before you start', style: AppTextStyles.bodySmall),
+                    ],
+                  ),
+                ),
+              ],
             ),
+            if (detail != null) ...[const SizedBox(height: 12), const Divider(), const SizedBox(height: 10), _ClientFacts(record: detail.clientRecord)],
           ],
         ),
       ),
+      if (job.isStructured) const _SafetyNote(),
     ];
 
     final StatusPill? appliedPill = closed
@@ -127,8 +156,22 @@ class JobDetailScreen extends ConsumerWidget {
               children: [
                 if (!applied && !filled && !closed)
                   KdButton(
-                    label: !verified ? 'Verified proof needed to apply' : !hasPayout ? 'Add a payout account to apply' : 'Apply for this job',
-                    onPressed: verified && hasPayout ? () { _confirmApply(context, ref, job, profile!); } : null,
+                    label: !verified
+                        ? (job.isStructured ? 'Verify this skill to apply' : 'Verified proof needed to apply')
+                        : !hasPayout
+                            ? 'Add a payout account to apply'
+                            : (job.paused && detail?.invitation == null)
+                                ? 'Applications are paused'
+                                : 'Apply for this job',
+                    onPressed: verified && hasPayout && (!job.paused || detail?.invitation != null)
+                        ? () {
+                            if (job.isStructured) {
+                              Navigator.of(context).push(MaterialPageRoute(builder: (_) => ApplyScreen(job: job)));
+                            } else {
+                              _confirmApply(context, ref, job, profile!);
+                            }
+                          }
+                        : null,
                   ),
                 if (job.applicationStatus == JobApplicationStatus.pending)
                   Text('${job.clientName} will see your application with your verified proof.', textAlign: TextAlign.center, style: AppTextStyles.hint),
@@ -141,7 +184,29 @@ class JobDetailScreen extends ConsumerWidget {
   }
 
   /// The one thing standing between this talent and applying, if anything.
-  Widget? _gate(BuildContext context, Job job, {required bool verified, required bool hasPayout, required bool applied}) {
+  Widget? _invitationBanner(InvitationInfo? i) {
+    if (i == null) return null;
+    final left = timeLeft(i.expiresAt);
+    return NoticeCard(
+      tone: KdTone.brand,
+      icon: Icons.mail_outline_rounded,
+      title: 'The client invited you',
+      body: left == null ? 'This invitation has run out.' : 'Open for $left. An invited talent can apply even when the job is paused.',
+      quote: i.message,
+    );
+  }
+
+  Widget? _gate(BuildContext context, Job job, {required bool verified, required bool hasPayout, required bool applied, bool invited = false}) {
+    if (job.paused && !applied && !invited && !job.closed) {
+      return NoticeCard(
+        tone: KdTone.warn,
+        icon: Icons.pause_circle_outline_rounded,
+        title: 'Applications are paused',
+        body: job.pausedReason == 'applicants'
+            ? 'This job has all ${job.applicantCap} applications it can take, so the client can look at them properly.'
+            : 'This job has been open for 5 days, so applications are paused. Save a search to be told about similar jobs.',
+      );
+    }
     if (job.closed) {
       return NoticeCard(
         tone: KdTone.plain,
@@ -155,14 +220,16 @@ class JobDetailScreen extends ConsumerWidget {
       return NoticeCard(
         tone: KdTone.plain,
         icon: Icons.lock_outline_rounded,
-        title: 'Verified proof in ${job.category} needed',
-        body: 'Add a real piece of work in this category. A ${AppBrand.name} reviewer checks it, then you can apply.',
+        title: job.isStructured ? 'Verify ${job.skillOrCategory} to apply' : 'Verified proof in ${job.category} needed',
+        body: job.isStructured
+            ? 'Send two or three pieces of real work. Two reviewers score it, and a person checks it is yours. Then you can apply.'
+            : 'Add a real piece of work in this category. A ${AppBrand.name} reviewer checks it, then you can apply.',
         actions: [
           KdButton(
-            label: 'Add proof',
+            label: job.isStructured ? 'Your skills' : 'Add proof',
             variant: KdButtonVariant.soft,
             height: AppDimensions.buttonHeightSm,
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileOverviewScreen())),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => job.isStructured ? const SkillsHubScreen() : const ProfileOverviewScreen())),
           ),
         ],
       );
@@ -279,12 +346,12 @@ class _Hero extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(formatNaira(job.budget), style: AppTextStyles.figure.copyWith(color: AppColors.money)),
+              Text(formatMoney(job.budget, job.currency), style: AppTextStyles.figure.copyWith(color: AppColors.money)),
               const SizedBox(width: 8),
               Flexible(
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 5),
-                  child: Text('paid to you when the client approves', style: AppTextStyles.bodySmall),
+                  child: Text(job.isStructured && job.jobType != JobType.oneDelivery ? '${job.jobType.label.toLowerCase()}${job.jobType.priceNote}' : 'paid to you when the client approves', style: AppTextStyles.bodySmall),
                 ),
               ),
             ],
@@ -294,7 +361,7 @@ class _Hero extends StatelessWidget {
             children: [
               tile('Delivery', job.deliveryDays == null ? 'Agree with client' : '${job.deliveryDays} day${job.deliveryDays == 1 ? '' : 's'}'),
               const SizedBox(width: 8),
-              tile('Applied', '${job.applicationCount}'),
+              tile('Applied', job.isStructured ? '${job.applicationCount} of ${job.applicantCap}' : '${job.applicationCount}'),
               const SizedBox(width: 8),
               tile('Changes', 'Up to ${Job.maxChangeRounds}'),
             ],
@@ -303,4 +370,128 @@ class _Hero extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The structured brief, in the order the form asked for it. This is what the work is judged against.
+class _BriefCard extends StatelessWidget {
+  final Job job;
+  const _BriefCard({required this.job});
+
+  static const _labels = {
+    'deliverables': 'Wanted',
+    'quantity': 'How many',
+    'formats': 'Formats',
+    'revisionsIncluded': 'Rounds of changes included',
+    'usageRights': 'Use of the work',
+    'clientFiles': 'Client provides',
+    'references': 'Examples',
+    'durationSeconds': 'Length (seconds)',
+    'aspectRatio': 'Shape',
+    'rawFootage': 'Footage',
+    'dimensions': 'Dimensions',
+    'brandNotes': 'Brand notes',
+    'platforms': 'Platforms',
+    'postsPerWeek': 'Posts a week',
+    'brandVoice': 'Brand voice',
+    'wordCount': 'Words each',
+    'tone': 'Tone',
+    'sources': 'Sources',
+    'pages': 'Pages or screens',
+    'stack': 'Technology',
+    'designFiles': 'Design files',
+    'months': 'Months',
+    'monthlyScope': 'Each month',
+    'hourlyRate': 'Rate per hour',
+    'weeklyCapHours': 'Most hours a week',
+    'weeks': 'Weeks',
+  };
+
+  String _value(String key, Object? v) {
+    if (key == 'usageRights') return usageRightsLabel('$v');
+    if (key == 'hourlyRate') return formatMoney(num.tryParse('$v') ?? 0, job.currency);
+    return '$v';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <Widget>[
+      for (final e in job.brief.entries)
+        if (e.key != 'milestones' && '${e.value}'.isNotEmpty && _labels.containsKey(e.key))
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(_labels[e.key]!, style: AppTextStyles.hint),
+              Text(_value(e.key, e.value), style: AppTextStyles.bodyMedium),
+            ]),
+          ),
+    ];
+    final milestones = (job.brief['milestones'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+    return KdCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('The brief', style: AppTextStyles.title),
+          const SizedBox(height: 4),
+          Text('The work is judged against this, so read it closely.', style: AppTextStyles.hint),
+          const SizedBox(height: 12),
+          ...rows,
+          if (milestones.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text('Milestones', style: AppTextStyles.hint),
+            for (var i = 0; i < milestones.length; i++)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Row(children: [
+                  Expanded(child: Text('${i + 1}. ${milestones[i]['title']} · ${milestones[i]['days']} days', style: AppTextStyles.bodyMedium)),
+                  Text(formatMoney(num.tryParse('${milestones[i]['amount']}') ?? 0, job.currency), style: AppTextStyles.bodyMedium.copyWith(color: AppColors.money)),
+                ]),
+              ),
+          ],
+          if (job.screeningQuestions.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text('You will be asked', style: AppTextStyles.hint),
+            for (final q in job.screeningQuestions) Padding(padding: const EdgeInsets.only(top: 4), child: Text('• $q', style: AppTextStyles.bodyMedium)),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Real facts about the client (D19). Ratings and review speed wait for reviews to exist.
+class _ClientFacts extends StatelessWidget {
+  final ClientRecord record;
+  const _ClientFacts({required this.record});
+
+  @override
+  Widget build(BuildContext context) {
+    final paid = record.paidOut.isEmpty ? 'Nothing paid out yet' : '${record.paidOut.map((p) => formatMoney(p.amount, p.currency)).join(' and ')} paid out';
+    final since = record.memberSince == null ? null : 'Member since ${formatDeadline(record.memberSince!).split(',').first}';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          if (record.identityVerified) const StatusPill('Identity verified', tone: KdTone.ok, icon: Icons.verified_outlined) else const StatusPill('Identity not verified yet'),
+          StatusPill('${record.jobsPosted} posted'),
+          StatusPill('${record.jobsHired} hired'),
+          StatusPill('${record.jobsCompleted} completed'),
+        ]),
+        const SizedBox(height: 8),
+        Text([paid, ?since].join(' · '), style: AppTextStyles.hint),
+      ],
+    );
+  }
+}
+
+/// "A talent never pays anyone" on every job (D18).
+class _SafetyNote extends StatelessWidget {
+  const _SafetyNote();
+
+  @override
+  Widget build(BuildContext context) => const NoticeCard(
+    tone: KdTone.plain,
+    icon: Icons.shield_outlined,
+    title: 'You never pay anyone',
+    body: 'Nobody on King Domain should ask you for money, a fee or a deposit. Keep everything inside the app, and report anything that asks otherwise.',
+  );
 }

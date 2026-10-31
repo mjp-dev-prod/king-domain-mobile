@@ -9,7 +9,8 @@ import '../../providers/push_service.dart';
 import '../../widgets/contract/contract_parts.dart';
 import '../../widgets/kit/kd_tab_bar.dart';
 import '../../widgets/kit/kd_toast.dart';
-import '../client/post_job_screen.dart';
+import '../client/post_job_flow.dart';
+import '../discovery/browse_talents_screen.dart';
 import '../jobs/job_feed_screen.dart';
 import '../profile/notifications_sheet.dart';
 import 'client_jobs_tab.dart';
@@ -90,9 +91,10 @@ class _AppShellState extends ConsumerState<AppShell> {
     final List<KdTab> tabs;
     if (isClient) {
       final needs = ClientJobsTab.mine(jobs, user?.id).where((j) => contractNeedsYou(j, forClient: true)).length;
-      screens = [ClientJobsTab(onPostJob: () => _go(1)), PostJobScreen(onPosted: () => _go(0)), const ClientProfileTab()];
+      screens = [ClientJobsTab(onPostJob: () => _go(2)), const BrowseTalentsScreen(), PostJobFlow(onPosted: () => _go(0)), const ClientProfileTab()];
       tabs = [
         KdTab(icon: Icons.work_outline_rounded, activeIcon: Icons.work_rounded, label: 'My jobs', badge: needs),
+        const KdTab(icon: Icons.groups_outlined, activeIcon: Icons.groups_rounded, label: 'Talents'),
         const KdTab(icon: Icons.add_circle_outline_rounded, activeIcon: Icons.add_circle_rounded, label: 'Post'),
         const KdTab(icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded, label: 'Profile'),
       ];

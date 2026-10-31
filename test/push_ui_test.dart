@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'discovery_test_support.dart';
 import 'package:king_domain/core/theme/app_theme.dart';
 import 'package:king_domain/data/models/contract_history.dart';
 import 'package:king_domain/data/models/job.dart';
@@ -73,6 +74,7 @@ Future<void> _shell(WidgetTester tester, {String role = 'talent', List<Job>? job
     overrides: [
       authProvider.overrideWith(() => _Auth(role)),
       jobsProvider.overrideWith(() => _Jobs(jobs ?? [_job('j1')])),
+      ...discoveryStubs(),
       talentProfileProvider.overrideWith(_Profile.new),
       identityProvider.overrideWith((ref) async => const IdentitySummary(status: IdentityStatus.notStarted, minor: false, guardianNeeded: false, canTransact: false, requiredForPaidActions: false)),
       aboutYouProvider.overrideWith((ref) async => const AboutYou()),
@@ -166,6 +168,7 @@ void main() {
         overrides: [
           authProvider.overrideWith(() => _Auth('client')),
           jobsProvider.overrideWith(() => _Jobs([_job('j1', contract: ContractStatus.submitted)])),
+          ...discoveryStubs(),
           pushGatewayProvider.overrideWithValue(_gateway),
           pushServerProvider.overrideWithValue(_server),
         ],

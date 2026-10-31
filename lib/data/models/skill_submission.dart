@@ -251,7 +251,7 @@ class SubmissionDetail {
       maxPieces: (limits['maxPieces'] as num).toInt(),
       limits: {
         for (final role in FileRole.values)
-          if ((limits['files'] as Map<String, dynamic>?)?[role.name] case final Map<String, dynamic> f)
+          if ((limits['files'] as Map?)?[role.name] case final Map f)
             role: FileLimit(maxBytes: (f['maxBytes'] as num).toInt(), types: [for (final t in f['types'] as List) t as String]),
       },
       rubric: [for (final l in (rubric?['lines'] as List? ?? const [])) RubricLine.fromJson(l as Map<String, dynamic>)],

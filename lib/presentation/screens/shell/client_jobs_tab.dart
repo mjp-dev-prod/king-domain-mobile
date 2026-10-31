@@ -14,6 +14,9 @@ import '../../widgets/kit/motion.dart';
 import '../../widgets/kit/status_pill.dart';
 import '../client/applicants_screen.dart';
 import '../client/client_contract_screen.dart';
+import '../client/post_job_flow.dart';
+import '../../widgets/kit/kd_sheet.dart';
+import '../../widgets/kit/kd_button.dart';
 import '../payments/fund_contract_screen.dart';
 import 'work_tab.dart';
 
@@ -84,6 +87,38 @@ class ClientJobsTab extends ConsumerWidget {
 
   Widget _tile(BuildContext context, Job job) {
     void open(Widget w) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => w));
+    // A post a person is reading, or sent back: say so, and what to do next (D17).
+    if (job.heldForScreening || job.needsChange) {
+      final held = job.heldForScreening;
+      return KdCard(
+        onTap: () => held
+            ? showKdSheet(
+                context,
+                builder: (sheet) => KdSheetBody(
+                  title: 'A person is reading it',
+                  lead: "A new client's first post is read by a person before it goes live, to keep talents safe. You will be told here and by email as soon as it is live.",
+                  children: [const SizedBox(height: 14), KdButton(label: 'Got it', onPressed: () => Navigator.of(sheet).pop())],
+                ),
+              )
+            : open(PostJobFlow(editing: job, onPosted: () => Navigator.of(context).pop())),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: Text(job.title, style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w700, height: 1.3))),
+                const SizedBox(width: 10),
+                held ? const StatusPill('Being read', tone: KdTone.warn, pulse: true) : const StatusPill('Needs a change', tone: KdTone.warn),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(held ? 'Not live yet. Nobody can see it until a person has read it.' : 'Sent back. Change it and it goes for another look.', style: AppTextStyles.bodySmall),
+            if (!held) ...[const SizedBox(height: 10), Text('Change it', style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w700, color: AppColors.primaryText))],
+          ],
+        ),
+      );
+    }
     if (job.contractStatus == null) {
       return KdCard(
         onTap: () => open(ApplicantsScreen(job: job)),
@@ -95,14 +130,14 @@ class ClientJobsTab extends ConsumerWidget {
               children: [
                 Expanded(child: Text(job.title, style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w700, height: 1.3))),
                 const SizedBox(width: 10),
-                job.closed ? const StatusPill('Closed') : const StatusPill('Open', tone: KdTone.brand),
+                job.closed ? const StatusPill('Closed') : job.paused ? const StatusPill('Paused', tone: KdTone.warn) : const StatusPill('Open', tone: KdTone.brand),
               ],
             ),
             const SizedBox(height: 4),
             Row(
               children: [
-                Expanded(child: Text(job.category, style: AppTextStyles.bodySmall)),
-                Text(formatNaira(job.budget), style: AppTextStyles.title.copyWith(color: AppColors.money)),
+                Expanded(child: Text(job.isStructured ? '${job.skillOrCategory} · ${job.jobType.label}' : job.category, style: AppTextStyles.bodySmall)),
+                Text('${formatMoney(job.budget, job.currency)}${job.jobType.priceNote}', style: AppTextStyles.title.copyWith(color: AppColors.money)),
               ],
             ),
             const SizedBox(height: 12),
@@ -114,6 +149,8 @@ class ClientJobsTab extends ConsumerWidget {
                   child: Text(
                     job.closed
                         ? (job.applicationCount == 0 ? 'Closed' : 'Closed · ${job.applicationCount} applicant${job.applicationCount == 1 ? '' : 's'}')
+                        : job.paused
+                            ? 'Paused · ${job.applicationCount} applicant${job.applicationCount == 1 ? '' : 's'} · reopen for more'
                         : job.applicationCount == 0
                             ? 'No applicants yet'
                             : '${job.applicationCount} applicant${job.applicationCount == 1 ? '' : 's'} · pick one',

@@ -1,3 +1,4 @@
+import 'discovery.dart';
 /// Mirrors king-domain-backend's /jobs API shapes (src/user/jobsRoutes.js's
 /// serializeJob/serializeApplication/serializeContract). Application status
 /// now lives on a separate Application record server-side (a Job can have
@@ -71,6 +72,25 @@ class Job {
   /// applicants and "my status" only makes sense from one talent's view.
   final JobApplicationStatus applicationStatus;
 
+  // ── S3: types, skill, structured brief, soft cap (PRD §4.1, §4.6) ──
+  /// A key from the skills list; null on jobs posted before skills existed.
+  final String? skillKey;
+  final String? skillLabel;
+  final JobType jobType;
+  /// 'NGN' or 'USD'. What `budget` means per type is in the backend's briefs.js.
+  final String currency;
+  final bool inviteOnly;
+  /// live, screening (held for a person) or rejected (needs a change).
+  final String postStatus;
+  /// The structured brief, field key to value.
+  final Map<String, dynamic> brief;
+  final List<String> screeningQuestions;
+  final int applicantCap;
+  /// The soft cap has paused applications (50 applicants or 5 days).
+  final bool paused;
+  final String? pausedReason;
+  final PostRejection? rejection;
+
   const Job({
     required this.id,
     required this.title,
@@ -103,6 +123,18 @@ class Job {
     this.deliverableUrl,
     this.deliverableFileUrl,
     this.applicationStatus = JobApplicationStatus.notApplied,
+    this.skillKey,
+    this.skillLabel,
+    this.jobType = JobType.oneDelivery,
+    this.currency = 'NGN',
+    this.inviteOnly = false,
+    this.postStatus = 'live',
+    this.brief = const {},
+    this.screeningQuestions = const [],
+    this.applicantCap = 50,
+    this.paused = false,
+    this.pausedReason,
+    this.rejection,
   });
 
   factory Job.fromJson(Map<String, dynamic> json) {
@@ -138,6 +170,18 @@ class Job {
       deliverableUrl: contract?['deliverableUrl'] as String?,
       deliverableFileUrl: contract?['deliverableFileUrl'] as String?,
       applicationStatus: _applicationStatusFromString(json['myApplicationStatus'] as String?),
+      skillKey: json['skillKey'] as String?,
+      skillLabel: json['skillLabel'] as String?,
+      jobType: JobType.values.where((t) => t.name == json['jobType']).firstOrNull ?? JobType.oneDelivery,
+      currency: json['currency'] as String? ?? 'NGN',
+      inviteOnly: json['visibility'] == 'invite',
+      postStatus: json['postStatus'] as String? ?? 'live',
+      brief: (json['brief'] as Map?)?.cast<String, dynamic>() ?? const {},
+      screeningQuestions: [for (final q in (json['screeningQuestions'] as List? ?? const [])) q as String],
+      applicantCap: (json['applicantCap'] as num?)?.toInt() ?? 50,
+      paused: json['paused'] as bool? ?? false,
+      pausedReason: json['pausedReason'] as String?,
+      rejection: json['rejection'] == null ? null : PostRejection.fromJson(json['rejection'] as Map<String, dynamic>),
     );
   }
 
@@ -182,8 +226,26 @@ class Job {
       deliverableUrl: deliverableUrl ?? this.deliverableUrl,
       deliverableFileUrl: deliverableFileUrl ?? this.deliverableFileUrl,
       applicationStatus: applicationStatus ?? this.applicationStatus,
+      skillKey: skillKey,
+      skillLabel: skillLabel,
+      jobType: jobType,
+      currency: currency,
+      inviteOnly: inviteOnly,
+      postStatus: postStatus,
+      brief: brief,
+      screeningQuestions: screeningQuestions,
+      applicantCap: applicantCap,
+      paused: paused,
+      pausedReason: pausedReason,
+      rejection: rejection,
     );
   }
+
+  /// The skill shown to people: the skill's name, or the older category for jobs from before skills.
+  String get skillOrCategory => skillLabel ?? category;
+  bool get isStructured => skillKey != null;
+  bool get heldForScreening => postStatus == 'screening';
+  bool get needsChange => postStatus == 'rejected';
 
   bool get closed => closedAt != null;
 
@@ -201,6 +263,41 @@ class Job {
 
 enum JobApplicationStatus { notApplied, pending, accepted, rejected }
 
+/// One delivery, milestones, monthly or hourly (D1). No contests.
+enum JobType { oneDelivery, milestones, monthly, hourly }
+
+extension JobTypeText on JobType {
+  String get label => switch (this) {
+    JobType.oneDelivery => 'One delivery',
+    JobType.milestones => 'Milestones',
+    JobType.monthly => 'Monthly',
+    JobType.hourly => 'Hourly',
+  };
+
+  String get hint => switch (this) {
+    JobType.oneDelivery => 'A logo, a flyer, one video edit, an article. The whole price is held after award.',
+    JobType.milestones => 'A website or a batch of work in stages. Each milestone is funded before it starts.',
+    JobType.monthly => 'Ongoing work like social media. Each month is funded before it starts.',
+    JobType.hourly => 'Open-ended work by the hour, with a weekly cap you fund up front.',
+  };
+
+  /// What the price on the card means for this type.
+  String get priceNote => switch (this) {
+    JobType.oneDelivery => '',
+    JobType.milestones => ' in total',
+    JobType.monthly => ' a month',
+    JobType.hourly => ' a week at most',
+  };
+}
+
+/// Why a held post was sent back, and what to change.
+class PostRejection {
+  final String? reasonCode;
+  final String? note;
+  const PostRejection({this.reasonCode, this.note});
+  factory PostRejection.fromJson(Map<String, dynamic> j) => PostRejection(reasonCode: j['reasonCode'] as String?, note: j['note'] as String?);
+}
+
 /// Maps the backend's ApplicationStatus enum ('pending' | 'selected' |
 /// 'notSelected', from Job.myApplicationStatus — see backend
 /// jobsRoutes.js's serializeJob) onto the existing Flutter enum names.
@@ -209,8 +306,12 @@ enum JobApplicationStatus { notApplied, pending, accepted, rejected }
 /// site that already reads well (job.applicationStatus == accepted).
 JobApplicationStatus _applicationStatusFromString(String? value) {
   switch (value) {
+    // A shortlist is the client's private working list: the talent still sees Applied.
+    case 'shortlisted':
     case 'pending':
       return JobApplicationStatus.pending;
+    case 'declined':
+      return JobApplicationStatus.rejected;
     case 'selected':
       return JobApplicationStatus.accepted;
     case 'notSelected':
@@ -265,6 +366,8 @@ class JobApplication {
   final DateTime createdAt;
   /// Real facts the client weighs (no score, no rank): see ApplicantSignals.
   final ApplicantSignals signals;
+  /// The S3 panel (facts, chosen work, answers) for structured jobs; null on older jobs.
+  final ApplicantPanel? panel;
 
   const JobApplication({
     required this.id,
@@ -275,6 +378,7 @@ class JobApplication {
     required this.status,
     required this.createdAt,
     this.signals = const ApplicantSignals(),
+    this.panel,
   });
 
   factory JobApplication.fromJson(Map<String, dynamic> json) {
@@ -288,6 +392,7 @@ class JobApplication {
       status: json['status'] as String? ?? 'pending',
       createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
       signals: ApplicantSignals.fromJson(json['signals'] as Map<String, dynamic>?),
+      panel: json['panel'] == null ? null : ApplicantPanel.fromJson(json['panel'] as Map<String, dynamic>),
     );
   }
 }

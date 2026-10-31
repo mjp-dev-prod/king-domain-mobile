@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'discovery_test_support.dart';
 import 'package:king_domain/core/theme/app_theme.dart';
 import 'package:king_domain/data/api_client.dart';
 import 'package:king_domain/data/models/job.dart';
@@ -9,7 +10,6 @@ import 'package:king_domain/presentation/providers/auth_provider.dart';
 import 'package:king_domain/presentation/providers/jobs_provider.dart';
 import 'package:king_domain/presentation/providers/talent_profile_provider.dart';
 import 'package:king_domain/presentation/screens/jobs/job_detail_screen.dart';
-import 'package:king_domain/presentation/screens/jobs/job_feed_screen.dart';
 
 final _now = DateTime.now();
 
@@ -80,6 +80,7 @@ Future<_Jobs> _show(WidgetTester tester, Widget screen, List<Job> jobs, {ApiExce
     overrides: [
       authProvider.overrideWith(_Auth.new),
       jobsProvider.overrideWith(() => notifier),
+      ...discoveryStubs(),
       talentProfileProvider.overrideWith(_Profile.new),
     ],
     child: MaterialApp(
@@ -156,19 +157,6 @@ void main() {
       expect(find.text('You\'ve already applied to this job.'), findsOneWidget);
       expect(find.text('Send application'), findsOneWidget);
       await _drainToasts(tester);
-    });
-  });
-
-  group('the feed', () {
-    testWidgets('hides a closed job the talent never applied to, and keeps one they applied to', (tester) async {
-      await _show(tester, const Scaffold(body: JobFeedScreen()), [
-        _job(id: 'open', title: 'Open job'),
-        _job(id: 'closed-never', title: 'Closed, never applied', closedAt: _now),
-        _job(id: 'closed-applied', title: 'Closed, I applied', closedAt: _now, app: JobApplicationStatus.rejected),
-      ]);
-      expect(find.text('Open job'), findsOneWidget);
-      expect(find.text('Closed, I applied'), findsOneWidget);
-      expect(find.text('Closed, never applied'), findsNothing);
     });
   });
 }

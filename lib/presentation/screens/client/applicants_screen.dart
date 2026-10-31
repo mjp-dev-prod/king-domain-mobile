@@ -8,6 +8,7 @@ import '../../../core/formatting/currency.dart';
 import '../../../core/formatting/deadline.dart';
 import '../../../data/api_client.dart';
 import '../../../data/models/job.dart';
+import '../../providers/discovery_provider.dart';
 import '../../providers/jobs_provider.dart';
 import '../../widgets/contract/contract_parts.dart';
 import '../../widgets/kit/kd_button.dart';
@@ -20,6 +21,10 @@ import '../../widgets/kit/motion.dart';
 import '../../widgets/kit/pressable.dart';
 import '../../widgets/kit/status_pill.dart';
 import '../payments/fund_contract_screen.dart';
+import '../discovery/browse_talents_screen.dart';
+import '../discovery/talent_profile_screen.dart';
+import 'applicant_panel_card.dart';
+import 'post_job_flow.dart';
 import 'post_job_screen.dart';
 
 /// C2 — Applicants and the single award (prototypes/palette-explorer.html,
@@ -80,12 +85,22 @@ class _ApplicantsScreenState extends ConsumerState<ApplicantsScreen> {
                     padding: const EdgeInsets.only(bottom: 12),
                     child: RiseIn(
                       delay: Duration(milliseconds: 50 * i.clamp(0, 6)),
-                      child: _ApplicantCard(
-                        app: apps[i],
-                        awardedHere: apps[i].id == job.awardedApplicationId,
-                        canAward: !awarded && !closed,
-                        onAward: () { _confirmAward(apps[i]); },
-                      ),
+                      child: apps[i].panel != null
+                          ? ApplicantPanelCard(
+                              app: apps[i],
+                              awardedHere: apps[i].id == job.awardedApplicationId,
+                              canAct: !awarded && !closed,
+                              onPick: () { _confirmAward(apps[i]); },
+                              onShortlist: () => _shortlist(apps[i]),
+                              onDecline: () => _confirmDecline(apps[i]),
+                              onOpenProfile: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TalentProfileScreen(talentId: apps[i].talentId, forJob: job))),
+                            )
+                          : _ApplicantCard(
+                              app: apps[i],
+                              awardedHere: apps[i].id == job.awardedApplicationId,
+                              canAward: !awarded && !closed,
+                              onAward: () { _confirmAward(apps[i]); },
+                            ),
                     ),
                   ),
               ],
@@ -128,12 +143,103 @@ class _ApplicantsScreenState extends ConsumerState<ApplicantsScreen> {
                     ],
                   ),
                 ),
+                if (job.isStructured && !awarded && !closed) ...[const SizedBox(height: 12), _capBanner(job, snap.data?.length ?? job.applicationCount)],
                 const SizedBox(height: 12),
                 body,
               ],
             ),
           );
         },
+      ),
+    );
+  }
+
+  /// The soft cap (D21): how many have applied, and when it is paused, the way to reopen.
+  Widget _capBanner(Job job, int count) {
+    final cap = ref.read(jobsProvider.notifier).capFor(job.id);
+    final paused = cap?.paused ?? job.paused;
+    final reason = cap?.reason ?? job.pausedReason;
+    return Column(
+      children: [
+        if (paused)
+          NoticeCard(
+            tone: KdTone.warn,
+            icon: Icons.pause_circle_outline_rounded,
+            title: 'Applications are paused',
+            body: reason == 'applicants'
+                ? '${job.applicantCap} people have applied, so new applications are paused while you look at them. Reopening lets another ${job.applicantCap} apply.'
+                : 'This job has been open for 5 days, so new applications are paused. Reopening starts the 5 days again.',
+            actions: [KdButton(label: 'Reopen applications', busyLabel: 'Reopening', variant: KdButtonVariant.soft, height: AppDimensions.buttonHeightSm, onPressed: _reopen)],
+          )
+        else
+          Row(children: [Expanded(child: Text('$count of ${job.applicantCap} applicants. Applications pause at ${job.applicantCap} or after 5 days.', style: AppTextStyles.hint))]),
+        const SizedBox(height: 10),
+        KdButton.secondary(label: 'Invite talents', icon: Icons.person_add_alt_1_outlined, height: AppDimensions.buttonHeightSm, onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => BrowseTalentsScreen(forJob: job)))),
+      ],
+    );
+  }
+
+  Future<void> _reopen() async {
+    try {
+      await ref.read(discoveryActionsProvider).reopen(widget.job.id);
+      setState(() => _future = _load());
+      if (mounted) KdToast.show(context, 'Applications are open again.');
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      if (e.code == 'premium_required') {
+        showKdSheet(
+          context,
+          builder: (sheet) => KdSheetBody(
+            title: 'Reopening is a premium feature',
+            lead: 'Getting more applicants after the first ${widget.job.applicantCap} is part of premium. Premium is coming to the app soon. Until then you can still pick from the people who applied.',
+            children: [const SizedBox(height: 14), KdButton(label: 'Got it', onPressed: () => Navigator.of(sheet).pop())],
+          ),
+        );
+      } else {
+        KdToast.show(context, e.message, kind: ToastKind.error);
+      }
+      throw const ShownError();
+    }
+  }
+
+  Future<void> _shortlist(JobApplication app) async {
+    try {
+      await ref.read(discoveryActionsProvider).shortlistApplicant(widget.job.id, app.id, on: app.status != 'shortlisted');
+      setState(() => _future = _load());
+    } on ApiException catch (e) {
+      if (mounted) KdToast.show(context, e.message, kind: ToastKind.error);
+    }
+  }
+
+  void _confirmDecline(JobApplication app) {
+    showKdSheet(
+      context,
+      builder: (sheet) => KdSheetBody(
+        title: 'Decline ${app.talentName}?',
+        lead: 'They are told that you chose not to go ahead, by notification and email. This can\'t be undone.',
+        children: [
+          const SizedBox(height: 18),
+          KdButton(
+            label: 'Decline',
+            busyLabel: 'Declining',
+            variant: KdButtonVariant.danger,
+            onPressed: () async {
+              try {
+                await ref.read(discoveryActionsProvider).declineApplicant(widget.job.id, app.id);
+              } on ApiException catch (e) {
+                if (sheet.mounted) KdToast.show(sheet, e.message, kind: ToastKind.error);
+                throw const ShownError();
+              }
+              if (!mounted || !sheet.mounted) return;
+              Navigator.of(sheet).pop();
+              setState(() => _future = _load());
+              if (!context.mounted) return;
+              KdToast.show(context, 'Declined. ${app.talentName.split(' ').first} has been told.');
+            },
+          ),
+          const SizedBox(height: 8),
+          KdButton.secondary(label: 'Keep them', onPressed: () => Navigator.of(sheet).pop()),
+        ],
       ),
     );
   }
@@ -166,7 +272,7 @@ class _ApplicantsScreenState extends ConsumerState<ApplicantsScreen> {
               variant: KdButtonVariant.soft,
               onPressed: () {
                 Navigator.of(sheet).pop();
-                Navigator.of(context).push(MaterialPageRoute(builder: (_) => PostJobScreen(editing: job)));
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => job.isStructured ? PostJobFlow(editing: job, onPosted: () => Navigator.of(context).pop()) : PostJobScreen(editing: job)));
               },
             )
           else

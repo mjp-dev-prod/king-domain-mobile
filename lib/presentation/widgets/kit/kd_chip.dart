@@ -41,12 +41,15 @@ class KdChoiceChip extends StatelessWidget {
                 const Icon(Icons.check_rounded, size: 16, color: AppColors.primaryText),
                 const SizedBox(width: 6),
               ],
-              Text(
-                label,
-                style: AppTextStyles.bodySmall.copyWith(
-                  fontSize: 13,
-                  color: selected ? AppColors.primaryText : AppColors.text2,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              // Flexible: a long label ("Everything, once I have paid in full") wraps inside the chip on a narrow phone.
+              Flexible(
+                child: Text(
+                  label,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    fontSize: 13,
+                    color: selected ? AppColors.primaryText : AppColors.text2,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  ),
                 ),
               ),
             ],

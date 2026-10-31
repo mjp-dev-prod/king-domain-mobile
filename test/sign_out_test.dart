@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'discovery_test_support.dart';
 import 'package:king_domain/data/models/job.dart';
 import 'package:king_domain/data/models/talent_profile.dart';
 import 'package:king_domain/presentation/providers/auth_provider.dart';
@@ -54,6 +55,7 @@ void main() {
       overrides: [
         authProvider.overrideWith(() => auth),
         jobsProvider.overrideWith(_Jobs.new),
+        ...discoveryStubs(),
         talentProfileProvider.overrideWith(_Profile.new),
         identityProvider.overrideWith((ref) async => const IdentitySummary(status: IdentityStatus.notStarted, minor: false, guardianNeeded: false, canTransact: false, requiredForPaidActions: false)),
         aboutYouProvider.overrideWith((ref) async => const AboutYou()),

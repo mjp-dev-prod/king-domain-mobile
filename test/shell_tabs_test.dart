@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'discovery_test_support.dart';
 import 'package:king_domain/core/theme/app_theme.dart';
 import 'package:king_domain/data/models/job.dart';
 import 'package:king_domain/data/models/talent_profile.dart';
@@ -70,6 +71,7 @@ Future<_Auth> _shell(WidgetTester tester, List<Job> jobs) async {
     overrides: [
       authProvider.overrideWith(() => auth),
       jobsProvider.overrideWith(() => _Jobs(jobs)),
+      ...discoveryStubs(feed: [for (final j in jobs) if (j.awardedApplicationId == null || j.applicationStatus != JobApplicationStatus.notApplied) j]),
       talentProfileProvider.overrideWith(_Profile.new),
       identityProvider.overrideWith((ref) async => const IdentitySummary(status: IdentityStatus.notStarted, minor: false, guardianNeeded: false, canTransact: false, requiredForPaidActions: false)),
       aboutYouProvider.overrideWith((ref) async => const AboutYou()),
@@ -86,7 +88,7 @@ Future<_Auth> _shell(WidgetTester tester, List<Job> jobs) async {
 }
 
 void main() {
-  testWidgets('feed: says plainly whether you can apply, filters by category, hides jobs filled by someone else', (tester) async {
+  testWidgets('feed: says plainly whether you can apply, for each job the server sends', (tester) async {
     await _shell(tester, [
       _job('a'),
       _job('b', category: 'Software & tech'),
@@ -96,12 +98,8 @@ void main() {
     expect(find.text('Job a'), findsOneWidget);
     expect(find.text('You qualify'), findsOneWidget, reason: 'verified in Design & creative');
     expect(find.text('Needs verified proof'), findsOneWidget, reason: 'not verified in Software & tech');
-    expect(find.text('Job c'), findsNothing, reason: 'awarded to someone else and never applied to');
-
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Software & tech'));
-    await tester.pumpAndSettle();
-    expect(find.text('Job a'), findsNothing);
     expect(find.text('Job b'), findsOneWidget);
+    // Which jobs appear is the server's call now (filters, paging, jobs filled by someone else): see the backend suite.
   });
 
   testWidgets('Work tab: empty state explains itself and goes to jobs', (tester) async {

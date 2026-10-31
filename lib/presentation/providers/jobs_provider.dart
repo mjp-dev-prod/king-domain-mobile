@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/api_client.dart';
 import '../../data/models/contract_history.dart';
+import '../../data/models/discovery.dart';
 import '../../data/models/job.dart';
 
 /// Real backend now (king-domain-backend's /jobs routes — Sprint 3). Every
@@ -12,11 +13,18 @@ class JobsNotifier extends AsyncNotifier<List<Job>> {
   Future<List<Job>> build() => _fetch();
 
   Future<List<Job>> _fetch({String? category}) async {
-    final query = category != null ? '?category=${Uri.encodeComponent(category)}' : '';
-    final data = await ApiClient.instance.get('/jobs$query');
-    return (data['jobs'] as List)
-        .map((j) => Job.fromJson(j as Map<String, dynamic>))
-        .toList();
+    // Everything the person posted or applied to (scope=mine), followed page by page, so the Work and My jobs
+    // tabs never miss a job just because the open feed is paged.
+    final jobs = <Job>[];
+    String? cursor;
+    for (var page = 0; page < 10; page++) {
+      final extra = category != null ? '&category=${Uri.encodeComponent(category)}' : '';
+      final data = await ApiClient.instance.get('/jobs?scope=mine&limit=50${cursor == null ? '' : '&cursor=$cursor'}$extra');
+      jobs.addAll((data['jobs'] as List).map((j) => Job.fromJson(j as Map<String, dynamic>)));
+      cursor = data['nextCursor'] as String?;
+      if (cursor == null) break;
+    }
+    return jobs;
   }
 
   Future<void> refresh() async {
@@ -58,8 +66,13 @@ class JobsNotifier extends AsyncNotifier<List<Job>> {
     await refresh();
   }
 
+  /// The soft-cap state the last applicants load reported, per job (null for older jobs).
+  final Map<String, ApplicantCap> _caps = {};
+  ApplicantCap? capFor(String jobId) => _caps[jobId];
+
   Future<List<JobApplication>> listApplications(String jobId) async {
     final data = await ApiClient.instance.get('/jobs/$jobId/applications');
+    if (data['cap'] != null) _caps[jobId] = ApplicantCap.fromJson(data['cap'] as Map<String, dynamic>);
     return (data['applications'] as List)
         .map((a) => JobApplication.fromJson(a as Map<String, dynamic>))
         .toList();

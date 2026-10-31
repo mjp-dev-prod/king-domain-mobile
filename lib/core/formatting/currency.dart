@@ -7,3 +7,8 @@ import 'package:intl/intl.dart';
 final _nairaFormat = NumberFormat.currency(locale: 'en_NG', symbol: '₦', decimalDigits: 0);
 
 String formatNaira(num amount) => _nairaFormat.format(amount);
+
+final _dollarFormat = NumberFormat.currency(locale: 'en_US', symbol: r'$', decimalDigits: 0);
+
+/// A price in the job's own currency: naira as ₦, dollars as $ (D37). Always the job's currency, never converted here.
+String formatMoney(num amount, String currency) => currency == 'USD' ? _dollarFormat.format(amount) : _nairaFormat.format(amount);

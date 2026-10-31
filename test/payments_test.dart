@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'discovery_test_support.dart';
 import 'package:king_domain/presentation/widgets/kit/kd_button.dart';
 import 'package:king_domain/core/formatting/currency.dart';
 import 'package:king_domain/data/api_client.dart';
@@ -240,6 +241,7 @@ void main() {
       await tester.pumpWidget(_host(const JobDetailScreen(jobId: 'j2'), [
         jobsProvider.overrideWith(() => _StaticJobs([openJob])),
         talentProfileProvider.overrideWith(() => _StaticProfile(profile)),
+        ...discoveryStubs(),
       ]));
       await _open(tester);
       return tester.widget<KdButton>(find.byType(KdButton).last);
