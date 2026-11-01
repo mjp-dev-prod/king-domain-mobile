@@ -37,7 +37,7 @@ List<LifecycleStep> lifecycleSteps(Job job, {required bool forClient}) {
     ContractStatus.awaitingPayment => 1,
     ContractStatus.funded || ContractStatus.inProgress || ContractStatus.changesRequested => 2,
     ContractStatus.submitted || ContractStatus.disputed => 3,
-    ContractStatus.approved => -1,
+    ContractStatus.approved || ContractStatus.resolved => -1,
   };
   final allDone = status == ContractStatus.approved;
 
@@ -105,6 +105,8 @@ class LifecycleStepper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // A settled job has no happy path left to show: the card above says how it ended.
+    if (job.contractStatus == ContractStatus.resolved) return const SizedBox.shrink();
     final steps = lifecycleSteps(job, forClient: forClient);
     return KdCard(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),

@@ -99,6 +99,14 @@ class Job {
   final double? upfrontAmount;
   final DateTime? upfrontPaidAt;
 
+  // ── S6: something's wrong, and how the money ended ──
+  /// A dispute is open: clocks and money actions wait.
+  final bool disputeOpen;
+  /// cancelled_overdue, split_agreed, cancel_agreed, split, release or refund; null until settled.
+  final String? settlementKind;
+  final double? settledTalentAmount;
+  final double? settledClientRefund;
+
   const Job({
     required this.id,
     required this.title,
@@ -147,6 +155,10 @@ class Job {
     this.startProofDueAt,
     this.upfrontAmount,
     this.upfrontPaidAt,
+    this.disputeOpen = false,
+    this.settlementKind,
+    this.settledTalentAmount,
+    this.settledClientRefund,
   });
 
   /// A job with a skill asks the talent for a start proof before they can deliver. Older jobs have none.
@@ -205,6 +217,10 @@ class Job {
       startProofDueAt: DateTime.tryParse(contract?['startProofDueAt'] as String? ?? ''),
       upfrontAmount: double.tryParse(contract?['upfrontAmount']?.toString() ?? ''),
       upfrontPaidAt: DateTime.tryParse(contract?['upfrontPaidAt'] as String? ?? ''),
+      disputeOpen: contract?['disputeOpen'] as bool? ?? false,
+      settlementKind: (contract?['settlement'] as Map?)?['kind'] as String?,
+      settledTalentAmount: ((contract?['settlement'] as Map?)?['talentAmount'] as num?)?.toDouble(),
+      settledClientRefund: ((contract?['settlement'] as Map?)?['clientRefund'] as num?)?.toDouble(),
     );
   }
 
@@ -265,6 +281,10 @@ class Job {
       startProofDueAt: startProofDueAt,
       upfrontAmount: upfrontAmount,
       upfrontPaidAt: upfrontPaidAt,
+      disputeOpen: disputeOpen,
+      settlementKind: settlementKind,
+      settledTalentAmount: settledTalentAmount,
+      settledClientRefund: settledClientRefund,
     );
   }
 
@@ -357,7 +377,8 @@ JobApplicationStatus _applicationStatusFromString(String? value) {
 /// Stage 2 adds two: changesRequested (the client sent delivered work back;
 /// the talent owes a resubmit by changeDueAt) and disputed (parked for a King
 /// Domain admin after round 2, or a missed resubmit clock; stage 3 resolves it).
-enum ContractStatus { awaitingPayment, funded, inProgress, submitted, changesRequested, disputed, approved }
+/// resolved: ended by an agreed way out, a ruling or a cancel for a refund. The money was split or returned (S6).
+enum ContractStatus { awaitingPayment, funded, inProgress, submitted, changesRequested, disputed, approved, resolved }
 
 ContractStatus? _contractStatusFromString(String? value) {
   switch (value) {
@@ -373,6 +394,8 @@ ContractStatus? _contractStatusFromString(String? value) {
       return ContractStatus.changesRequested;
     case 'disputed':
       return ContractStatus.disputed;
+    case 'resolved':
+      return ContractStatus.resolved;
     case 'approved':
       return ContractStatus.approved;
     default:

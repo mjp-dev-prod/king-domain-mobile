@@ -18,6 +18,7 @@ import '../../widgets/kit/kd_fields.dart';
 import '../../widgets/kit/kd_sheet.dart';
 import '../../widgets/kit/kd_toast.dart';
 import '../../widgets/kit/motion.dart';
+import '../contracts/dispute_screen.dart';
 import '../contracts/drafts_screen.dart';
 import '../contracts/receipt_screen.dart';
 import '../contracts/start_proof_screen.dart';
@@ -85,14 +86,31 @@ class _ClientContract extends ConsumerWidget {
     final history = ref.watch(contractHistoryProvider(job.id)).valueOrNull ?? const ContractHistory();
     final state = _stateCards(context, ref, status, history);
     final proofCard = _startProofCard(context);
+    final disputeCard = job.disputeOpen
+        ? NoticeCard(
+            tone: KdTone.warn,
+            icon: Icons.report_gmailerrorred_outlined,
+            title: 'A problem is open on this job',
+            body: 'Delivery dates, your review time and automatic payment are paused while you sort it out. Nothing is paid or refunded until it is settled.',
+            actions: [KdButton(label: 'See where it stands', variant: KdButtonVariant.soft, height: AppDimensions.buttonHeightSm, onPressed: () => _openDispute(context))],
+          )
+        : null;
     final working = status == ContractStatus.funded || status == ContractStatus.inProgress || status == ContractStatus.changesRequested;
     final cards = <Widget>[
+      ?disputeCard,
       if (proofCard != null && proofCard.$2) proofCard.$1 else if (state.isNotEmpty) state.first,
       LifecycleStepper(job: job, forClient: true),
       if (proofCard != null && proofCard.$2) ...state,
       if (proofCard != null && !proofCard.$2) proofCard.$1,
       if (proofCard == null || !proofCard.$2) ...state.skip(1),
       if (status != ContractStatus.awaitingPayment) ...[
+        if (status != ContractStatus.approved && status != ContractStatus.resolved)
+          ContractLinkTile(
+            icon: Icons.report_gmailerrorred_outlined,
+            title: 'Something\'s wrong',
+            sub: job.disputeOpen || status == ContractStatus.disputed ? 'See where it stands' : 'Work it out with the talent, or ask us to decide',
+            onTap: () => _openDispute(context),
+          ),
         ContractLinkTile(
           icon: Icons.draw_outlined,
           title: 'Drafts',
@@ -265,6 +283,21 @@ class _ClientContract extends ConsumerWidget {
                 'Nothing is paid out or refunded until then.',
           ),
         ];
+      case ContractStatus.resolved:
+        final back = job.settledClientRefund ?? 0;
+        final paid = job.settledTalentAmount ?? 0;
+        return [
+          NoticeCard(
+            tone: KdTone.plain,
+            icon: Icons.handshake_outlined,
+            title: back > 0 ? 'Settled. ${formatMoney(back, job.currency)} is coming back to you' : 'Settled. The talent was paid in full',
+            body: [
+              if (back > 0) 'Refunds can take 3 to 10 working days to show in your account. The service fee isn\'t refunded.',
+              if (paid > 0) 'The talent was paid ${formatMoney(paid, job.currency)}.',
+              if (back > 0 && paid == 0) 'The job has been put back in front of the other people who applied.',
+            ].join(' '),
+          ),
+        ];
       case ContractStatus.approved:
         return [
           NoticeCard(
@@ -350,7 +383,13 @@ class _ClientContract extends ConsumerWidget {
     );
   }
 
+  void _openDispute(BuildContext context) =>
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => DisputeScreen(jobId: job.id, jobTitle: job.title)));
+
   List<Widget> _actions(BuildContext context, WidgetRef ref, ContractStatus status) {
+    if (job.disputeOpen) {
+      return [KdButton(label: 'See the open problem', icon: Icons.report_gmailerrorred_outlined, onPressed: () => _openDispute(context))];
+    }
     if (status != ContractStatus.submitted) return const [];
     final last = job.changeRounds >= Job.maxChangeRounds;
     return [

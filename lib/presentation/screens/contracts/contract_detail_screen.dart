@@ -21,6 +21,7 @@ import '../../widgets/kit/kd_toast.dart';
 import '../../widgets/kit/motion.dart';
 import '../payments/payout_account_screen.dart';
 import '../../widgets/kit/about_amount_text.dart';
+import 'dispute_screen.dart';
 import 'drafts_screen.dart';
 import 'receipt_screen.dart';
 import 'start_proof_screen.dart';
@@ -63,13 +64,15 @@ class _TalentContract extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final status = job.contractStatus!;
     final history = ref.watch(contractHistoryProvider(job.id)).valueOrNull ?? const ContractHistory();
-    final needsPayoutAccount = status != ContractStatus.approved &&
+    final needsPayoutAccount = status != ContractStatus.approved && status != ContractStatus.resolved &&
         ref.watch(talentProfileProvider).valueOrNull?.payoutAccount == null;
     final held = status == ContractStatus.awaitingPayment ? formatMoney(job.budget, job.currency) : '${formatMoney(job.budget, job.currency)} held by ${AppBrand.name}';
 
     final state = _stateCards(context, status, history);
     final proofCard = _startProofCard(context, ref);
+    final disputeCard = _disputeCard(context);
     final cards = <Widget>[
+      ?disputeCard,
       // The primary card first (the deadline when there is one), then the timeline,
       // then the rest, as in prototypes/palette-explorer.html: an action card is
       // never pushed below the fold by the stepper.
@@ -171,12 +174,34 @@ class _TalentContract extends ConsumerWidget {
     }
   }
 
+  VoidCallback _openDispute(BuildContext context) => () =>
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => DisputeScreen(jobId: job.id, jobTitle: job.title)));
+
+  /// Shown while a dispute is open: everything else on the page waits for it.
+  Widget? _disputeCard(BuildContext context) {
+    if (!job.disputeOpen) return null;
+    return NoticeCard(
+      tone: KdTone.warn,
+      icon: Icons.report_gmailerrorred_outlined,
+      title: 'A problem is open on this job',
+      body: 'Delivery dates, the review time and automatic payment are paused while you sort it out. Nothing is paid or refunded until it is settled.',
+      actions: [KdButton(label: 'See where it stands', variant: KdButtonVariant.soft, height: AppDimensions.buttonHeightSm, onPressed: _openDispute(context))],
+    );
+  }
+
   /// Drafts and the receipt, once there is something to show.
   List<Widget> _extraLinks(BuildContext context) {
     final status = job.contractStatus!;
     if (status == ContractStatus.awaitingPayment) return const [];
     final working = status == ContractStatus.funded || status == ContractStatus.inProgress || status == ContractStatus.changesRequested;
     return [
+      if (status != ContractStatus.approved && status != ContractStatus.resolved)
+        ContractLinkTile(
+          icon: Icons.report_gmailerrorred_outlined,
+          title: 'Something\'s wrong',
+          sub: job.disputeOpen || status == ContractStatus.disputed ? 'See where it stands' : 'Work it out with ${job.clientName}, or ask us to decide',
+          onTap: _openDispute(context),
+        ),
       ContractLinkTile(
         icon: Icons.draw_outlined,
         title: 'Drafts',
@@ -281,6 +306,18 @@ class _TalentContract extends ConsumerWidget {
             body: 'Sent to your payout account. Transfers can take a little while to show.',
           ),
         ];
+      case ContractStatus.resolved:
+        final got = job.settledTalentAmount ?? 0;
+        return [
+          NoticeCard(
+            tone: KdTone.plain,
+            icon: Icons.handshake_outlined,
+            title: got > 0 ? 'Settled. ${formatMoney(got, job.currency)} is yours' : 'Settled. Nothing is owed to you',
+            body: got > 0
+                ? 'Sent to your payout account. Transfers can take a little while to show.'
+                : 'The job ended with the money going back to ${job.clientName}.${job.upfrontPaidAt == null ? '' : ' The first 20% you were paid for the start proof stays yours.'}',
+          ),
+        ];
     }
   }
 
@@ -323,6 +360,9 @@ class _TalentContract extends ConsumerWidget {
 
   List<Widget> _actions(BuildContext context, WidgetRef ref, ContractStatus status, ContractHistory history) {
     final notifier = ref.read(jobsProvider.notifier);
+    if (job.disputeOpen) {
+      return [KdButton(label: 'See the open problem', icon: Icons.report_gmailerrorred_outlined, onPressed: _openDispute(context))];
+    }
     Widget askForTime() {
       final blocked = _extensionBlocked(history);
       final left = job.extensionRequestsLeft;

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/debug_log.dart';
 import '../../data/api_client.dart';
 import '../../data/models/contract_extras.dart';
+import '../../data/models/dispute.dart';
 import 'auth_provider.dart';
 import 'jobs_provider.dart';
 import 'skill_submissions_provider.dart' show PickedFile, blobUploaderProvider;
@@ -15,6 +16,19 @@ final startProofProvider = FutureProvider.autoDispose.family<StartProof, String>
 final draftsProvider = FutureProvider.autoDispose.family<DraftList, String>((ref, jobId) async {
   final json = await ApiClient.instance.get('/jobs/$jobId/contract/drafts') as Map<String, dynamic>;
   return DraftList.fromJson(json);
+});
+
+/// "Something's wrong" for one job: the open or last dispute, what the person may pick, and what is held.
+final disputeProvider = FutureProvider.autoDispose.family<DisputeState, String>((ref, jobId) async {
+  final json = await ApiClient.instance.get('/jobs/$jobId/contract/dispute') as Map<String, dynamic>;
+  return DisputeState.fromJson(json);
+});
+
+/// Where a King Domain agent can reach the person in a serious escalation, and why it is asked for.
+final addressProvider = FutureProvider.autoDispose<AddressInfo>((ref) async {
+  ref.watch(authProvider.select((s) => s.user?.id));
+  final json = await ApiClient.instance.get('/users/me/address') as Map<String, dynamic>;
+  return AddressInfo.fromJson(json);
 });
 
 final receiptProvider = FutureProvider.autoDispose.family<Receipt, String>((ref, jobId) async {
@@ -117,6 +131,46 @@ class ContractExtrasActions {
   Future<void> objectToProof(String jobId, {required String reasonCode, required String note}) async {
     await _api.post('${_base(jobId)}/start-proof/object', body: {'reasonCode': reasonCode, 'note': note});
     await _refreshAll(jobId);
+  }
+
+  // ── Something's wrong ──
+
+  Future<void> _afterDispute(String jobId) async {
+    _ref.invalidate(disputeProvider(jobId));
+    _ref.invalidate(contractHistoryProvider(jobId));
+    await _ref.read(jobsProvider.notifier).refresh();
+  }
+
+  Future<void> openDispute(String jobId, {required String problem, required String note}) async {
+    await _api.post('${_base(jobId)}/dispute', body: {'problem': problem, 'note': note});
+    await _afterDispute(jobId);
+  }
+
+  Future<void> offerWayOut(String jobId, {required String kind, Map<String, dynamic>? params, String? note}) async {
+    await _api.post('${_base(jobId)}/dispute/proposals', body: {'kind': kind, 'params': params ?? {}, 'note': ?note});
+    await _afterDispute(jobId);
+  }
+
+  Future<void> answerOffer(String jobId, String offerId, {required bool accept}) async {
+    await _api.post('${_base(jobId)}/dispute/proposals/$offerId/answer', body: {'decision': accept ? 'accept' : 'decline'});
+    await _afterDispute(jobId);
+  }
+
+  Future<void> askTeamToDecide(String jobId) async {
+    await _api.post('${_base(jobId)}/dispute/escalate');
+    await _afterDispute(jobId);
+  }
+
+  /// Three days past the delivery date with nothing delivered: cancel for a refund of what is held.
+  Future<double> cancelForRefund(String jobId) async {
+    final json = await _api.post('${_base(jobId)}/cancel') as Map<String, dynamic>;
+    await _afterDispute(jobId);
+    return (json['refund'] as num?)?.toDouble() ?? 0;
+  }
+
+  Future<void> saveAddress(Address a) async {
+    await _api.put('/users/me/address', body: {'line': a.line.trim(), 'city': a.city.trim(), 'state': a.state.trim()});
+    _ref.invalidate(addressProvider);
   }
 
   /// Shares work in progress. Files go straight to storage; if any fails the draft is not kept.

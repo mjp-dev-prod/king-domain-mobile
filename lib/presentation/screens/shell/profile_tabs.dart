@@ -21,6 +21,7 @@ import '../identity/identity_rows.dart';
 import '../skills/skills_row.dart';
 import '../profile/delete_account_sheet.dart';
 import '../../providers/contract_extras_provider.dart';
+import '../profile/address_sheet.dart';
 import '../profile/currency_sheet.dart';
 import '../profile/notifications_sheet.dart';
 import '../profile/privacy_link.dart';
@@ -89,6 +90,12 @@ class _AccountGroup extends ConsumerWidget {
           title: 'Money shown in',
           sub: switch (ref.watch(displayCurrencyProvider).valueOrNull) { 'USD' => 'Dollars, with naira amounts marked "about"', 'NGN' => 'Naira, with dollar amounts marked "about"', _ => 'Naira or dollars' },
           onTap: () => showCurrencySheet(context),
+        ),
+        ListRow(
+          icon: Icons.place_outlined,
+          title: 'Where we can reach you',
+          sub: 'Only used if something serious goes wrong on a job',
+          onTap: () => showAddressSheet(context),
         ),
         ListRow(icon: Icons.privacy_tip_outlined, title: 'Privacy policy', sub: 'How we handle your data', onTap: () => openPrivacyPolicy(context)),
         ListRow(icon: Icons.logout_rounded, title: 'Sign out', danger: true, onTap: () => confirmSignOut(context, ref)),

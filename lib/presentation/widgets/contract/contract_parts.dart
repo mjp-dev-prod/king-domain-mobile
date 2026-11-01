@@ -49,6 +49,7 @@ StatusPill contractStatusPill(ContractStatus status) => switch (status) {
   ContractStatus.changesRequested => const StatusPill('Changes requested', tone: KdTone.warn, pulse: true),
   ContractStatus.disputed => const StatusPill('With an admin', tone: KdTone.bad, icon: Icons.balance_rounded),
   ContractStatus.approved => const StatusPill('Paid', tone: KdTone.ok, icon: Icons.check_rounded),
+  ContractStatus.resolved => const StatusPill('Settled', tone: KdTone.plain, icon: Icons.handshake_outlined),
 };
 
 /// Screen header: back button + status pill, the job title and one sub line.
@@ -518,6 +519,7 @@ class ContractLinkTile extends StatelessWidget {
     ContractStatus.disputed => (text: 'With a ${AppBrand.name} admin', tone: KdTone.bad),
     // The Paid pill already says it; no second line.
     ContractStatus.approved => (text: '', tone: KdTone.ok),
+    ContractStatus.resolved => (text: forClient ? 'Settled · see how it ended' : 'Settled · see how it ended', tone: KdTone.plain),
     null => (text: '', tone: KdTone.plain),
   };
 }
@@ -526,7 +528,7 @@ class ContractLinkTile extends StatelessWidget {
 int contractSortRank(Job job, {required bool forClient}) {
   if (contractNeedsYou(job, forClient: forClient)) return 0;
   return switch (job.contractStatus) {
-    ContractStatus.approved || ContractStatus.disputed => 2,
+    ContractStatus.approved || ContractStatus.disputed || ContractStatus.resolved => 2,
     _ => 1,
   };
 }
