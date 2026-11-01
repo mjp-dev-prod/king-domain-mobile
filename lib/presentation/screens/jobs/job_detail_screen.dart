@@ -17,6 +17,7 @@ import '../../providers/talent_profile_provider.dart';
 import '../../widgets/contract/contract_parts.dart';
 import '../../widgets/kit/kd_button.dart';
 import '../../widgets/kit/kd_card.dart';
+import '../../widgets/kit/reputation_widgets.dart';
 import '../../widgets/kit/kd_layout.dart';
 import '../../widgets/kit/kd_sheet.dart';
 import '../../widgets/kit/kd_toast.dart';
@@ -478,6 +479,8 @@ class _ClientFacts extends StatelessWidget {
         ]),
         const SizedBox(height: 8),
         Text([paid, ?since].join(' · '), style: AppTextStyles.hint),
+        const SizedBox(height: 8),
+        ClientReputationBlock(reputation: record.reputation),
       ],
     );
   }

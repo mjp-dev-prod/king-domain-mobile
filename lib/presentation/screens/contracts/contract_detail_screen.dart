@@ -24,6 +24,7 @@ import '../../widgets/kit/about_amount_text.dart';
 import 'dispute_screen.dart';
 import 'drafts_screen.dart';
 import 'receipt_screen.dart';
+import 'review_screen.dart';
 import 'start_proof_screen.dart';
 import 'submit_deliverable_screen.dart';
 
@@ -174,6 +175,9 @@ class _TalentContract extends ConsumerWidget {
     }
   }
 
+  void _openReview(BuildContext context) =>
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => ReviewScreen(jobId: job.id, jobTitle: job.title)));
+
   VoidCallback _openDispute(BuildContext context) => () =>
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => DisputeScreen(jobId: job.id, jobTitle: job.title)));
 
@@ -208,6 +212,8 @@ class _TalentContract extends ConsumerWidget {
         sub: working ? 'Show work in progress without handing it in' : 'Work you showed along the way',
         onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => DraftsScreen(jobId: job.id, jobTitle: job.title, forClient: false, canShare: working))),
       ),
+      if (status == ContractStatus.approved || (status == ContractStatus.resolved && (job.settledTalentAmount ?? 0) > 0))
+        ContractLinkTile(icon: Icons.rate_review_outlined, title: 'Review ${job.clientName}', sub: 'Specific questions, no stars. Hidden until both are in', onTap: () => _openReview(context)),
       ContractLinkTile(
         icon: Icons.receipt_long_outlined,
         title: 'Receipt',
@@ -304,6 +310,7 @@ class _TalentContract extends ConsumerWidget {
             icon: Icons.payments_outlined,
             title: 'You\'ve been paid ${formatMoney(job.budget, job.currency)}',
             body: 'Sent to your payout account. Transfers can take a little while to show.',
+            actions: [KdButton(label: 'Review ${job.clientName}', variant: KdButtonVariant.soft, height: AppDimensions.buttonHeightSm, onPressed: () => _openReview(context))],
           ),
         ];
       case ContractStatus.resolved:

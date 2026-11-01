@@ -22,6 +22,7 @@ import '../skills/skills_row.dart';
 import '../profile/delete_account_sheet.dart';
 import '../../providers/contract_extras_provider.dart';
 import '../profile/address_sheet.dart';
+import '../profile/my_reputation_screen.dart';
 import '../profile/currency_sheet.dart';
 import '../profile/notifications_sheet.dart';
 import '../profile/privacy_link.dart';
@@ -90,6 +91,12 @@ class _AccountGroup extends ConsumerWidget {
           title: 'Money shown in',
           sub: switch (ref.watch(displayCurrencyProvider).valueOrNull) { 'USD' => 'Dollars, with naira amounts marked "about"', 'NGN' => 'Naira, with dollar amounts marked "about"', _ => 'Naira or dollars' },
           onTap: () => showCurrencySheet(context),
+        ),
+        ListRow(
+          icon: Icons.workspace_premium_outlined,
+          title: 'Your reputation',
+          sub: 'What others see, Proven levels and credentials',
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MyReputationScreen())),
         ),
         ListRow(
           icon: Icons.place_outlined,

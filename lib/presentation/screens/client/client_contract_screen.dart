@@ -21,6 +21,7 @@ import '../../widgets/kit/motion.dart';
 import '../contracts/dispute_screen.dart';
 import '../contracts/drafts_screen.dart';
 import '../contracts/receipt_screen.dart';
+import '../contracts/review_screen.dart';
 import '../contracts/start_proof_screen.dart';
 
 /// The client's view of a paid contract (prototypes/stage2-contract-flow.html,
@@ -117,6 +118,8 @@ class _ClientContract extends ConsumerWidget {
           sub: working ? 'Work in progress the talent has shown you' : 'Work shown along the way',
           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => DraftsScreen(jobId: job.id, jobTitle: job.title, forClient: true, canShare: false))),
         ),
+        if (status == ContractStatus.approved || (status == ContractStatus.resolved && (job.settledTalentAmount ?? 0) > 0))
+          ContractLinkTile(icon: Icons.rate_review_outlined, title: 'Review the talent', sub: 'Specific questions, no stars. Hidden until both are in', onTap: () => _openReview(context)),
         ContractLinkTile(
           icon: Icons.receipt_long_outlined,
           title: 'Receipt',
@@ -305,6 +308,7 @@ class _ClientContract extends ConsumerWidget {
             icon: Icons.payments_outlined,
             title: 'You approved. ${formatMoney(job.budget, job.currency)} sent in all',
             body: 'Thanks for paying through ${AppBrand.name}.',
+            actions: [KdButton(label: 'Review the talent', variant: KdButtonVariant.soft, height: AppDimensions.buttonHeightSm, onPressed: () => _openReview(context))],
           ),
         ];
     }
@@ -382,6 +386,9 @@ class _ClientContract extends ConsumerWidget {
       ),
     );
   }
+
+  void _openReview(BuildContext context) =>
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => ReviewScreen(jobId: job.id, jobTitle: job.title)));
 
   void _openDispute(BuildContext context) =>
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => DisputeScreen(jobId: job.id, jobTitle: job.title)));

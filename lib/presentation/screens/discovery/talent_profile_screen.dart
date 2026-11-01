@@ -12,6 +12,7 @@ import '../../providers/discovery_provider.dart';
 import '../../widgets/contract/contract_parts.dart';
 import '../../widgets/kit/kd_button.dart';
 import '../../widgets/kit/kd_card.dart';
+import '../../widgets/kit/reputation_widgets.dart';
 import '../../widgets/kit/kd_image.dart';
 import '../../widgets/kit/kd_layout.dart';
 import '../../widgets/kit/kd_toast.dart';
@@ -83,6 +84,12 @@ class TalentProfileScreen extends ConsumerWidget {
               KdButton.secondary(label: 'Message ${t.fullName.split(' ').first}', icon: Icons.chat_bubble_outline_rounded, onPressed: () => _message(context, ref)),
               const SizedBox(height: 8),
               KdButton.secondary(label: t.saved ? 'Saved. Tap to remove' : 'Save this talent', icon: t.saved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded, onPressed: () => _toggleSave(context, ref, t)),
+              const SizedBox(height: 20),
+              Text('Track record on ${AppBrand.name}', style: AppTextStyles.title),
+              const SizedBox(height: 4),
+              Text('Counts and facts from real jobs. No score, no ranking.', style: AppTextStyles.hint),
+              const SizedBox(height: 10),
+              TalentReputationSection(reputation: p.reputation),
               const SizedBox(height: 20),
               Text('Verified work', style: AppTextStyles.title),
               const SizedBox(height: 4),

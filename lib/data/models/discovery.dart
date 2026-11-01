@@ -1,6 +1,7 @@
 // Discovery as the server describes it (backend src/discovery.js, src/briefs.js and the routes that serve them;
 // PRD §4.6, decisions D21 to D25). No score and no rank anywhere: facts only.
 import 'job.dart';
+import 'reputation.dart';
 
 DateTime? _date(Object? v) => v == null ? null : DateTime.tryParse(v as String);
 Map<String, dynamic> _map(Object? v) =>
@@ -442,10 +443,13 @@ class TalentProfileView {
   final TalentCard card;
   final String? bio;
   final List<VerifiedWork> work;
+  /// Plain counts, visible reviews with their facts, and Proven levels. Never a score (D29).
+  final TalentReputation reputation;
   const TalentProfileView({
     required this.card,
     required this.bio,
     required this.work,
+    this.reputation = const TalentReputation(),
   });
 
   factory TalentProfileView.fromJson(Map<String, dynamic> j) {
@@ -454,6 +458,7 @@ class TalentProfileView {
       card: TalentCard.fromJson(t),
       bio: t['bio'] as String?,
       work: [for (final w in _maps(j['work'])) VerifiedWork.fromJson(w)],
+      reputation: j['reputation'] == null ? const TalentReputation() : TalentReputation.fromJson(j['reputation'] as Map<String, dynamic>),
     );
   }
 }
@@ -532,7 +537,10 @@ class ClientRecord {
   final int jobsHired;
   final int jobsCompleted;
   final List<({String currency, double amount})> paidOut;
+  /// What talents said about this client, and how they behave: plain counts (D19).
+  final ClientReputation reputation;
   const ClientRecord({
+    this.reputation = const ClientReputation(),
     this.memberSince,
     required this.identityVerified,
     required this.jobsPosted,
@@ -542,6 +550,7 @@ class ClientRecord {
   });
 
   factory ClientRecord.fromJson(Map<String, dynamic> j) => ClientRecord(
+    reputation: j['reputation'] == null ? const ClientReputation() : ClientReputation.fromJson(j['reputation'] as Map<String, dynamic>),
     memberSince: _date(j['memberSince']),
     identityVerified: j['identityVerified'] as bool? ?? false,
     jobsPosted: (j['jobsPosted'] as num?)?.toInt() ?? 0,
