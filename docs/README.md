@@ -19,6 +19,10 @@ live here regardless of which sibling repo (backend, web, admin) they end up aff
   Written 2026-10-31 from the eleven research topics below. It replaces the sprint plan as the build order.
 - [Sample data while the backend catches up](./core/sample-data.md) — the store-interface convention and the
   "Sample data" strip for screens built before their endpoint exists; read before building such a screen.
+- [Overnight build handoff](./core/overnight-handoff-2026-10-31.md) — **what S0 to S8 contain, what is verified and what is
+  not, the decisions made without Victor, what was cut, the settings owed, and the order of the verification pass.**
+- [S5 plan: contracts and money](./superpowers/plans/2026-10-31-s5-contracts-and-money.md) — the start proof and the 20%,
+  drafts, receipts, display currency, and what was not built.
 - [S0 foundations plan](./superpowers/plans/2026-10-31-s0-foundations.md) — the task-by-task plan for slice S0
   (skills, roles, audit log, inbox, alerts, shared kit pieces).
 - [Backend + Frontend Sprint Plan](./research/BACKEND_SPRINT_PLAN.md) — the September build order

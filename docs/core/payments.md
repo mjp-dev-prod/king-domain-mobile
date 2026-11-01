@@ -164,13 +164,27 @@ so re-sending is manual for now.
 
 See [testing.md](./testing.md) for what is covered, what passed, and what is not guaranteed.
 
+## Beyond approval and payout (S5 and S6, built, not yet run against Paystack)
+
+- **Start proof and the first 20%** (`src/startProof.js`): after funding, a skill job's talent sends a start proof; accepting it
+  (or 24 hours of silence) pays 20% of the price by transfer (`kd_upfront_<contract>_<n>`); approval then pays only the rest
+  (`releasePayment` subtracts what was paid).
+- **Settlement** (`src/settlement.js`): an agreed split or cancel, a ruling, or a cancel-for-refund pays the talent their share
+  by transfer (`kd_settle_<contract>_<n>`) and refunds the client the rest through Paystack's refund API against the funding
+  reference. What is held is the price less any 20% already paid; the 10% fee is never refunded. Each leg is recorded on
+  `Contract.settlement` as it lands, so a retry resumes instead of repeating. The contract ends `resolved`.
+- **Disputes** (`src/disputes.js`): while one is open `Contract.disputeHoldAt` is set and every clock that pays, escalates or
+  grants on silence waits; the money routes answer `dispute_open`.
+- **Chargebacks** (`src/chargebacks.js`): `charge.dispute.*` webhooks create a row, alert the team, and count 16 weekday hours;
+  the answer is built from our records and sent through the Dispute API. A lost one after the talent was paid removes the client.
+- **Refund webhooks** (`src/refunds.js`): `refund.processed` and `refund.failed` update the contract's record; a failure alerts the team.
+- **Premium** (`src/premium.js`) is bought through Google Play, never Paystack, and job payments never go through Play.
+
 ## Not built yet
 
-- **Stage 2 in the apps** — the backend is built; the screens are next.
-- **Stage 3 of the decision** — disputes with an admin ruling and split refunds, cancel for a
-  refund after an overdue delivery. Auto-release stays off until an escalation can be resolved.
-- **Push notifications** — reminders are email and in-app only.
-- **Refunds** — manual, from the Paystack dashboard.
+- **Push notifications** — reminders are email and in-app only; S5 to S8 steps are push only.
+- **Payout failures queue** — the settlement and start-proof payouts are recorded on the contract, but a transfer that fails
+  later (`transfer.failed`) is still only logged.
 - **Payout state on the contract** — a payout that fails after approval is only logged; the
   contract still reads `approved` and the talent's app says paid. Needs a schema change.
 - **Background reconciliation** — a contract whose client never returns to the app *and* whose
