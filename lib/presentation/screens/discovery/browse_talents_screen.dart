@@ -16,6 +16,7 @@ import '../../widgets/kit/kd_button.dart';
 import '../../widgets/kit/kd_card.dart';
 import '../../widgets/kit/kd_chip.dart';
 import '../../widgets/kit/kd_layout.dart';
+import '../packages/package_browse_screen.dart';
 import '../../widgets/kit/kd_sheet.dart';
 import '../../widgets/kit/kd_toast.dart';
 import '../../widgets/kit/motion.dart';
@@ -119,6 +120,10 @@ class _BrowseTalentsScreenState extends ConsumerState<BrowseTalentsScreen> {
           ContractHeader(title: 'Invite talents', sub: job!.title, pill: StatusPill(job.skillOrCategory, tone: KdTone.brand))
         else
           const ScreenHeader(title: 'Talents'),
+        if (!pushed) ...[
+          const SizedBox(height: 10),
+          KdButton.secondary(label: 'Or buy a ready-made package', icon: Icons.inventory_2_outlined, height: AppDimensions.buttonHeightSm, onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PackageBrowseScreen()))),
+        ],
         const SizedBox(height: 14),
         Row(children: [
           Expanded(

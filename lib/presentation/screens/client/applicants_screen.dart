@@ -25,6 +25,8 @@ import '../discovery/browse_talents_screen.dart';
 import '../discovery/talent_profile_screen.dart';
 import '../messages/conversation_screen.dart';
 import '../../providers/messaging_provider.dart';
+import '../../widgets/kit/premium_sheet.dart';
+import '../packages/job_questions_section.dart';
 import 'applicant_panel_card.dart';
 import 'post_job_flow.dart';
 import 'post_job_screen.dart';
@@ -147,6 +149,7 @@ class _ApplicantsScreenState extends ConsumerState<ApplicantsScreen> {
                   ),
                 ),
                 if (job.isStructured && !awarded && !closed) ...[const SizedBox(height: 12), _capBanner(job, snap.data?.length ?? job.applicationCount)],
+                if (job.isStructured && !awarded && !closed) JobQuestionsSection(job: job, isClient: true),
                 const SizedBox(height: 12),
                 body,
               ],
@@ -190,14 +193,19 @@ class _ApplicantsScreenState extends ConsumerState<ApplicantsScreen> {
     } on ApiException catch (e) {
       if (!mounted) return;
       if (e.code == 'premium_required') {
-        showKdSheet(
-          context,
-          builder: (sheet) => KdSheetBody(
-            title: 'Reopening is a premium feature',
-            lead: 'Getting more applicants after the first ${widget.job.applicantCap} is part of premium. Premium is coming to the app soon. Until then you can still pick from the people who applied.',
-            children: [const SizedBox(height: 14), KdButton(label: 'Got it', onPressed: () => Navigator.of(sheet).pop())],
-          ),
-        );
+        // Buy it through Google Play, have our server check it, then try again once.
+        final productId = e.data?['productId'] as String?;
+        final bought = await offerPremium(context, feature: 'reopen_job', productId: productId);
+        if (bought && mounted) {
+          try {
+            await ref.read(discoveryActionsProvider).reopen(widget.job.id);
+            setState(() => _future = _load());
+            if (mounted) KdToast.show(context, 'Applications are open again.');
+            return;
+          } on ApiException catch (again) {
+            if (mounted) KdToast.show(context, again.message, kind: ToastKind.error);
+          }
+        }
       } else {
         KdToast.show(context, e.message, kind: ToastKind.error);
       }

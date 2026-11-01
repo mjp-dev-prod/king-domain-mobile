@@ -23,6 +23,9 @@ import '../profile/delete_account_sheet.dart';
 import '../../providers/contract_extras_provider.dart';
 import '../profile/address_sheet.dart';
 import '../profile/my_reputation_screen.dart';
+import '../packages/my_packages_screen.dart';
+import '../packages/package_browse_screen.dart';
+import '../packages/package_orders_screen.dart';
 import '../profile/currency_sheet.dart';
 import '../profile/notifications_sheet.dart';
 import '../profile/privacy_link.dart';
@@ -92,6 +95,12 @@ class _AccountGroup extends ConsumerWidget {
           sub: switch (ref.watch(displayCurrencyProvider).valueOrNull) { 'USD' => 'Dollars, with naira amounts marked "about"', 'NGN' => 'Naira, with dollar amounts marked "about"', _ => 'Naira or dollars' },
           onTap: () => showCurrencySheet(context),
         ),
+        if (ref.watch(authProvider).user?.role == 'client') ...[
+          ListRow(icon: Icons.inventory_2_outlined, title: 'Packages', sub: 'Ready-made offers from verified talents', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PackageBrowseScreen()))),
+          ListRow(icon: Icons.inbox_outlined, title: 'Your package orders', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PackageOrdersScreen()))),
+        ] else ...[
+          ListRow(icon: Icons.inventory_2_outlined, title: 'Your packages', sub: 'Publish ready-made offers and answer orders', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MyPackagesScreen()))),
+        ],
         ListRow(
           icon: Icons.workspace_premium_outlined,
           title: 'Your reputation',

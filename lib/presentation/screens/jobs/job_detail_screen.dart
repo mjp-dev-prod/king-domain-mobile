@@ -17,6 +17,7 @@ import '../../providers/talent_profile_provider.dart';
 import '../../widgets/contract/contract_parts.dart';
 import '../../widgets/kit/kd_button.dart';
 import '../../widgets/kit/kd_card.dart';
+import '../packages/job_questions_section.dart';
 import '../../widgets/kit/reputation_widgets.dart';
 import '../../widgets/kit/kd_layout.dart';
 import '../../widgets/kit/kd_sheet.dart';
@@ -122,6 +123,7 @@ class JobDetailScreen extends ConsumerWidget {
           ],
         ),
       ),
+      if (job.isStructured) JobQuestionsSection(job: job, isClient: false),
       if (job.isStructured) const _SafetyNote(),
     ];
 

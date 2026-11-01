@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:king_domain/data/models/job.dart';
 import 'package:king_domain/data/models/skill.dart';
 import 'package:king_domain/data/models/skill_submission.dart';
+import 'package:king_domain/data/models/packages.dart';
 import 'package:king_domain/presentation/providers/discovery_provider.dart';
+import 'package:king_domain/presentation/providers/packages_provider.dart';
 import 'package:king_domain/presentation/providers/skill_submissions_provider.dart';
 import 'package:king_domain/presentation/providers/skills_provider.dart';
 import 'package:king_domain/data/models/discovery.dart';
@@ -34,4 +36,5 @@ List<Override> discoveryStubs({List<Job> feed = const [], SkillHub? hub}) => [
   shortlistAsksProvider.overrideWith((ref) async => const []),
   savedSearchesProvider.overrideWith((ref) async => const <SavedSearch>[]),
   savedTalentsProvider.overrideWith((ref) async => const <TalentCard>[]),
+  jobQuestionsProvider.overrideWith((ref, jobId) async => const <JobQuestion>[]),
 ];
