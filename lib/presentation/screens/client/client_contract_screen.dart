@@ -18,6 +18,9 @@ import '../../widgets/kit/kd_fields.dart';
 import '../../widgets/kit/kd_sheet.dart';
 import '../../widgets/kit/kd_toast.dart';
 import '../../widgets/kit/motion.dart';
+import '../contracts/drafts_screen.dart';
+import '../contracts/receipt_screen.dart';
+import '../contracts/start_proof_screen.dart';
 
 /// The client's view of a paid contract (prototypes/stage2-contract-flow.html,
 /// right phone): progress toward the delivery date, extension requests to
@@ -72,15 +75,37 @@ class _ClientContract extends ConsumerWidget {
 
   String get talent => 'The talent';
 
+  /// The first 20% was already paid on the start proof; approval pays the rest.
+  bool get _paidUpfront => job.upfrontPaidAt != null && job.upfrontAmount != null;
+  double get _remaining => job.budget - (_paidUpfront ? job.upfrontAmount! : 0);
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final status = job.contractStatus!;
     final history = ref.watch(contractHistoryProvider(job.id)).valueOrNull ?? const ContractHistory();
     final state = _stateCards(context, ref, status, history);
+    final proofCard = _startProofCard(context);
+    final working = status == ContractStatus.funded || status == ContractStatus.inProgress || status == ContractStatus.changesRequested;
     final cards = <Widget>[
-      if (state.isNotEmpty) state.first,
+      if (proofCard != null && proofCard.$2) proofCard.$1 else if (state.isNotEmpty) state.first,
       LifecycleStepper(job: job, forClient: true),
-      ...state.skip(1),
+      if (proofCard != null && proofCard.$2) ...state,
+      if (proofCard != null && !proofCard.$2) proofCard.$1,
+      if (proofCard == null || !proofCard.$2) ...state.skip(1),
+      if (status != ContractStatus.awaitingPayment) ...[
+        ContractLinkTile(
+          icon: Icons.draw_outlined,
+          title: 'Drafts',
+          sub: working ? 'Work in progress the talent has shown you' : 'Work shown along the way',
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => DraftsScreen(jobId: job.id, jobTitle: job.title, forClient: true, canShare: false))),
+        ),
+        ContractLinkTile(
+          icon: Icons.receipt_long_outlined,
+          title: 'Receipt',
+          sub: 'The record of what you paid',
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ReceiptScreen(jobId: job.id))),
+        ),
+      ],
       if (history.deliveries.isNotEmpty) VersionsCard(
           versions: history.deliveries,
           title: 'Delivered work',
@@ -100,7 +125,7 @@ class _ClientContract extends ConsumerWidget {
             children: [
               ContractHeader(
                 title: job.title,
-                sub: '${formatNaira(job.budget)} held by ${AppBrand.name}',
+                sub: '${formatMoney(job.budget, job.currency)} held by ${AppBrand.name}',
                 pill: contractStatusPill(status),
               ),
               for (var i = 0; i < cards.length; i++)
@@ -111,6 +136,64 @@ class _ClientContract extends ConsumerWidget {
         Positioned(left: 0, right: 0, bottom: 0, child: ActionBar(children: _actions(context, ref, status))),
       ],
     );
+  }
+
+  /// The start proof as the client sees it, with whether it needs them now (then it leads the screen). Null when the
+  /// job has none or it is past the working stage.
+  (Widget, bool)? _startProofCard(BuildContext context) {
+    if (!job.hasStartProof) return null;
+    final status = job.contractStatus;
+    if (status != ContractStatus.funded && status != ContractStatus.inProgress) return null;
+    final amount = formatMoney(job.upfrontAmount ?? job.budget * 0.2, job.currency);
+    void open() => Navigator.of(context).push(MaterialPageRoute(builder: (_) => StartProofScreen(jobId: job.id, forClient: true)));
+    switch (job.startProofStatus) {
+      case 'submitted':
+        final due = job.startProofDueAt;
+        return (
+          NoticeCard(
+            tone: KdTone.warn,
+            icon: Icons.flag_outlined,
+            title: 'The start proof is ready for you',
+            body: 'Accept it to pay the talent $amount (20%). If you say nothing it is accepted for you after 24 hours.',
+            waiting: due == null ? null : (timeLeft(due) == null ? 'The 24 hours are up' : 'Decide within ${timeLeft(due)}'),
+            actions: [KdButton(label: 'Look at it', variant: KdButtonVariant.soft, height: AppDimensions.buttonHeightSm, onPressed: open)],
+          ),
+          true,
+        );
+      case 'objected':
+        return (
+          NoticeCard(
+            tone: KdTone.warn,
+            icon: Icons.fact_check_outlined,
+            title: 'A person is checking the start proof',
+            body: 'You raised a point. We check it against the format, usually within the day, and tell you both.',
+            actions: [KdButton(label: 'See it', variant: KdButtonVariant.soft, height: AppDimensions.buttonHeightSm, onPressed: open)],
+          ),
+          false,
+        );
+      case 'redo':
+        return (
+          NoticeCard(
+            tone: KdTone.plain,
+            icon: Icons.replay_rounded,
+            title: 'The talent is sending the start proof again',
+            body: 'We agreed with your point. You\'ll have 24 hours again when it arrives.',
+          ),
+          false,
+        );
+      case 'accepted':
+        return null;
+      default:
+        return (
+          NoticeCard(
+            tone: KdTone.plain,
+            icon: Icons.flag_outlined,
+            title: 'Waiting for the start proof',
+            body: 'The talent will show you they\'ve started. Then you can accept it, which pays them $amount (20%) now.',
+          ),
+          false,
+        );
+    }
   }
 
   List<Widget> _stateCards(BuildContext context, WidgetRef ref, ContractStatus status, ContractHistory history) {
@@ -153,7 +236,7 @@ class _ClientContract extends ConsumerWidget {
             tone: KdTone.plain,
             icon: Icons.verified_user_outlined,
             title: 'Your call',
-            body: 'Approving sends ${formatNaira(job.budget)} to the talent\'s bank account and can\'t be undone. '
+            body: 'Approving sends ${formatMoney(_remaining, job.currency)} to the talent\'s bank account and can\'t be undone.${_paidUpfront ? ' The first ${formatMoney(job.upfrontAmount!, job.currency)} was paid when you accepted the start proof.' : ''} '
                 'If something isn\'t right, ask for changes (${job.changeRoundsLeft} round${job.changeRoundsLeft == 1 ? '' : 's'} left).',
           ),
         ];
@@ -187,7 +270,7 @@ class _ClientContract extends ConsumerWidget {
           NoticeCard(
             tone: KdTone.ok,
             icon: Icons.payments_outlined,
-            title: 'You approved. ${formatNaira(job.budget)} sent',
+            title: 'You approved. ${formatMoney(job.budget, job.currency)} sent in all',
             body: 'Thanks for paying through ${AppBrand.name}.',
           ),
         ];
@@ -271,7 +354,7 @@ class _ClientContract extends ConsumerWidget {
     if (status != ContractStatus.submitted) return const [];
     final last = job.changeRounds >= Job.maxChangeRounds;
     return [
-      KdButton(label: 'Approve and pay ${formatNaira(job.budget)}', onPressed: () { _confirmApprove(context, ref); }),
+      KdButton(label: 'Approve and pay ${formatMoney(_remaining, job.currency)}', onPressed: () { _confirmApprove(context, ref); }),
       KdButton.secondary(
         label: last ? 'Still not right? Ask an admin' : 'Ask for changes · ${job.changeRoundsLeft} round${job.changeRoundsLeft == 1 ? '' : 's'} left',
         onPressed: () { showKdSheet(context, builder: (_) => _ChangesSheet(job: job)); },
@@ -283,7 +366,7 @@ class _ClientContract extends ConsumerWidget {
     return showKdSheet(
       context,
       builder: (sheet) => KdSheetBody(
-        title: 'Approve and pay ${formatNaira(job.budget)}?',
+        title: 'Approve and pay ${formatMoney(_remaining, job.currency)}?',
         lead: 'The talent is paid from the money you already paid in. This can\'t be undone.',
         children: [
           const SizedBox(height: 18),
@@ -299,7 +382,7 @@ class _ClientContract extends ConsumerWidget {
               }
               if (!sheet.mounted) return;
               Navigator.of(sheet).pop();
-              KdToast.show(sheet, 'Approved · ${formatNaira(job.budget)} on its way to the talent');
+              KdToast.show(sheet, 'Approved · ${formatMoney(_remaining, job.currency)} on its way to the talent');
             },
           ),
           const SizedBox(height: 8),

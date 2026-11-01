@@ -91,6 +91,14 @@ class Job {
   final String? pausedReason;
   final PostRejection? rejection;
 
+  // ── S5: the start proof and the first 20% (PRD §4.2) ──
+  /// null (nothing sent yet, or an older job with none), submitted, objected, redo or accepted.
+  final String? startProofStatus;
+  /// The client has until this to accept or raise a point; silence accepts.
+  final DateTime? startProofDueAt;
+  final double? upfrontAmount;
+  final DateTime? upfrontPaidAt;
+
   const Job({
     required this.id,
     required this.title,
@@ -135,7 +143,18 @@ class Job {
     this.paused = false,
     this.pausedReason,
     this.rejection,
+    this.startProofStatus,
+    this.startProofDueAt,
+    this.upfrontAmount,
+    this.upfrontPaidAt,
   });
+
+  /// A job with a skill asks the talent for a start proof before they can deliver. Older jobs have none.
+  bool get hasStartProof => skillKey != null;
+
+  /// The talent still owes the start proof: paid, being worked on, and not yet accepted.
+  bool get startProofOwed =>
+      hasStartProof && (contractStatus == ContractStatus.funded || contractStatus == ContractStatus.inProgress) && startProofStatus != 'accepted';
 
   factory Job.fromJson(Map<String, dynamic> json) {
     final client = json['client'] as Map<String, dynamic>?;
@@ -182,6 +201,10 @@ class Job {
       paused: json['paused'] as bool? ?? false,
       pausedReason: json['pausedReason'] as String?,
       rejection: json['rejection'] == null ? null : PostRejection.fromJson(json['rejection'] as Map<String, dynamic>),
+      startProofStatus: contract?['startProofStatus'] as String?,
+      startProofDueAt: DateTime.tryParse(contract?['startProofDueAt'] as String? ?? ''),
+      upfrontAmount: double.tryParse(contract?['upfrontAmount']?.toString() ?? ''),
+      upfrontPaidAt: DateTime.tryParse(contract?['upfrontPaidAt'] as String? ?? ''),
     );
   }
 
@@ -238,6 +261,10 @@ class Job {
       paused: paused,
       pausedReason: pausedReason,
       rejection: rejection,
+      startProofStatus: startProofStatus,
+      startProofDueAt: startProofDueAt,
+      upfrontAmount: upfrontAmount,
+      upfrontPaidAt: upfrontPaidAt,
     );
   }
 

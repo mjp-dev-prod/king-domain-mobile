@@ -465,6 +465,36 @@ class ActionBar extends StatelessWidget {
   }
 }
 
+/// A row that opens one of the contract room's extra pages (drafts, receipt, start proof).
+class ContractLinkTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String sub;
+  final VoidCallback onTap;
+  const ContractLinkTile({super.key, required this.icon, required this.title, required this.sub, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Pressable(
+      onTap: onTap,
+      semanticLabel: title,
+      child: KdCard(
+        child: Row(children: [
+          Icon(icon, size: 22, color: AppColors.primaryText),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: AppTextStyles.title),
+              Text(sub, style: AppTextStyles.hint),
+            ]),
+          ),
+          const Icon(Icons.chevron_right_rounded, color: AppColors.text3),
+        ]),
+      ),
+    );
+  }
+}
+
 /// One line saying what happens next on a contract, for list rows. The tone
 /// keeps each colour's one job (amber = waiting, red = missed, green = done).
 ({String text, KdTone tone}) contractNextStep(Job job, {required bool forClient}) {

@@ -20,6 +20,8 @@ import '../payments/payout_account_screen.dart';
 import '../identity/identity_rows.dart';
 import '../skills/skills_row.dart';
 import '../profile/delete_account_sheet.dart';
+import '../../providers/contract_extras_provider.dart';
+import '../profile/currency_sheet.dart';
 import '../profile/notifications_sheet.dart';
 import '../profile/privacy_link.dart';
 import '../profile/profile_overview_screen.dart';
@@ -82,6 +84,12 @@ class _AccountGroup extends ConsumerWidget {
             subTone: permission == PushPermission.granted ? KdTone.ok : KdTone.plain,
             onTap: () => _notifications(context, ref, permission),
           ),
+        ListRow(
+          icon: Icons.currency_exchange_rounded,
+          title: 'Money shown in',
+          sub: switch (ref.watch(displayCurrencyProvider).valueOrNull) { 'USD' => 'Dollars, with naira amounts marked "about"', 'NGN' => 'Naira, with dollar amounts marked "about"', _ => 'Naira or dollars' },
+          onTap: () => showCurrencySheet(context),
+        ),
         ListRow(icon: Icons.privacy_tip_outlined, title: 'Privacy policy', sub: 'How we handle your data', onTap: () => openPrivacyPolicy(context)),
         ListRow(icon: Icons.logout_rounded, title: 'Sign out', danger: true, onTap: () => confirmSignOut(context, ref)),
         ListRow(icon: Icons.person_remove_outlined, title: 'Delete account', danger: true, onTap: () => showDeleteAccountSheet(context)),

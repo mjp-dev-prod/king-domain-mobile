@@ -7,9 +7,11 @@ import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/formatting/currency.dart';
 import '../../../data/api_client.dart';
+import '../../../data/models/contract_extras.dart';
 import '../../../data/models/discovery.dart';
 import '../../../data/models/job.dart';
 import '../../../data/models/skill.dart';
+import '../../providers/contract_extras_provider.dart';
 import '../../providers/discovery_provider.dart';
 import '../../providers/skills_provider.dart';
 import '../../widgets/contract/contract_parts.dart';
@@ -18,6 +20,7 @@ import '../../widgets/kit/kd_button.dart';
 import '../../widgets/kit/kd_card.dart';
 import '../../widgets/kit/kd_chip.dart';
 import '../../widgets/kit/kd_layout.dart';
+import '../../widgets/kit/kd_toast.dart';
 import '../../widgets/kit/motion.dart';
 import '../../widgets/kit/pressable.dart';
 import '../../widgets/kit/status_pill.dart';
@@ -252,7 +255,7 @@ class _PostJobFlowState extends ConsumerState<PostJobFlow> {
       // The server says which field was wrong: take the client back to the step that has it.
       final field = e.data?['field'] as String?;
       if (field != null) {
-        _go(field == 'price' ? _Step.price : _Step.brief);
+        _go(switch (field) { 'price' || 'currency' => _Step.price, 'jobType' => _Step.type, _ => _Step.brief });
         _fail(e.message);
       }
       throw const ShownError();
@@ -310,19 +313,34 @@ class _PostJobFlowState extends ConsumerState<PostJobFlow> {
   Widget _body0(AsyncValue<SkillCatalog> catalog, AsyncValue<BriefSpec>? spec) {
     switch (_step) {
       case _Step.type:
+        final available = ref.watch(availabilityProvider).valueOrNull ?? const Availability();
         return Column(children: [
           for (final t in JobType.values)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: Pressable(
                 onTap: () {
+                  if (!available.type(t.name)) {
+                    KdToast.show(context, 'Not available yet. Post it as one delivery for now.', kind: ToastKind.info);
+                    return;
+                  }
                   setState(() => _type = t);
                   _go(_Step.skill);
                 },
-                semanticLabel: '${t.label}. ${t.hint}',
+                semanticLabel: available.type(t.name) ? '${t.label}. ${t.hint}' : '${t.label}. Not available yet.',
                 child: KdCard(
                   tone: _type == t ? KdTone.brand : KdTone.plain,
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(t.label, style: AppTextStyles.title), const SizedBox(height: 4), Text(t.hint, style: AppTextStyles.bodySmall)]),
+                  child: Opacity(
+                    opacity: available.type(t.name) ? 1 : 0.55,
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Row(children: [
+                        Expanded(child: Text(t.label, style: AppTextStyles.title)),
+                        if (!available.type(t.name)) const StatusPill('Not available yet', tone: KdTone.plain),
+                      ]),
+                      const SizedBox(height: 4),
+                      Text(available.type(t.name) ? t.hint : 'We are still building how each milestone, month or week is held and released. Until then, post it as one delivery.', style: AppTextStyles.bodySmall),
+                    ]),
+                  ),
                 ),
               ),
             ),
@@ -383,7 +401,17 @@ class _PostJobFlowState extends ConsumerState<PostJobFlow> {
           const SizedBox(height: 8),
           Wrap(spacing: 8, children: [
             KdChoiceChip(label: 'Naira', selected: _currency == 'NGN', onTap: () => setState(() => _currency = 'NGN')),
-            KdChoiceChip(label: 'Dollars', selected: _currency == 'USD', onTap: () => setState(() => _currency = 'USD')),
+            KdChoiceChip(
+              label: (ref.watch(availabilityProvider).valueOrNull?.usd ?? true) ? 'Dollars' : 'Dollars (not yet)',
+              selected: _currency == 'USD',
+              onTap: () {
+                if (!(ref.read(availabilityProvider).valueOrNull?.usd ?? true)) {
+                  KdToast.show(context, 'Dollar jobs aren\'t available yet. Price it in naira for now.', kind: ToastKind.info);
+                  return;
+                }
+                setState(() => _currency = 'USD');
+              },
+            ),
           ]),
           if (_currency == 'USD') ...[
             const SizedBox(height: 8),
