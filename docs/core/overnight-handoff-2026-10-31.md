@@ -271,6 +271,9 @@ Roles: **Disputes** for rulings and start-proof objections, **Finance** for char
 - **The new native dependency `in_app_purchase` 3.3.1** could not be built here, like `file_picker` before it. If the next
   phone build fails, suspect these two first.
 - **The VC-JWT header** carries `kid` and `jwk` as in the 1EdTech example; a third-party verifier has not been tried.
+- **"What you sent"** (read-only view of a sent skill submission, 2026-11-02): backend `GET /users/me/submissions/:id/work`
+  and `GET /users/link-preview` (server-side fetch behind an SSRF guard), app `SentWorkScreen`, gallery and video player.
+  The new `video_player` dependency has not been built or played on a phone; the backend half is not yet on staging.
 
 ## The verification pass (once, in this order)
 
