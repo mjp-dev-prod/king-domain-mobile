@@ -20,6 +20,7 @@ import '../../widgets/kit/pressable.dart';
 import '../../widgets/kit/status_pill.dart';
 import 'file_section.dart';
 import 'piece_editor_screen.dart';
+import 'sent_work_screen.dart';
 import 'skill_history.dart';
 
 /// How long we aim to take, from sending to a result: the authenticity check (24 h target) plus the review
@@ -392,16 +393,33 @@ class _Waiting extends StatelessWidget {
               ListRow(
                 icon: Icons.folder_outlined,
                 title: p.displayTitle,
-                sub: '${p.files.where((f) => f.ready).length} files${p.liveLink.isEmpty ? '' : ' · live link'}',
+                sub: _pieceSub(p),
+                onTap: () => openSentWork(context, detail.id, focusPieceId: p.id),
               ),
-            ListRow(icon: Icons.videocam_outlined, title: 'Walkthrough', sub: detail.hasWalkthrough ? detail.walkthrough.first.name : 'None'),
+            ListRow(
+              icon: Icons.videocam_outlined,
+              title: 'Walkthrough',
+              sub: detail.hasWalkthrough ? detail.walkthrough.first.name : 'None',
+              onTap: () => openSentWork(context, detail.id),
+            ),
           ],
         ),
+        const SizedBox(height: 12),
+        SeeEverythingButton(submissionId: detail.id),
         const SizedBox(height: 20),
         SkillHistory(skillKey: detail.skillKey, exceptId: detail.id),
       ],
     );
   }
+}
+
+String _pieceSub(SubmissionPiece p) {
+  final files = p.files.where((f) => f.ready).length;
+  return [
+    '$files ${files == 1 ? 'file' : 'files'}',
+    if (p.liveLink.isNotEmpty) 'live link',
+    if (p.processLink.isNotEmpty) 'how-it-was-made link',
+  ].join(' · ');
 }
 
 // ── Result ───────────────────────────────────────────────
@@ -518,6 +536,8 @@ class _ResultView extends ConsumerWidget {
         const SizedBox(height: 16),
         RiseIn(child: children.first),
         ...children.skip(1),
+        const SizedBox(height: 16),
+        SeeEverythingButton(submissionId: detail.id),
         const SizedBox(height: 20),
         SkillHistory(skillKey: detail.skillKey, exceptId: detail.id),
       ],
