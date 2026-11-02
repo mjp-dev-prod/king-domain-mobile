@@ -320,7 +320,8 @@ class _PieceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     int n(FileRole r) => piece.filesOf(r).where((f) => f.ready).length;
-    final summary = '${n(FileRole.output)} finished · ${n(FileRole.working)} working · ${n(FileRole.draft)} drafts';
+    final madeFiles = n(FileRole.working) + n(FileRole.draft);
+    final summary = '${n(FileRole.output)} finished · ${madeFiles + (piece.processLink.trim().isEmpty ? 0 : 1)} showing how it was made';
     return Pressable(
       onTap: () => _push(context, PieceEditorScreen(submissionId: detail.id, pieceId: piece.id)),
       semanticLabel: 'Edit ${piece.displayTitle}',
@@ -367,7 +368,7 @@ class _Waiting extends StatelessWidget {
             title: inReview ? 'Two reviewers are scoring it' : 'A person is checking it is yours',
             body: inReview
                 ? 'They each score it against the list you saw, without knowing who you are or what the other said. If they disagree, a third decides.'
-                : 'They look at your working files, drafts and walkthrough. Then it goes to two reviewers.',
+                : 'They look at the walkthrough and at what shows how you made it. Then it goes to two reviewers.',
             footnote: 'We aim to reply within $replyDays days of you sending it, and we will tell you by notification and email. There is nothing you need to do.',
           ),
         ),

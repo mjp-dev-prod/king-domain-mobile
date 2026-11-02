@@ -19,7 +19,8 @@ import 'file_section.dart';
 
 /// One piece of work: what it was, the person's part in it, and the files that show it (PRD §4.3).
 /// The three kinds of file are asked for separately because each answers a different doubt: the finished work
-/// shows what was made, the working files that it was really made, the drafts how it developed.
+/// shows what was made, and "how it was made" (a screenshot, a recording, a file or a link, in words for the skill)
+/// that it was really made and not copied.
 class PieceEditorScreen extends ConsumerStatefulWidget {
   final String submissionId;
   final String pieceId;
@@ -35,12 +36,13 @@ class _PieceEditorScreenState extends ConsumerState<PieceEditorScreen> {
   final _role = TextEditingController();
   final _madeOn = TextEditingController();
   final _link = TextEditingController();
+  final _process = TextEditingController();
   bool _loaded = false;
   String? _error;
 
   @override
   void dispose() {
-    for (final c in [_title, _brief, _role, _madeOn, _link]) {
+    for (final c in [_title, _brief, _role, _madeOn, _link, _process]) {
       c.dispose();
     }
     super.dispose();
@@ -54,12 +56,19 @@ class _PieceEditorScreenState extends ConsumerState<PieceEditorScreen> {
     _role.text = p.role;
     _madeOn.text = p.madeOn;
     _link.text = p.liveLink;
+    _process.text = p.processLink;
   }
 
   Future<void> _save() async {
     final link = _link.text.trim();
-    if (link.isNotEmpty && !RegExp(r'^https?://\S+\.\S+$', caseSensitive: false).hasMatch(link)) {
+    final processLink = _process.text.trim();
+    final linkOk = RegExp(r'^https?://\S+\.\S+$', caseSensitive: false);
+    if (link.isNotEmpty && !linkOk.hasMatch(link)) {
       setState(() => _error = 'The live link must start with http:// or https://.');
+      throw const ShownError();
+    }
+    if (processLink.isNotEmpty && !linkOk.hasMatch(processLink)) {
+      setState(() => _error = 'The link that shows how you made it must start with http:// or https://.');
       throw const ShownError();
     }
     setState(() => _error = null);
@@ -72,6 +81,7 @@ class _PieceEditorScreenState extends ConsumerState<PieceEditorScreen> {
         role: _role.text.trim(),
         madeOn: _madeOn.text.trim(),
         liveLink: link,
+        processLink: processLink,
       );
     } on ApiException catch (e) {
       setState(() => _error = e.message);
@@ -156,25 +166,31 @@ class _PieceEditorScreenState extends ConsumerState<PieceEditorScreen> {
                 ),
               ),
               const SizedBox(height: 12),
+              KdCard(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Show how it was made', style: AppTextStyles.title),
+                  const SizedBox(height: 4),
+                  Text(d.howMadePrompt, style: AppTextStyles.bodySmall.copyWith(color: AppColors.text2)),
+                  const SizedBox(height: 8),
+                  for (final o in d.howMadeOptions) Padding(padding: const EdgeInsets.only(bottom: 4), child: Text('•  $o', style: AppTextStyles.bodySmall)),
+                  const SizedBox(height: 4),
+                  Text('One is enough, on one piece. Nothing here is judged for how neat it is: it only shows the work is yours.', style: AppTextStyles.hint),
+                ]),
+              ),
+              const SizedBox(height: 12),
               FileSection(
                 submissionId: d.id,
                 detail: d,
                 role: FileRole.working,
                 pieceId: piece.id,
                 files: piece.filesOf(FileRole.working),
-                title: 'Working files',
-                hint: 'The project file, layers, a screenshot of your timeline. Shows it was really made, not copied. Needed for at least one piece.',
+                title: 'Screenshots, recordings or files',
+                hint: 'Anything from the list above that you can add from your phone: a screenshot, a screen recording, a photo of your notes, or the file.',
               ),
               const SizedBox(height: 12),
-              FileSection(
-                submissionId: d.id,
-                detail: d,
-                role: FileRole.draft,
-                pieceId: piece.id,
-                files: piece.filesOf(FileRole.draft),
-                title: 'Drafts',
-                hint: 'Earlier versions or a rough cut. Shows how it developed. Needed for at least one piece.',
-              ),
+              KdTextField(controller: _process, label: 'Or a link that shows it (optional)', hintText: 'https://github.com/you/project', keyboardType: TextInputType.url),
+              const SizedBox(height: 6),
+              Text('A GitHub, Figma or shared Google Docs link works. Save your details after adding it.', style: AppTextStyles.hint),
               const SizedBox(height: 24),
               KdButton.secondary(label: 'Remove this piece', onPressed: _remove),
             ],

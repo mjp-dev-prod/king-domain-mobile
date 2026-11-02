@@ -171,7 +171,7 @@ class SkillIntroScreen extends ConsumerWidget {
                   const SizedBox(height: 12),
                   const KdStepper(
                     steps: [
-                      KdStep(label: 'Send 2 or 3 pieces of real work', subtitle: 'With working files, drafts and a short walkthrough video', state: KdStepState.current),
+                      KdStep(label: 'Send 2 or 3 pieces of real work', subtitle: 'With something that shows how you made it, and a short walkthrough video', state: KdStepState.current),
                       KdStep(label: 'A person checks it is yours', state: KdStepState.later),
                       KdStep(label: 'Two reviewers score it', subtitle: 'Without knowing who you are', state: KdStepState.later),
                       KdStep(label: 'You get the result, with reasons', state: KdStepState.later),

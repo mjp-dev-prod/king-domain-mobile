@@ -100,9 +100,11 @@ class SubmissionPiece {
   final String role;
   final String madeOn;
   final String liveLink;
+  /// A link that shows how it was made (a repository, a Figma file, a shared document).
+  final String processLink;
   final List<SubmissionFile> files;
 
-  const SubmissionPiece({required this.id, required this.position, required this.title, required this.brief, required this.role, required this.madeOn, required this.liveLink, required this.files});
+  const SubmissionPiece({required this.id, required this.position, required this.title, required this.brief, required this.role, required this.madeOn, required this.liveLink, this.processLink = '', required this.files});
 
   factory SubmissionPiece.fromJson(Map<String, dynamic> j) => SubmissionPiece(
     id: j['id'] as String,
@@ -112,6 +114,7 @@ class SubmissionPiece {
     role: (j['role'] as String?) ?? '',
     madeOn: (j['madeOn'] as String?) ?? '',
     liveLink: (j['liveLink'] as String?) ?? '',
+    processLink: (j['processLink'] as String?) ?? '',
     files: [for (final f in (j['files'] as List? ?? const [])) SubmissionFile.fromJson(f as Map<String, dynamic>)],
   );
 
@@ -200,6 +203,9 @@ class SubmissionDetail {
   final List<RubricLine> rubric;
   final bool rubricDraft;
   final SubmissionResult? result;
+  /// What counts as "how it was made" for this skill, in words its people recognise (decision 2026-11-02).
+  final String howMadePrompt;
+  final List<String> howMadeOptions;
 
   const SubmissionDetail({
     required this.id,
@@ -224,6 +230,8 @@ class SubmissionDetail {
     required this.rubric,
     required this.rubricDraft,
     required this.result,
+    this.howMadePrompt = 'Show how it was made. Any one of these, for at least one piece.',
+    this.howMadeOptions = const ['A screenshot of the work open in the tool you used', 'An earlier version or your notes', 'A link to the project, if it has a history'],
   });
 
   factory SubmissionDetail.fromJson(Map<String, dynamic> j) {
@@ -257,6 +265,10 @@ class SubmissionDetail {
       rubric: [for (final l in (rubric?['lines'] as List? ?? const [])) RubricLine.fromJson(l as Map<String, dynamic>)],
       rubricDraft: (rubric?['draft'] as bool?) ?? true,
       result: j['result'] == null ? null : SubmissionResult.fromJson(j['result'] as Map<String, dynamic>),
+      howMadePrompt: ((j['howMade'] as Map?)?['prompt'] as String?) ?? 'Show how it was made. Any one of these, for at least one piece.',
+      howMadeOptions: [
+        for (final o in (((j['howMade'] as Map?)?['options'] as List?) ?? const ['A screenshot of the work open in the tool you used', 'An earlier version or your notes', 'A link to the project, if it has a history'])) o as String,
+      ],
     );
   }
 

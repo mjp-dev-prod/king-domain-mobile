@@ -201,8 +201,8 @@ class SubmissionActions {
     _refresh(id);
   }
 
-  Future<void> savePiece(String id, String pieceId, {required String title, required String brief, required String role, required String madeOn, required String liveLink}) async {
-    await _api.patch('/users/me/submissions/$id/pieces/$pieceId', body: {'title': title, 'brief': brief, 'role': role, 'madeOn': madeOn, 'liveLink': liveLink});
+  Future<void> savePiece(String id, String pieceId, {required String title, required String brief, required String role, required String madeOn, required String liveLink, String processLink = ''}) async {
+    await _api.patch('/users/me/submissions/$id/pieces/$pieceId', body: {'title': title, 'brief': brief, 'role': role, 'madeOn': madeOn, 'liveLink': liveLink, 'processLink': processLink});
     _refresh(id);
   }
 
