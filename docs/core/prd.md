@@ -57,8 +57,9 @@ Rules that apply everywhere:
    confirms on their phone (D10, D12). Until the provider's live keys exist (after CAC), the team checks a
    NIN slip photo and a short live video by hand and the provider re-checks later (D47).
 5. **Verify a skill** (one of the five launch skills, D25): the evidence pack (2–3 real pieces with brief,
-   role and date; working files; drafts; a 2–3 minute walkthrough video; a declaration of own work and AI
-   use), after reading and accepting the terms on repeat submissions (D5, D9). Result: **Verified** with what
+   role and date; something that shows how at least one was made, in words for the skill (a screenshot, a screen
+   recording, a file, notes or a link; Victor, 2026-11-02, replacing "working files" and "drafts"); a 2–3 minute
+   walkthrough video; a declaration of own work and AI use), after reading and accepting the terms on repeat submissions (D5, D9). Result: **Verified** with what
    was checked, or **Not yet** with the reason per standard line and what to do, or **Removed** with the
    reason. The submission stays visible either way.
 6. **Payout account** in their own verified name (name match).
@@ -140,7 +141,7 @@ the start-proof work and gets the other 80% back; the 20% is not refunded, and t
 
 ### 4.3 Proving a skill (D5–D9; proof verification doc)
 Per skill. The evidence pack (§3.1 step 5). An authenticity check by a checker: face in the walkthrough
-against the identity check, reverse image search on two pieces, working files match, Content Credentials read
+against the identity check, reverse image search on two pieces, what shows how it was made fits the work, Content Credentials read
 where present, an optional follow-up question; AI detectors never a verdict. Then **two reviewers who practise
 the skill** score independently against the skill's rubric; a third decides if they disagree; reviewers pass a
 calibration set first. Results always shown in the app with reasons. "Real work" includes own projects, school
