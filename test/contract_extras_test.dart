@@ -36,7 +36,7 @@ class _Jobs extends JobsNotifier {
 }
 
 class _Actions extends ContractExtrasActions {
-  _Actions(Ref ref) : super(ref);
+  _Actions(super.ref);
   static final calls = <String>[];
   static ApiException? failNext;
 

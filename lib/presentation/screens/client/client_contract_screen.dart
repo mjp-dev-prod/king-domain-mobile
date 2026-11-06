@@ -97,6 +97,16 @@ class _ClientContract extends ConsumerWidget {
           )
         : null;
     final working = status == ContractStatus.funded || status == ContractStatus.inProgress || status == ContractStatus.changesRequested;
+    final delivered = history.deliveries.isEmpty
+        ? null
+        : VersionsCard(
+            versions: history.deliveries,
+            title: 'Delivered work',
+            refreshLinks: () async => (await ref.refresh(contractHistoryProvider(job.id).future)).deliveries,
+          );
+    // While the client is deciding, the work leads: "Approve and pay" stays on screen, so what it pays for can't sit under
+    // the links. Afterwards the links lead, because the next step is one of them (reviewing the talent).
+    final deciding = status == ContractStatus.submitted;
     final cards = <Widget>[
       ?disputeCard,
       if (proofCard != null && proofCard.$2) proofCard.$1 else if (state.isNotEmpty) state.first,
@@ -104,6 +114,7 @@ class _ClientContract extends ConsumerWidget {
       if (proofCard != null && proofCard.$2) ...state,
       if (proofCard != null && !proofCard.$2) proofCard.$1,
       if (proofCard == null || !proofCard.$2) ...state.skip(1),
+      if (deciding) ?delivered,
       if (status != ContractStatus.awaitingPayment) ...[
         if (status != ContractStatus.approved && status != ContractStatus.resolved)
           ContractLinkTile(
@@ -127,11 +138,7 @@ class _ClientContract extends ConsumerWidget {
           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ReceiptScreen(jobId: job.id))),
         ),
       ],
-      if (history.deliveries.isNotEmpty) VersionsCard(
-          versions: history.deliveries,
-          title: 'Delivered work',
-          refreshLinks: () async => (await ref.refresh(contractHistoryProvider(job.id).future)).deliveries,
-        ),
+      if (!deciding) ?delivered,
     ];
 
     return Stack(

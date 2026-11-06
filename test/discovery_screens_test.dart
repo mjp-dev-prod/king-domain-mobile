@@ -517,11 +517,14 @@ void main() {
       await t.pumpWidget(_app(const TalentProfileScreen(talentId: 't1'), role: 'client', extra: [talentProfileViewProvider('t1').overrideWith((ref) async => view)]));
       await t.settle();
       expect(find.text('I edit short videos.'), findsOneWidget);
-      expect(find.text('Salon promo'), findsOneWidget);
-      expect(find.textContaining('reel1.mp4'), findsOneWidget);
       await t.tap(find.text('Save this talent'));
       await t.settle();
       expect(_Actions.calls, ['saved t1 true']);
+      // Verified work sits under the track record, past the first screen.
+      await t.scrollUntilVisible(find.text('Salon promo'), 300, scrollable: find.byType(Scrollable).first);
+      await t.settle();
+      expect(find.text('Salon promo'), findsOneWidget);
+      expect(find.textContaining('reel1.mp4'), findsOneWidget);
     });
 
     dtest('an applicant panel shows facts, the chosen work and answers, and Pick, Shortlist and Decline are there to use', (t) async {

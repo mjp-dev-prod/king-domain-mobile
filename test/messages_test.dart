@@ -59,7 +59,6 @@ void main() {
 
     testWidgets('conversations show the other person, a preview, and how many are waiting', (tester) async {
       final semantics = tester.ensureSemantics();
-      addTearDown(semantics.dispose);
       await _show(tester, role: 'client', list: () async => [
         const ConversationSummary(id: 'c1', otherId: 't1', otherName: 'Ada Obi', preview: 'Can you start Monday?', lastMine: true, unread: 0),
         const ConversationSummary(id: 'c2', otherId: 't2', otherName: 'Tunde Bello', preview: 'Sent the draft', unread: 3),
@@ -68,8 +67,11 @@ void main() {
       expect(find.text('Ada Obi'), findsOneWidget);
       expect(find.text('You: Can you start Monday?'), findsOneWidget);
       expect(find.text('Tunde Bello'), findsOneWidget);
-      expect(find.bySemanticsLabel('3 unread'), findsOneWidget);
+      // The row is one tappable item, so a screen reader hears it as one line ending in the count, said once.
+      expect(find.bySemanticsLabel(RegExp(r'Sent the draft\n3 unread$')), findsOneWidget);
       expect(find.text('Blocked'), findsOneWidget, reason: 'a blocked conversation hides its preview');
+      // Here, not in addTearDown: the framework checks for open handles before tear-downs run.
+      semantics.dispose();
     });
 
     testWidgets('a held last message is marked as not sent', (tester) async {

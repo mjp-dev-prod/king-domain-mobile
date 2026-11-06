@@ -105,7 +105,7 @@ class _Tile extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 7),
               alignment: Alignment.center,
               decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(99)),
-              child: Semantics(label: '${c.unread} unread', child: Text('${c.unread}', style: AppTextStyles.bodySmall.copyWith(color: AppColors.onPrimary, fontWeight: FontWeight.w700, fontSize: 12))),
+              child: Semantics(label: '${c.unread} unread', excludeSemantics: true, child: Text('${c.unread}', style: AppTextStyles.bodySmall.copyWith(color: AppColors.onPrimary, fontWeight: FontWeight.w700, fontSize: 12))),
             ),
           ],
         ],

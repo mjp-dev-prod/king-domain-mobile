@@ -104,10 +104,14 @@ class _OrderCard extends ConsumerWidget {
     };
     return KdCard(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Expanded(child: Text(o.title, style: AppTextStyles.title)),
-          StatusPill(label, tone: tone),
-        ]),
+        // The pill carries the clock, so it drops under the title rather than shrink when both won't fit.
+        SizedBox(
+          width: double.infinity,
+          child: Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, runSpacing: 6, children: [
+            Text(o.title, style: AppTextStyles.title),
+            StatusPill(label, tone: tone),
+          ]),
+        ),
         const SizedBox(height: 4),
         Text('${isClient ? 'From' : 'For'} ${o.other}${o.skillLabel == null ? '' : ' · ${o.skillLabel}'}', style: AppTextStyles.bodySmall.copyWith(color: AppColors.text2)),
         const SizedBox(height: 4),

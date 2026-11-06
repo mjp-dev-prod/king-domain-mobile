@@ -34,7 +34,7 @@ ReviewState _state({String state = 'can_review', ReviewBody? mine, ReviewBody? t
 );
 
 class _Actions extends ReviewActions {
-  _Actions(Ref ref) : super(ref);
+  _Actions(super.ref);
   static final calls = <String>[];
   static ApiException? failNext;
 
@@ -74,6 +74,15 @@ Future<void> _drain(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+/// The form is taller than the phone. A tap that lands off-screen does nothing, so a test could "prove" a button is
+/// disabled by simply missing it. Scroll to the target first.
+Future<void> _tap(WidgetTester tester, Finder target) async {
+  await tester.ensureVisible(target);
+  await tester.pumpAndSettle();
+  await tester.tap(target);
+  await tester.pump();
+}
+
 void main() {
   group('writing a review', () {
     testWidgets('shows what the system recorded, specific questions and a private one, with no stars', (tester) async {
@@ -90,20 +99,16 @@ void main() {
 
     testWidgets('cannot be sent until every question, including the private one, is answered', (tester) async {
       await _show(tester, _state());
-      await tester.tap(find.text('Send my review'));
+      await _tap(tester, find.text('Send my review'));
       await tester.pumpAndSettle();
       expect(_Actions.calls, isEmpty);
       expect(find.text('Answer every question to send it.'), findsOneWidget);
 
-      await tester.tap(find.text('Yes').first);
-      await tester.pump();
-      await tester.tap(find.text('Yes').at(1));
-      await tester.pump();
-      await tester.tap(find.text('Yes').last);
-      await tester.pump();
+      await _tap(tester, find.text('Yes').first);
+      await _tap(tester, find.text('Yes').at(1));
+      await _tap(tester, find.text('Yes').last);
       await tester.enterText(find.byType(TextField), 'Sent drafts early.');
-      await tester.ensureVisible(find.text('Send my review'));
-      await tester.tap(find.text('Send my review'));
+      await _tap(tester, find.text('Send my review'));
       await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();
       expect(_Actions.calls.single, contains('followedBrief=yes'));
@@ -119,15 +124,11 @@ void main() {
 
     testWidgets('a refused send shows the reason and keeps what was typed', (tester) async {
       await _show(tester, _state());
-      await tester.tap(find.text('Yes').first);
-      await tester.pump();
-      await tester.tap(find.text('Yes').at(1));
-      await tester.pump();
-      await tester.tap(find.text('No').last);
-      await tester.pump();
+      await _tap(tester, find.text('Yes').first);
+      await _tap(tester, find.text('Yes').at(1));
+      await _tap(tester, find.text('No').last);
       _Actions.failNext = ApiException('The 14 days to review this job have passed.', 409);
-      await tester.ensureVisible(find.text('Send my review'));
-      await tester.tap(find.text('Send my review'));
+      await _tap(tester, find.text('Send my review'));
       await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();
       expect(find.text('The 14 days to review this job have passed.'), findsOneWidget);

@@ -30,7 +30,7 @@ class _Jobs extends JobsNotifier {
 }
 
 class _Actions extends ContractExtrasActions {
-  _Actions(Ref ref) : super(ref);
+  _Actions(super.ref);
   static final calls = <String>[];
   static ApiException? failNext;
 
@@ -139,6 +139,13 @@ Future<void> _drain(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+/// The cards run past the bottom of the phone and the list builds lazily, so a target has to be scrolled to before it
+/// exists or a tap can land on it.
+Future<void> _scrollTo(WidgetTester tester, Finder target) async {
+  await tester.scrollUntilVisible(target, 200, scrollable: find.byType(Scrollable).first);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   group('nothing open', () {
     testWidgets('explains the staircase and lists only the problems that are the person\'s', (tester) async {
@@ -184,6 +191,7 @@ void main() {
     testWidgets('three days late with nothing delivered, the client can cancel for a refund after confirming', (tester) async {
       await _show(tester, _state(canCancel: true));
       expect(find.textContaining('Nothing arrived. You can cancel for a refund'), findsOneWidget);
+      await _scrollTo(tester, find.text('Cancel and refund ₦10,000'));
       await tester.tap(find.text('Cancel and refund ₦10,000'));
       await tester.pumpAndSettle();
       expect(find.textContaining('This can\'t be undone'), findsOneWidget);
@@ -210,7 +218,8 @@ void main() {
     testWidgets('an offer from the other person can be accepted or declined, with the clock shown', (tester) async {
       await _show(tester, _state(dispute: _dispute(offers: [_offer()])));
       expect(find.textContaining('They offer: split what is held'), findsOneWidget);
-      expect(find.textContaining('left'), findsWidgets);
+      expect(find.text('Answer within 1 day 15h'), findsOneWidget);
+      await _scrollTo(tester, find.text('Accept'));
       await tester.tap(find.text('Accept'));
       await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();
@@ -243,6 +252,7 @@ void main() {
 
     testWidgets('asking the team to decide asks first, and says it is free and final', (tester) async {
       await _show(tester, _state(dispute: _dispute()));
+      await _scrollTo(tester, find.text('Ask King Domain to decide'));
       await tester.tap(find.text('Ask King Domain to decide'));
       await tester.pumpAndSettle();
       expect(find.textContaining('free'), findsWidgets);
@@ -257,6 +267,7 @@ void main() {
 
     testWidgets('asks for an address, once, with the purpose', (tester) async {
       await _show(tester, _state(dispute: _dispute(), hasAddress: false));
+      await _scrollTo(tester, find.text('Tell us where we can reach you'));
       expect(find.text('Tell us where we can reach you'), findsOneWidget);
     });
   });
@@ -288,7 +299,7 @@ void main() {
     testWidgets('an agreement says what was agreed', (tester) async {
       await _show(tester, _state(canFile: false, dispute: _dispute(status: 'resolved', resolution: {'by': 'agreement', 'kind': 'more_time'})));
       expect(find.text('Settled between you'), findsOneWidget);
-      expect(find.textContaining('more time'), findsOneWidget);
+      expect(find.text('You agreed more time, and the job carries on.'), findsOneWidget);
     });
   });
 }

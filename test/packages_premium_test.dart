@@ -26,13 +26,13 @@ class _Auth extends AuthNotifier {
 }
 
 class _Gateway implements BillingGateway {
-  final BillingProduct? item;
+  static const _item = BillingProduct(id: 'kd.question', title: 'Ask a question', price: '₦500');
   final bool isAvailable;
-  const _Gateway({this.item = const BillingProduct(id: 'kd.question', title: 'Ask a question', price: '₦500'), this.isAvailable = true});
+  const _Gateway({this.isAvailable = true});
   @override
   Future<bool> available() async => isAvailable;
   @override
-  Future<BillingProduct?> product(String productId) async => item;
+  Future<BillingProduct?> product(String productId) async => _item;
   @override
   Future<BillingPurchase> buy(String productId, {required String accountId}) async => BillingPurchase(productId: productId, token: 'token');
   @override
@@ -40,7 +40,7 @@ class _Gateway implements BillingGateway {
 }
 
 class _Actions extends PackageActions {
-  _Actions(Ref ref) : super(ref);
+  _Actions(super.ref);
   static final calls = <String>[];
   static Object? failBuy;
   static ApiException? failNext;
@@ -78,6 +78,10 @@ class _Actions extends PackageActions {
 class _EmptyJobs extends JobsNotifier {
   @override
   Future<List<Job>> build() async => const [];
+
+  // Accepting an order refreshes the jobs; without this the test would call the server.
+  @override
+  Future<void> refresh() async {}
 }
 
 PackageItem _pkg({String tier = 'basic', String status = 'active', PackageTalent? talent}) => PackageItem(

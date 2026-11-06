@@ -104,11 +104,14 @@ class _PackageTile extends StatelessWidget {
           const SizedBox(height: 2),
           Text(p.summary, maxLines: 2, overflow: TextOverflow.ellipsis, style: AppTextStyles.bodySmall.copyWith(color: AppColors.text2)),
           const SizedBox(height: 10),
-          Row(children: [
-            Text(formatMoney(p.price, p.currency), style: AppTextStyles.h3.copyWith(color: AppColors.money)),
-            const Spacer(),
-            Text('${p.deliveryDays} days · ${p.revisions} round${p.revisions == 1 ? '' : 's'} of changes', style: AppTextStyles.hint),
-          ]),
+          // Side by side when they fit, the terms under the price when they don't: neither gets cut off.
+          SizedBox(
+            width: double.infinity,
+            child: Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, spacing: 12, runSpacing: 2, children: [
+              Text(formatMoney(p.price, p.currency), style: AppTextStyles.h3.copyWith(color: AppColors.money)),
+              Text('${p.deliveryDays} days · ${p.revisions} round${p.revisions == 1 ? '' : 's'} of changes', style: AppTextStyles.hint),
+            ]),
+          ),
         ]),
       ),
     );

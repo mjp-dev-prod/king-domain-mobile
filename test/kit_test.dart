@@ -6,6 +6,7 @@ import 'package:king_domain/core/constants/app_motion.dart';
 import 'package:king_domain/core/theme/app_theme.dart';
 import 'package:king_domain/presentation/widgets/kit/kd_button.dart';
 import 'package:king_domain/presentation/widgets/kit/kd_fields.dart';
+import 'package:king_domain/presentation/widgets/kit/kd_sheet.dart';
 import 'package:king_domain/presentation/widgets/kit/kd_toast.dart';
 
 Widget _host(Widget child) => MaterialApp(
@@ -67,6 +68,61 @@ void main() {
       await tester.tap(find.text('Deliver'));
       await tester.pump();
       expect(find.byType(CircularProgressIndicator), findsNothing);
+    });
+
+    testWidgets('behind a sheet it opened it rests: the spinner means working, not waiting for someone to decide', (tester) async {
+      await tester.pumpWidget(_host(Builder(builder: (context) => KdButton(label: 'Answer', busyLabel: 'Working', onPressed: () => showKdSheet<void>(context, builder: (_) => const Text('The sheet'))))));
+
+      await tester.tap(find.text('Answer'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('The sheet'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.text('Answer'), findsOneWidget);
+    });
+
+    testWidgets('work that follows the sheet shows the spinner once the sheet is gone', (tester) async {
+      final gate = Completer<void>();
+      late BuildContext sheet;
+      await tester.pumpWidget(_host(Builder(
+        builder: (context) => KdButton(
+          label: 'Reply',
+          onPressed: () async {
+            await showKdSheet<void>(context, builder: (s) {
+              sheet = s;
+              return const Text('The sheet');
+            });
+            await gate.future;
+          },
+        ),
+      )));
+
+      await tester.tap(find.text('Reply'));
+      await tester.pumpAndSettle();
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+
+      Navigator.of(sheet).pop();
+      await tester.pump();
+      await tester.pump();
+      expect(find.byType(CircularProgressIndicator), findsOneWidget, reason: 'now it really is working');
+
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.text('Reply'), findsOneWidget);
+    });
+
+    testWidgets('a long working label in a half-width button shortens instead of overflowing', (tester) async {
+      final gate = Completer<void>();
+      await tester.pumpWidget(_host(SizedBox(width: 120, child: KdButton(label: 'Accept', busyLabel: 'Accepting', onPressed: () => gate.future))));
+
+      await tester.tap(find.text('Accept'));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Accepting'), findsOneWidget);
+      gate.complete();
+      await tester.pumpAndSettle();
     });
   });
 

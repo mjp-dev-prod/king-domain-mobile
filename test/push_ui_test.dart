@@ -103,6 +103,7 @@ void main() {
 
       _gateway.grantsOnRequest = PushPermission.granted;
       await tester.tap(find.text('Turn on'));
+      await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();
       expect(_gateway.requests, 1);
       expect(_server.registered, ['tok-fake']);

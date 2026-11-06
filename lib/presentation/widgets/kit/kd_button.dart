@@ -114,20 +114,25 @@ class _KdButtonState extends State<KdButton> {
     final c = disabled ? (bg: AppColors.surface2, fg: AppColors.text3) : _colors;
     final glow = !disabled && widget.variant == KdButtonVariant.primary;
     final reduce = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    // A spinner means "working". While a sheet or page sits on top of this button the person is the one deciding, so
+    // it rests. The action is still running, and if work follows (a reply posted once the sheet closes) the spinner
+    // comes back for it. Taps stay blocked by _phase.
+    final covered = !(ModalRoute.isCurrentOf(context) ?? true);
+    final phase = _phase == _Phase.busy && covered ? _Phase.idle : _phase;
 
-    final Widget content = switch (_phase) {
+    final Widget content = switch (phase) {
       _Phase.busy => Row(
         key: const ValueKey('busy'),
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.4, color: c.fg)),
-          if (widget.busyLabel != null) ...[const SizedBox(width: 10), Text(widget.busyLabel!)],
+          if (widget.busyLabel != null) ...[const SizedBox(width: 10), Flexible(child: Text(widget.busyLabel!, maxLines: 1, overflow: TextOverflow.ellipsis))],
         ],
       ),
       _Phase.done => Row(
         key: const ValueKey('done'),
         mainAxisSize: MainAxisSize.min,
-        children: [Icon(Icons.check_rounded, size: 20, color: c.fg), const SizedBox(width: 8), Text(widget.successLabel!)],
+        children: [Icon(Icons.check_rounded, size: 20, color: c.fg), const SizedBox(width: 8), Flexible(child: Text(widget.successLabel!, maxLines: 1, overflow: TextOverflow.ellipsis))],
       ),
       _Phase.idle => Row(
         key: const ValueKey('idle'),
@@ -141,7 +146,7 @@ class _KdButtonState extends State<KdButton> {
 
     return Pressable(
       onTap: disabled || _phase != _Phase.idle ? null : _run,
-      semanticLabel: _phase == _Phase.busy ? (widget.busyLabel ?? 'Working') : null,
+      semanticLabel: phase == _Phase.busy ? (widget.busyLabel ?? 'Working') : null,
       child: AnimatedContainer(
         duration: reduce ? Duration.zero : AppMotion.state,
         curve: AppMotion.ease,

@@ -226,6 +226,7 @@ void main() {
         history: ContractHistory(deliveries: [DeliveryVersion(version: 1, note: 'Brand kit attached', submittedAt: _now)]),
       );
 
+      // No scrolling: the list builds lazily, so this only finds the note while the work sits above the links.
       expect(find.text('Brand kit attached'), findsOneWidget);
       await tester.tap(find.text('Approve and pay ₦45,000'));
       await tester.pumpAndSettle();
@@ -236,6 +237,19 @@ void main() {
       await tester.pumpAndSettle();
       expect(jobs.calls, ['approve']);
       await _drainToasts(tester);
+    });
+
+    testWidgets('once paid, the next step comes before the delivered work', (tester) async {
+      await _show(
+        tester,
+        const ClientContractScreen(jobId: 'j1'),
+        _job(status: ContractStatus.approved),
+        history: ContractHistory(deliveries: [DeliveryVersion(version: 1, note: 'Brand kit attached', submittedAt: _now)]),
+      );
+
+      await tester.scrollUntilVisible(find.text('Brand kit attached'), 200, scrollable: find.byType(Scrollable).first);
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(find.text('Review the talent')).dy, lessThan(tester.getTopLeft(find.text('Brand kit attached')).dy));
     });
 
     testWidgets('after round 2 the change action becomes asking an admin', (tester) async {
