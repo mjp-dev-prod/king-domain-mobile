@@ -97,7 +97,76 @@ Step 4 belongs to Victor, on his phone: walk the whole journey on staging with a
 
 ## Results
 
-_To be filled in by the agent: for each of the 19, the cause, what you changed (in `lib/` or the test) and why;
-any assertion you changed and why; final `flutter analyze` output; final full `flutter test` count; the commit
-hashes pushed; the Codemagic and Vercel outcomes; anything left open. Also update the "Last full run" line in
-`docs/core/testing.md`._
+Filled in 2026-11-06.
+
+**Outcome.** All 19 pass. `flutter analyze lib test`: `No issues found! (ran in 195.6s)`. Full `flutter test -j 2`:
+`05:44 +423: All tests passed!`. App and admin are pushed. Both admin sites are confirmed live. **The Codemagic build
+is not confirmed** (see Pushes).
+
+### What was wrong
+
+Eleven of the 19 traced to real app bugs, six in all. The other eight were the tests.
+
+The overflow sizes below are from the test font, which is wider than Public Sans, so a phone would overflow less often.
+The rows still had no way to give on a narrow phone or with large text.
+
+| # | Cause | Changed | Where |
+|---|---|---|---|
+| 6, 7, 16, 17, 18 | **Not a pill or a skeleton.** A `KdButton` whose action opens a sheet returns a Future, so it showed its endless spinner for as long as the sheet stayed open. On a phone that is a spinner behind every such sheet. Proved with a test holding only a button and a sheet, which timed out the same way. | `KdButton` rests while `ModalRoute.isCurrentOf` is false. Work that follows the sheet still spins, and taps stay blocked. Fixes every button of this kind, not only these five. | `lib/` |
+| 2 | `Row` with a `Spacer` and two fixed texts (175 px). | `Wrap` with `spaceBetween`, so the terms drop under the price instead of being cut. | `lib/` |
+| 3, 4, 5 | Title and clock pill in a `Row` (2 px). | `Wrap`, so the pill drops under the title and the clock stays readable. | `lib/` |
+| 3 (second exception) | The busy label had no `Flexible`, so "Accepting" overflowed a half-width button (54 px). | `Flexible` and ellipsis on the busy and done labels. Also stubbed `refresh()` in the test's jobs fake, which was calling the network. | `lib/`, test |
+| 19 | **A regression, not only a test looking low.** S5 put the link tiles above Delivered work, so the client saw "Approve and pay" over a card buried under Receipt. | Delivered work leads while the status is `submitted`. Every other status keeps the links first, so "Review the talent", the only on-screen route to the review, stays high. The test passes with its assertion unchanged. | `lib/` |
+| 1 | The badge's label merged with its own digit, so a screen reader got the count twice. | `excludeSemantics: true`. Two test faults sat behind it: see Assertions, and `addTearDown(semantics.dispose)` runs after the framework's open-handle check, so it moved into the test body. | `lib/`, test |
+| 8, 10, 11 | Below the fold. One tap landed at y=910 on an 866-high screen. The copy and the buttons were right. | `_scrollTo` before the tap. | test |
+| 9 | The clock is there. It reads "Answer within 1 day 15h", and the test searched for the word "left". | See Assertions, plus `_scrollTo` before Accept. | test |
+| 12 | Finder too broad, as the handoff said. | See Assertions. | test |
+| 13 | Below the fold, under the track record. The piece is shown. | Scroll to it after the Save tap, since Save is above and would be gone from the lazy list. | test |
+| 14, 15 | Not an unbuilt chip. The `Bad state` was `calls.single` on an empty list: the private-question chip was at y=1199 on a 933-high screen, the tap missed, and Send stayed disabled. The refusal toast was fine. | `_tap` scrolls to each target first. | test |
+| Not on the list | `push_ui_test` "appears once after sign-in" failed after the `KdButton` fix. It never waited out the 450 ms hold, and passed only because the old spinner's frames carried `pumpAndSettle` one 100 ms step past the timer. One extra harmless `pump` fails it on the old button too (measured: settles at 400 ms, timer about 445 ms). | `pump(1 s)` after the tap, as the other tests do. | test |
+
+### Assertions changed
+
+None weakened.
+
+- **#1:** `bySemanticsLabel('3 unread')` could never pass: the row is one tappable node, and a separate node for the badge
+  would be worse for a screen reader. Now `RegExp(r'Sent the draft\n3 unread$')`, which pins the count to the end of what
+  is read out. Confirmed it fails with the app fix removed.
+- **#9:** `textContaining('left')` became `text('Answer within 1 day 15h')`. Stricter: it checks the real clock.
+- **#12:** `textContaining('more time')` became the exact agreement sentence. Stricter.
+- **#14:** the first tap on the disabled Send button used to land off-screen, so "cannot be sent" passed without touching
+  the button. It lands now.
+- **New tests:** three in `kit_test.dart` (rests behind a sheet, spins for work after it, long busy label), each seen
+  failing first, and one in `stage2_screens_test.dart` (once paid, the review link comes before the delivered work).
+- **Lint:** five old warnings in test fakes cleared, so analyze is fully clean.
+
+### Pushes
+
+| What | Result |
+|---|---|
+| App to `staging` | `e4dded9..26016ae`, 24 commits, fast-forward. App `master` not touched. This Results commit followed with `[skip ci]`, which Codemagic documents as skipping the build, so it shouldn't start or cancel one. |
+| Admin to `master` | `f16fc5b..c26599b`, 7 commits. |
+| Vercel | **Both deployed.** GitHub shows "Deployment has completed" from `king-domain-admin` and `king-domain-admin-staging` on `c26599b`, and both live bundles contain Chargebacks, Disputes, Reported reviews and Start proofs. The Vercel MCP returned 403 for this team, so this came from GitHub and the live sites. |
+| Codemagic | **Not confirmed.** This session had no Codemagic token or browser, and GitHub shows no status for the commit, so whether the build started or passed was not seen. |
+
+**A check for Victor, not in this handoff:** `codemagic.yaml` stops the staging build straight away unless a **draft
+release exists on the staging backend** (`GET /app/release/pending`). The admin MCP reads production, so whether staging
+has one was not seen. No draft was created here, because the workflow says a person writes the version and release
+notes. If the build fails with "No pending draft release found", author a draft in the staging admin (App Releases) and
+start the build again.
+
+### Left open
+
+- **Stale copy, a real dead end:** `client_contract_screen.dart:250` tells a client with an overdue job that cancelling
+  for a refund "isn't available in the app yet". The dispute screen now offers exactly that.
+  `stage2_screens_test.dart:266` asserts the old words. Not one of the 19, so left alone. Worth fixing before the walk-through.
+- **Settled disputes:** the general "Most problems are settled…" explainer sits above the outcome card, so someone
+  checking how it ended reads the intro first.
+- **Screen readers:** conversation rows say the person's name twice, once from the avatar and once from the title.
+- **Review scope:** this session read the 14 changed files in full. The 23 older app commits had a secrets and
+  file-name scan only, and the 7 admin commits a targeted pass (injection, link sinks, secrets; the backend validates
+  the links checked, and React 19 blocks `javascript:` URLs).
+- **Untracked, not committed:** `package.json`, `package-lock.json`, `node_modules/` and `transcript.txt` at the repo root.
+  They predate this work.
+- **Windows note for the next agent:** `TaskStop` ends the shell but not a `flutter` child. An orphaned test run slowed
+  every later run until it was killed by PID.

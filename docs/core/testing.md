@@ -4,7 +4,7 @@
 files 1 to 11 and then 12 to 38 (375 tests). The six failures in that run were test mistakes, plus one real bug: a
 chargeback due-time loop that could spin forever. All of them were fixed and re-run. The `disputes` file then passed 27/27,
 and `/transfer` was added to the fake Paystack. Admin: `npm run build` clean, no lint errors in new pages. App: `flutter analyze
-lib` clean; the full `flutter test` had 36 failures, 17 fixed, **19 open** (see
+lib test` clean; the first full `flutter test` had 36 failures, all fixed, and the final run passed 423/423 (see
 [test-fix-handoff-2026-11-06.md](test-fix-handoff-2026-11-06.md)).
 
 **Push notifications (2026-10-24, targeted runs):** backend `push.test.js` 30/30 plus `reminders`, `changes`, `deliveryDates`,
@@ -16,7 +16,7 @@ lib` clean; the full `flutter test` had 36 failures, 17 fixed, **19 open** (see
 `jobsRoutes.test.js` 37/37; app `delete_account_test.dart` 10, `api_client_delete_test.dart` 5, `photo_usage_test.dart`, `shell_tabs_test.dart`;
 `tools/session-notify` 22/22. No full suite has run since the line below.
 
-**Last full run: 2026-10-22 (after profile photos).** Backend 189/189, app 223/223, `flutter analyze` clean. (Before the work gaps: backend 108, app 83.) The backend 189 came from two runs: 174 in the full run, then `jobsRoutes.test.js` (15) re-run alone after its server failed to start twice within the 60 s wait on a slow Neon branch; it passed 15/15 and the wait is now 150 s.
+**Last full run: 2026-11-06 (after S0 to S8).** App 423/423 (`flutter test -j 2`, about 6 minutes), `flutter analyze lib test` clean. Backend full suite green, all 38 files. Details: [test-fix-handoff-2026-11-06.md](test-fix-handoff-2026-11-06.md). (Run of 2026-10-22, after profile photos: backend 189/189, app 223/223.)
 
 Evidence tags: 🟢 documented by Paystack (source named) · 🔵 observed in this repo's tests ·
 🟡 assumed, not yet seen against the real service · 🔴 not covered.
