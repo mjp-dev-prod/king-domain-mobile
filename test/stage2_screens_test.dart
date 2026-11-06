@@ -260,10 +260,10 @@ void main() {
       expect(find.text('Send to an admin'), findsOneWidget);
     });
 
-    testWidgets('overdue: says so plainly and promises no refund yet', (tester) async {
+    testWidgets('overdue: says so plainly and points to the refund route', (tester) async {
       await _show(tester, const ClientContractScreen(jobId: 'j1'), _job(status: ContractStatus.inProgress, overdue: true));
       expect(find.descendant(of: find.byType(NoticeCard), matching: find.text('3 days past the delivery date')), findsOneWidget);
-      expect(find.textContaining('isn\'t available in the app yet'), findsOneWidget);
+      expect(find.textContaining('You can cancel for a refund'), findsOneWidget);
     });
   });
 

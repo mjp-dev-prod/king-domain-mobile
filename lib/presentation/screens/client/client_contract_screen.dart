@@ -247,7 +247,7 @@ class _ClientContract extends ConsumerWidget {
               icon: Icons.error_outline_rounded,
               title: '3 days past the delivery date',
               body: 'Nothing has been delivered and no extension was agreed. We\'ve recorded this on the job. '
-                  'Cancelling for a refund of the budget isn\'t available in the app yet.',
+                  'You can cancel for a refund: open "Something\'s wrong" below.',
             ),
           ?_extensionCard(context, ref, history),
         ];
