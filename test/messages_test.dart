@@ -58,6 +58,8 @@ void main() {
     });
 
     testWidgets('conversations show the other person, a preview, and how many are waiting', (tester) async {
+      final semantics = tester.ensureSemantics();
+      addTearDown(semantics.dispose);
       await _show(tester, role: 'client', list: () async => [
         const ConversationSummary(id: 'c1', otherId: 't1', otherName: 'Ada Obi', preview: 'Can you start Monday?', lastMine: true, unread: 0),
         const ConversationSummary(id: 'c2', otherId: 't2', otherName: 'Tunde Bello', preview: 'Sent the draft', unread: 3),
@@ -83,10 +85,10 @@ void main() {
       expect(find.text('Try again'), findsOneWidget);
     });
 
-    testWidgets('the data saver switch is on the tab', (tester) async {
+    testWidgets('the data saver switch lives in Settings, so the tab is just the conversations', (tester) async {
       await _show(tester, role: 'client', list: () async => const []);
-      expect(find.textContaining('Data saver'), findsOneWidget);
-      expect(find.byType(Switch), findsOneWidget);
+      expect(find.textContaining('Data saver'), findsNothing);
+      expect(find.byType(Switch), findsNothing);
     });
   });
 

@@ -132,8 +132,12 @@ void main() {
       expect(find.text('Stay in the loop'), findsNothing);
       await tester.tap(find.text('Profile'));
       await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(find.text('Sign out'), 200, scrollable: find.byType(Scrollable).last);
-      await tester.ensureVisible(find.text('Sign out'));
+      await tester.scrollUntilVisible(find.text('Settings'), 200, scrollable: find.byType(Scrollable).last);
+      await tester.ensureVisible(find.text('Settings'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Settings'));
+      await tester.pumpAndSettle();
+      expect(find.text('Sign out'), findsOneWidget, reason: 'Settings opened');
       expect(find.text('Notifications'), findsNothing);
     });
   });
@@ -192,15 +196,18 @@ void main() {
       await tester.tap(find.text('Profile'));
       await tester.pumpAndSettle();
       // The list builds rows beyond the screen, so "found" is not "on screen": bring it into view.
-      await tester.scrollUntilVisible(find.text('Notifications'), 200, scrollable: find.byType(Scrollable).last);
-      await tester.ensureVisible(find.text('Notifications'));
+      await tester.scrollUntilVisible(find.text('Settings'), 200, scrollable: find.byType(Scrollable).last);
+      await tester.ensureVisible(find.text('Settings'));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Settings'));
+      await tester.pumpAndSettle();
+      expect(find.text('Notifications'), findsOneWidget);
     }
 
     testWidgets('says On when allowed', (tester) async {
       await _shell(tester, permission: PushPermission.granted);
       await toProfile(tester);
-      expect(find.text('On'), findsOneWidget);
+      expect(find.textContaining('On. We tell you'), findsOneWidget);
     });
 
     testWidgets('offers to turn on when the person said Not now, and asks Android when tapped', (tester) async {

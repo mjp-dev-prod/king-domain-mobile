@@ -3,7 +3,10 @@ import 'package:king_domain/data/models/job.dart';
 import 'package:king_domain/data/models/skill.dart';
 import 'package:king_domain/data/models/skill_submission.dart';
 import 'package:king_domain/data/models/packages.dart';
+import 'package:king_domain/presentation/providers/contract_extras_provider.dart';
+import 'package:king_domain/data/models/messaging.dart';
 import 'package:king_domain/presentation/providers/discovery_provider.dart';
+import 'package:king_domain/presentation/providers/messaging_provider.dart';
 import 'package:king_domain/presentation/providers/packages_provider.dart';
 import 'package:king_domain/presentation/providers/skill_submissions_provider.dart';
 import 'package:king_domain/presentation/providers/skills_provider.dart';
@@ -28,8 +31,16 @@ SkillCatalog testCatalog() => const SkillCatalog(
 
 /// Everything the job feed, job detail and talent tabs read from the server, answered with nothing in it. Pass
 /// [feed] for the jobs the feed should show.
+/// "Money shown in" is read from the server; a screen that lists it needs an answer that doesn't leave a timer behind.
+class FakeDisplayCurrency extends DisplayCurrencyNotifier {
+  @override
+  Future<String> build() async => 'NGN';
+}
+
 List<Override> discoveryStubs({List<Job> feed = const [], SkillHub? hub}) => [
   feedProvider.overrideWith(() => FakeFeed(feed)),
+  displayCurrencyProvider.overrideWith(FakeDisplayCurrency.new),
+  conversationsProvider.overrideWith((ref) async => const <ConversationSummary>[]),
   skillCatalogProvider.overrideWith((ref) async => testCatalog()),
   skillHubProvider.overrideWith((ref) async => hub ?? const SkillHub(skills: [], uploadsAvailable: true)),
   invitationsProvider.overrideWith((ref) async => const []),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:king_domain/core/theme/app_theme.dart';
+import 'discovery_test_support.dart';
 import 'package:king_domain/data/api_client.dart';
 import 'package:king_domain/data/models/talent_profile.dart';
 import 'package:king_domain/presentation/providers/auth_provider.dart';
@@ -11,6 +12,7 @@ import 'package:king_domain/presentation/providers/skill_submissions_provider.da
 import 'package:king_domain/data/models/identity.dart';
 import 'package:king_domain/presentation/providers/talent_profile_provider.dart';
 import 'package:king_domain/presentation/screens/onboarding/sign_up_screen.dart';
+import 'package:king_domain/presentation/screens/profile/settings_screen.dart';
 import 'package:king_domain/presentation/screens/shell/profile_tabs.dart';
 
 /// Account deletion in the app (docs/features/account-deletion-and-privacy.md): the rows on the
@@ -44,6 +46,7 @@ Future<ProviderContainer> _show(WidgetTester tester, Widget screen, {String role
   addTearDown(tester.view.reset);
   final container = ProviderContainer(overrides: [
     authProvider.overrideWith(() => _Auth(role)),
+    ...discoveryStubs(),
     talentProfileProvider.overrideWith(_Profile.new),
     identityProvider.overrideWith((ref) async => const IdentitySummary(status: IdentityStatus.notStarted, minor: false, guardianNeeded: false, canTransact: false, requiredForPaidActions: false)),
     aboutYouProvider.overrideWith((ref) async => const AboutYou()),
@@ -62,8 +65,18 @@ Future<ProviderContainer> _show(WidgetTester tester, Widget screen, {String role
   return container;
 }
 
+/// Settings is where the account rows live now: one row at the foot of the profile opens it.
+Future<void> _openSettings(WidgetTester tester) async {
+  await tester.scrollUntilVisible(find.text('Settings'), 200, scrollable: find.byType(Scrollable).first);
+  await tester.ensureVisible(find.text('Settings'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Settings'));
+  await tester.pumpAndSettle();
+}
+
 Future<void> _openSheet(WidgetTester tester) async {
-  await tester.scrollUntilVisible(find.text('Delete account'), 200, scrollable: find.byType(Scrollable).first);
+  await _openSettings(tester);
+  await tester.scrollUntilVisible(find.text('Delete account'), 200, scrollable: find.descendant(of: find.byType(SettingsScreen), matching: find.byType(Scrollable)).first);
   await tester.tap(find.text('Delete account'));
   await tester.pumpAndSettle();
 }
@@ -81,16 +94,20 @@ void main() {
   });
 
   group('the profile', () {
-    testWidgets('a client sees Privacy policy, Sign out and Delete account', (tester) async {
+    testWidgets('a client finds Privacy policy, Sign out and Delete account in Settings, not on the profile', (tester) async {
       await _show(tester, const ClientProfileTab());
+      expect(find.text('Delete account'), findsNothing);
+      await _openSettings(tester);
       expect(find.text('Privacy policy'), findsOneWidget);
       expect(find.text('Sign out'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Delete account'), 200, scrollable: find.descendant(of: find.byType(SettingsScreen), matching: find.byType(Scrollable)).first);
       expect(find.text('Delete account'), findsOneWidget);
     });
 
-    testWidgets('a talent sees them too', (tester) async {
+    testWidgets('a talent finds them there too', (tester) async {
       await _show(tester, const TalentProfileTab(), role: 'talent');
-      await tester.scrollUntilVisible(find.text('Delete account'), 200, scrollable: find.byType(Scrollable).first);
+      await _openSettings(tester);
+      await tester.scrollUntilVisible(find.text('Delete account'), 200, scrollable: find.descendant(of: find.byType(SettingsScreen), matching: find.byType(Scrollable)).first);
       expect(find.text('Privacy policy'), findsOneWidget);
       expect(find.text('Delete account'), findsOneWidget);
     });

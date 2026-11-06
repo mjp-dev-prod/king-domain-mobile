@@ -20,7 +20,6 @@ class MessagesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(conversationsProvider);
     final isClient = ref.watch(authProvider).user?.role == 'client';
-    final dataSaver = ref.watch(dataSaverProvider);
 
     final Widget body = async.when(
       loading: () => const Column(children: [SkeletonCard(), SizedBox(height: 12), SkeletonCard(), SizedBox(height: 12), SkeletonCard()]),
@@ -58,16 +57,6 @@ class MessagesScreen extends ConsumerWidget {
         children: [
           const ScreenHeader(title: 'Messages'),
           const SizedBox(height: 12),
-          // Where the data-saver setting lives: it changes what this tab and every conversation download.
-          KdCard(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            child: Row(children: [
-              const Icon(Icons.data_saver_on_rounded, size: 20, color: AppColors.text2),
-              const SizedBox(width: 10),
-              Expanded(child: Text(dataSaver ? 'Data saver is on: photos wait until you tap them' : 'Data saver: photos wait until you tap them', style: AppTextStyles.bodySmall)),
-              Semantics(label: 'Data saver', child: Switch(value: dataSaver, onChanged: (v) => ref.read(dataSaverProvider.notifier).set(v), activeTrackColor: AppColors.primary)),
-            ]),
-          ),
           const SizedBox(height: 14),
           body,
         ],

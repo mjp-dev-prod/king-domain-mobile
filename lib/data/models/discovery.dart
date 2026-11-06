@@ -1,5 +1,6 @@
 // Discovery as the server describes it (backend src/discovery.js, src/briefs.js and the routes that serve them;
 // PRD §4.6, decisions D21 to D25). No score and no rank anywhere: facts only.
+import '../../core/formatting/currency.dart';
 import 'job.dart';
 import 'reputation.dart';
 
@@ -11,6 +12,13 @@ List<Map<String, dynamic>> _maps(Object? v) => [
 ];
 
 // ── The feed ─────────────────────────────────────────────
+
+/// One filter that is on, worded for a person, and the filters with just that one taken off.
+class ActiveFilter {
+  final String label;
+  final FeedFilters without;
+  const ActiveFilter(this.label, this.without);
+}
 
 /// What a talent filters the job feed by (PRD §3.1 step 7). Everything is optional.
 class FeedFilters {
@@ -82,6 +90,26 @@ class FeedFilters {
       (fewApplicants ? 1 : 0);
 
   bool get isEmpty => activeCount == 0;
+
+  /// The filters that live in the filter sheet, each worded the way a person would say it, with what the feed looks like
+  /// once that one is taken off. The search text and the skill chips are not here: they are on the screen already, and
+  /// "for you" is an ordering, not a filter. Shown as removable chips, so "what is on" is never a bare number.
+  List<ActiveFilter> get active {
+    final currency = market == 'international' ? 'USD' : 'NGN';
+    String money(int v) => formatMoney(v, currency);
+    return [
+      if (types.isNotEmpty) ActiveFilter(types.map((t) => t.label).join(' or '), copyWith(types: const {})),
+      if (market != null) ActiveFilter(market == 'international' ? 'Paid in dollars' : 'Paid in naira', copyWith(market: null)),
+      if (budgetMin != null || budgetMax != null)
+        ActiveFilter(
+          budgetMin != null && budgetMax != null ? '${money(budgetMin!)} to ${money(budgetMax!)}' : budgetMin != null ? 'From ${money(budgetMin!)}' : 'Up to ${money(budgetMax!)}',
+          copyWith(budgetMin: null, budgetMax: null),
+        ),
+      if (deliveryDaysMax != null) ActiveFilter('Within $deliveryDaysMax days', copyWith(deliveryDaysMax: null)),
+      if (verifiedClient) ActiveFilter('Verified clients', copyWith(verifiedClient: false)),
+      if (fewApplicants) ActiveFilter('Few applicants', copyWith(fewApplicants: false)),
+    ];
+  }
 
   Map<String, String> toQuery({String? cursor, int limit = 20}) => {
     'limit': '$limit',

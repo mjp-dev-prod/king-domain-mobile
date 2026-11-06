@@ -136,8 +136,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Campus café logo'), findsOneWidget);
 
-    await tester.scrollUntilVisible(find.text('Sign out'), 200, scrollable: find.byType(Scrollable).last);
-    await tester.ensureVisible(find.text('Sign out'));
+    await tester.scrollUntilVisible(find.text('Settings'), 200, scrollable: find.byType(Scrollable).last);
+    await tester.ensureVisible(find.text('Settings'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Settings'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Sign out'));
     await tester.pumpAndSettle();

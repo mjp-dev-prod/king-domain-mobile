@@ -213,12 +213,15 @@ class _JobFeedScreenState extends ConsumerState<JobFeedScreen> {
               _IconTile(
                 icon: Icons.tune_rounded,
                 label: 'Filters',
-                active: filters.activeCount - (filters.query.trim().isEmpty ? 0 : 1) > 0,
-                badge: filters.activeCount - (filters.query.trim().isEmpty ? 0 : 1),
+                active: filters.active.isNotEmpty,
                 onTap: () => showKdSheet(context, builder: (sheet) => FeedFilterSheet(initial: filters, onApply: (f) { _setFilters(f); Navigator.of(sheet).pop(); })),
               ),
             ],
           ),
+          if (filters.active.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _ActiveFilters(filters: filters, onChange: _setFilters, onClear: () => _setFilters(FeedFilters(query: filters.query, skills: filters.skills))),
+          ],
           const SizedBox(height: 12),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -259,13 +262,57 @@ class _JobFeedScreenState extends ConsumerState<JobFeedScreen> {
   }
 }
 
+/// What the Filters button has switched on, said in words, each with a cross to take just that one off. This is what
+/// stands in for a bare number on the button: you read the feed's conditions without opening the sheet.
+class _ActiveFilters extends StatelessWidget {
+  final FeedFilters filters;
+  final ValueChanged<FeedFilters> onChange;
+  final VoidCallback onClear;
+  const _ActiveFilters({required this.filters, required this.onChange, required this.onClear});
+
+  @override
+  Widget build(BuildContext context) {
+    final active = filters.active;
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      clipBehavior: Clip.none,
+      child: Row(
+        children: [
+          for (final f in active)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Pressable(
+                onTap: () => onChange(f.without),
+                semanticLabel: 'Remove filter: ${f.label}',
+                child: Container(
+                  padding: const EdgeInsets.only(left: 12, right: 8, top: 7, bottom: 7),
+                  decoration: BoxDecoration(color: AppColors.primarySoft, borderRadius: BorderRadius.circular(AppDimensions.radiusPill)),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Text(f.label, style: AppTextStyles.bodySmall.copyWith(color: AppColors.primaryText, fontWeight: FontWeight.w600)),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.close_rounded, size: 15, color: AppColors.primaryText),
+                  ]),
+                ),
+              ),
+            ),
+          if (active.length > 1)
+            Pressable(
+              onTap: onClear,
+              semanticLabel: 'Clear all filters',
+              child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7), child: Text('Clear all', style: AppTextStyles.bodySmall.copyWith(color: AppColors.text2, fontWeight: FontWeight.w600))),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _IconTile extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool active;
-  final int badge;
   final VoidCallback onTap;
-  const _IconTile({required this.icon, required this.label, required this.active, required this.onTap, this.badge = 0});
+  const _IconTile({required this.icon, required this.label, required this.active, required this.onTap});
 
   @override
   Widget build(BuildContext context) => Tooltip(
@@ -281,7 +328,6 @@ class _IconTile extends StatelessWidget {
           alignment: Alignment.center,
           children: [
             Icon(icon, color: active ? AppColors.primaryText : AppColors.text2),
-            if (badge > 0) Positioned(top: 6, right: 6, child: Container(padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1), decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(99)), child: Text('$badge', style: AppTextStyles.bodySmall.copyWith(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w700)))),
           ],
         ),
       ),

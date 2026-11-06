@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:king_domain/core/theme/app_theme.dart';
+import 'package:king_domain/core/formatting/currency.dart';
 import 'package:king_domain/data/api_client.dart';
 import 'package:king_domain/data/models/discovery.dart';
 import 'package:king_domain/data/models/job.dart';
@@ -235,6 +236,17 @@ void main() {
       expect(const FeedFilters().isEmpty, isTrue, reason: 'for-you ordering is not a filter');
     });
 
+    test('the filters in the sheet are worded for a person, and each knows how to come off', () {
+      final f = const FeedFilters().copyWith(skills: {'writing'}, query: 'logo', types: {JobType.monthly, JobType.hourly}, market: 'international', budgetMin: 100, budgetMax: 500, deliveryDaysMax: 7, verifiedClient: true, fewApplicants: true);
+      expect(f.active.map((a) => a.label), ['Monthly or Hourly', 'Paid in dollars', '${formatMoney(100, 'USD')} to ${formatMoney(500, 'USD')}', 'Within 7 days', 'Verified clients', 'Few applicants']);
+      expect(f.active.length, 6, reason: 'search text and skill chips are on the screen already, so they are not listed');
+      final without = f.active.firstWhere((a) => a.label.startsWith('Within')).without;
+      expect(without.deliveryDaysMax, isNull);
+      expect(without.market, 'international', reason: 'taking one off leaves the others on');
+      expect(const FeedFilters(forYou: false).active, isEmpty);
+      expect(const FeedFilters().copyWith(budgetMax: 5000).active.single.label, startsWith('Up to'));
+    });
+
     test('a job carries its structured fields, and an old job still reads as one delivery in naira', () {
       final j = Job.fromJson({
         'id': 'a', 'title': 'T', 'category': 'Video & media', 'description': 'd', 'budget': '30000', 'createdAt': '2026-10-01T00:00:00Z',
@@ -335,6 +347,17 @@ void main() {
       final container = ProviderScope.containerOf(t.element(find.byType(JobFeedScreen)));
       expect(container.read(feedFiltersProvider).types, {JobType.monthly});
       expect(container.read(feedFiltersProvider).market, 'international');
+      // What is on is said in words under the search, and a cross takes just that one off.
+      expect(find.text('Monthly'), findsOneWidget);
+      expect(find.text('Paid in dollars'), findsOneWidget);
+      await t.tap(find.text('Paid in dollars'));
+      await t.settle();
+      expect(container.read(feedFiltersProvider).market, isNull);
+      expect(container.read(feedFiltersProvider).types, {JobType.monthly});
+      await t.tap(find.text('Monthly'));
+      await t.settle();
+      expect(find.text('Clear all'), findsNothing);
+      expect(container.read(feedFiltersProvider).types, isEmpty);
     });
   });
 

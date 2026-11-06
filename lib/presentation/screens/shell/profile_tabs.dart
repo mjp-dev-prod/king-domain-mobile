@@ -6,8 +6,6 @@ import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../data/models/talent_profile.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/push_gateway.dart';
-import '../../providers/push_service.dart';
 import '../../providers/talent_profile_provider.dart';
 import '../../widgets/kit/kd_button.dart';
 import '../../widgets/kit/kd_card.dart';
@@ -19,16 +17,11 @@ import '../../widgets/kit/status_pill.dart';
 import '../payments/payout_account_screen.dart';
 import '../identity/identity_rows.dart';
 import '../skills/skills_row.dart';
-import '../profile/delete_account_sheet.dart';
-import '../../providers/contract_extras_provider.dart';
-import '../profile/address_sheet.dart';
 import '../profile/my_reputation_screen.dart';
 import '../packages/my_packages_screen.dart';
 import '../packages/package_browse_screen.dart';
 import '../packages/package_orders_screen.dart';
-import '../profile/currency_sheet.dart';
-import '../profile/notifications_sheet.dart';
-import '../profile/privacy_link.dart';
+import '../profile/settings_screen.dart';
 import '../profile/profile_overview_screen.dart';
 import '../profile/profile_photo_button.dart';
 
@@ -58,43 +51,15 @@ void confirmSignOut(BuildContext context, WidgetRef ref) {
   );
 }
 
-/// Notifications, Privacy policy, Sign out and Delete account: the same rows at the foot of both profile tabs.
+/// The foot of both profile tabs: what is about your work (packages, reputation), then one way into Settings, where
+/// notifications, display, data, privacy and the account itself live.
 class _AccountGroup extends ConsumerWidget {
   const _AccountGroup();
 
-  Future<void> _notifications(BuildContext context, WidgetRef ref, PushPermission permission) async {
-    if (permission == PushPermission.granted) return showNotificationsSettingsInfo(context, on: true);
-    if (permission == PushPermission.denied) return showNotificationsSettingsInfo(context, on: false);
-    final result = await ref.read(pushServiceProvider).enable();
-    ref.invalidate(pushPermissionProvider);
-    // Refused again: Android may not show its prompt a second time, so say where the switch is.
-    if (result != PushPermission.granted && context.mounted) showNotificationsSettingsInfo(context, on: false);
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final permission = ref.watch(pushPermissionProvider).valueOrNull;
     return ListGroup(
       rows: [
-        // Hidden on a build or phone without Firebase: there is nothing to switch.
-        if (permission != null && permission != PushPermission.unavailable)
-          ListRow(
-            icon: Icons.notifications_none_rounded,
-            title: 'Notifications',
-            sub: switch (permission) {
-              PushPermission.granted => 'On',
-              PushPermission.notAsked => 'Off · tap to turn on',
-              _ => 'Off · turn on in your phone\'s settings',
-            },
-            subTone: permission == PushPermission.granted ? KdTone.ok : KdTone.plain,
-            onTap: () => _notifications(context, ref, permission),
-          ),
-        ListRow(
-          icon: Icons.currency_exchange_rounded,
-          title: 'Money shown in',
-          sub: switch (ref.watch(displayCurrencyProvider).valueOrNull) { 'USD' => 'Dollars, with naira amounts marked "about"', 'NGN' => 'Naira, with dollar amounts marked "about"', _ => 'Naira or dollars' },
-          onTap: () => showCurrencySheet(context),
-        ),
         if (ref.watch(authProvider).user?.role == 'client') ...[
           ListRow(icon: Icons.inventory_2_outlined, title: 'Packages', sub: 'Ready-made offers from verified talents', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PackageBrowseScreen()))),
           ListRow(icon: Icons.inbox_outlined, title: 'Your package orders', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PackageOrdersScreen()))),
@@ -108,14 +73,11 @@ class _AccountGroup extends ConsumerWidget {
           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MyReputationScreen())),
         ),
         ListRow(
-          icon: Icons.place_outlined,
-          title: 'Where we can reach you',
-          sub: 'Only used if something serious goes wrong on a job',
-          onTap: () => showAddressSheet(context),
+          icon: Icons.settings_outlined,
+          title: 'Settings',
+          sub: 'Notifications, money, data, privacy, your account',
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsScreen())),
         ),
-        ListRow(icon: Icons.privacy_tip_outlined, title: 'Privacy policy', sub: 'How we handle your data', onTap: () => openPrivacyPolicy(context)),
-        ListRow(icon: Icons.logout_rounded, title: 'Sign out', danger: true, onTap: () => confirmSignOut(context, ref)),
-        ListRow(icon: Icons.person_remove_outlined, title: 'Delete account', danger: true, onTap: () => showDeleteAccountSheet(context)),
       ],
     );
   }

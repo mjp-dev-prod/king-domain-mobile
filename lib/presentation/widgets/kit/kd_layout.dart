@@ -132,7 +132,9 @@ class ListRow extends StatelessWidget {
   final KdTone subTone;
   final bool danger;
   final VoidCallback? onTap;
-  const ListRow({super.key, required this.icon, required this.title, this.sub, this.subTone = KdTone.plain, this.danger = false, this.onTap});
+  /// Replaces the chevron: a switch for a setting, a value for a choice.
+  final Widget? trailing;
+  const ListRow({super.key, required this.icon, required this.title, this.sub, this.subTone = KdTone.plain, this.danger = false, this.onTap, this.trailing});
 
   @override
   Widget build(BuildContext context) {
@@ -161,7 +163,7 @@ class ListRow extends StatelessWidget {
                 ],
               ),
             ),
-            if (!danger) const Icon(Icons.chevron_right_rounded, color: AppColors.text3),
+            if (trailing != null) ...[const SizedBox(width: 8), trailing!] else if (!danger) const Icon(Icons.chevron_right_rounded, color: AppColors.text3),
           ],
         ),
       ),
