@@ -21,6 +21,8 @@ live here regardless of which sibling repo (backend, web, admin) they end up aff
   "Sample data" strip for screens built before their endpoint exists; read before building such a screen.
 - [Overnight build handoff](./core/overnight-handoff-2026-10-31.md) — **what S0 to S8 contain, what is verified and what is
   not, the decisions made without Victor, what was cut, the settings owed, and the order of the verification pass.**
+- [Test-fix handoff, 2026-11-06](./core/test-fix-handoff-2026-11-06.md) — **the 19 app tests still failing after the first
+  full verification run, how to fix them, the approved pushes (app to staging, admin), and the results once done.**
 - [S5 plan: contracts and money](./superpowers/plans/2026-10-31-s5-contracts-and-money.md) — the start proof and the 20%,
   drafts, receipts, display currency, and what was not built.
 - [S0 foundations plan](./superpowers/plans/2026-10-31-s0-foundations.md) — the task-by-task plan for slice S0

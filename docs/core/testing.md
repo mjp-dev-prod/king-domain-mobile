@@ -1,5 +1,12 @@
 # Testing — what is guaranteed, and what is not
 
+**Verification pass after S3 to S8 (2026-11-02 to 2026-11-06).** Backend: every file passes (all 38), in two parts:
+files 1 to 11 and then 12 to 38 (375 tests). The six failures in that run were test mistakes, plus one real bug: a
+chargeback due-time loop that could spin forever. All of them were fixed and re-run. The `disputes` file then passed 27/27,
+and `/transfer` was added to the fake Paystack. Admin: `npm run build` clean, no lint errors in new pages. App: `flutter analyze
+lib` clean; the full `flutter test` had 36 failures, 17 fixed, **19 open** (see
+[test-fix-handoff-2026-11-06.md](test-fix-handoff-2026-11-06.md)).
+
 **Push notifications (2026-10-24, targeted runs):** backend `push.test.js` 30/30 plus `reminders`, `changes`, `deliveryDates`,
 `lifecycle` (the `HTTP routes` suite) and `accountDeletion` all pass; app `push_service_test` 11, `push_ui_test` 11,
 `android_manifest_test`, `api_client_delete_test` and the shell/profile/logout tests pass; `dart analyze` clean; Android resources
