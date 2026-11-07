@@ -48,7 +48,7 @@ class ShortlistAsksScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               if (asks.isEmpty)
-                const EmptyState(icon: Icons.person_search_outlined, title: 'Nobody is asking right now', body: 'When the team is building a shortlist and your work fits, you are asked here first.'),
+                const EmptyState(icon: Icons.person_search_outlined, title: 'Nobody is asking right now', body: 'When our team is finding people for a client and your work fits, you are asked here first.'),
               for (var i = 0; i < asks.length; i++)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),

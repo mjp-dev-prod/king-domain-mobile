@@ -229,7 +229,9 @@ class SavedSearch {
 
 // ── The post-a-job form ──────────────────────────────────
 
-enum BriefKind { text, int, choice, milestones }
+/// The kinds of question a brief asks. `choices` is pick-several, `yesno` must be answered either way, and `note` is a
+/// fixed term of the job (shown, not asked; the server writes it into the brief).
+enum BriefKind { text, int, choice, choices, yesno, note, milestones }
 
 class BriefField {
   final String key;
@@ -240,6 +242,15 @@ class BriefField {
   final int? max;
   final List<String> options;
 
+  /// A short example under the question, e.g. "For example: Home, About, Contact".
+  final String? hint;
+
+  /// For a `note`: the term itself.
+  final String? text;
+
+  /// True when a ready-made package answers this itself, so its buyer isn't asked.
+  final bool scope;
+
   const BriefField({
     required this.key,
     required this.label,
@@ -248,6 +259,9 @@ class BriefField {
     this.min,
     this.max,
     this.options = const [],
+    this.hint,
+    this.text,
+    this.scope = false,
   });
 
   factory BriefField.fromJson(Map<String, dynamic> j) => BriefField(
@@ -260,6 +274,9 @@ class BriefField {
     min: (j['min'] as num?)?.toInt(),
     max: (j['max'] as num?)?.toInt(),
     options: [for (final o in (j['options'] as List? ?? const [])) o as String],
+    hint: j['hint'] as String?,
+    text: j['text'] as String?,
+    scope: j['scope'] as bool? ?? false,
   );
 }
 

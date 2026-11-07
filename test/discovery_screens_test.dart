@@ -21,6 +21,7 @@ import 'package:king_domain/presentation/screens/discovery/browse_talents_screen
 import 'package:king_domain/presentation/screens/discovery/invitations_screen.dart';
 import 'package:king_domain/presentation/screens/discovery/saved_searches_screen.dart';
 import 'package:king_domain/presentation/screens/discovery/shortlist_asks_screen.dart';
+import 'package:king_domain/presentation/screens/discovery/find_someone_screen.dart';
 import 'package:king_domain/presentation/screens/discovery/talent_profile_screen.dart';
 import 'package:king_domain/presentation/screens/jobs/job_feed_screen.dart';
 import 'discovery_test_support.dart';
@@ -56,6 +57,14 @@ class _Actions extends DiscoveryActions {
     calls.add('post');
     lastPost = body;
     return (job: _job(), held: true, reason: 'first_post');
+  }
+
+  @override
+  Future<({Job job, bool resubmitted})> editJob(String id, Map<String, dynamic> body) async {
+    _maybeFail();
+    calls.add('edit $id');
+    lastPost = body;
+    return (job: _job(), resubmitted: true);
   }
 
   @override
@@ -151,6 +160,9 @@ BriefSpec _spec() => BriefSpec.fromJson({
     {'key': 'deliverables', 'label': 'What you want delivered', 'kind': 'text', 'required': true, 'max': 600},
     {'key': 'quantity', 'label': 'How many', 'kind': 'int', 'required': true, 'min': 1, 'max': 1000},
     {'key': 'usageRights', 'label': 'What the work may be used for', 'kind': 'choice', 'required': true, 'options': ['none', 'organic']},
+    {'key': 'files', 'label': 'Files you get', 'kind': 'choices', 'required': true, 'options': ['Print-ready PDF', 'Transparent PNG', 'Editable source file']},
+    {'key': 'projectFile', 'label': 'Editable project file included', 'kind': 'yesno', 'required': true},
+    {'key': 'handover', 'label': 'At the end you get', 'kind': 'note', 'required': false, 'text': 'The admin login and the code, in your name.'},
   ],
 });
 
@@ -559,6 +571,31 @@ void main() {
     });
   });
 
+  group('find someone for me', () {
+    dtest('says a person picks and asks people first, with no price and without the word shortlist', (t) async {
+      await t.pumpWidget(_app(const FindSomeoneScreen(), role: 'client', extra: [
+        shortlistsProvider.overrideWith((ref) async => const ShortlistsData(requests: [], promise: ShortlistPromise(hours: 20, basedOn: 20))),
+      ]));
+      await t.settle();
+      expect(find.text('How it works'), findsOneWidget);
+      expect(find.textContaining('Someone on our team picks 3 to 5 verified people'), findsOneWidget);
+      expect(find.textContaining('Nobody is shown to you unless they say they are free'), findsOneWidget);
+      expect(find.text('Ask us to find someone'), findsOneWidget);
+      expect(find.text('Free'), findsNothing, reason: 'the service will be paid; the price is an open decision');
+      expect(find.textContaining(RegExp('shortlist', caseSensitive: false)), findsNothing);
+    });
+
+    dtest('the request form asks the skill\'s own brief and shows no price tag', (t) async {
+      await t.pumpWidget(_app(const NewShortlistScreen(), role: 'client', extra: [briefSpecProvider.overrideWith((ref, key) async => _spec())]));
+      await t.settle();
+      expect(find.text('Ask us to find someone'), findsOneWidget);
+      expect(find.text('Free'), findsNothing);
+      await t.tapText('Graphic design');
+      expect(find.text('Files you get'), findsOneWidget);
+      expect(find.text('Editable project file included'), findsOneWidget);
+    });
+  });
+
   group('post a job', () {
     List<Override> specs() => [briefSpecProvider.overrideWith((ref, key) async => _spec())];
 
@@ -581,6 +618,10 @@ void main() {
       await t.enterText(find.widgetWithText(TextFormField, 'What you want delivered'), 'One logo, three files');
       await t.enterText(find.widgetWithText(TextFormField, 'How many'), '1');
       await t.tapText('Posting on my own pages', waitAfter: false);
+      await t.tapText('Editable source file', waitAfter: false);
+      await t.tapText('Transparent PNG', waitAfter: false);
+      await t.tapText('Yes', waitAfter: false);
+      expect(find.text('The admin login and the code, in your name.'), findsOneWidget, reason: 'a fixed term is shown, not asked');
       await t.pressButton('Continue');
       expect(find.text('Price and delivery'), findsOneWidget);
       await t.enterText(find.widgetWithText(TextFormField, 'Price'), '25000');
@@ -595,7 +636,13 @@ void main() {
       expect(_Actions.lastPost!['skillKey'], 'graphic-design');
       expect(_Actions.lastPost!['jobType'], 'oneDelivery');
       expect(_Actions.lastPost!['price'], 25000.0);
-      expect(_Actions.lastPost!['brief'], {'deliverables': 'One logo, three files', 'quantity': 1, 'usageRights': 'organic'});
+      expect(_Actions.lastPost!['brief'], {
+        'deliverables': 'One logo, three files',
+        'quantity': 1,
+        'usageRights': 'organic',
+        'files': ['Transparent PNG', 'Editable source file'], // in the form's order, not the order tapped
+        'projectFile': true,
+      }, reason: 'the fixed term is not sent: the server writes it');
       expect(find.text('A person is reading it first'), findsOneWidget, reason: 'a first post is held (D17), and the screen says so');
     });
 
@@ -610,6 +657,43 @@ void main() {
       expect(find.widgetWithText(TextFormField, 'Job title'), findsOneWidget);
     });
 
+    dtest('a pick-several needs at least one, and a yes or no must be answered either way', (t) async {
+      await t.pumpWidget(_app(const Scaffold(body: PostJobFlow()), role: 'client', extra: specs()));
+      await t.settle();
+      await toBrief(t);
+      await t.enterText(find.widgetWithText(TextFormField, 'Job title'), 'Logo for a bakery');
+      await t.enterText(find.widgetWithText(TextFormField, 'What the job is, in your words'), 'A simple logo for a small bakery in Yaba, two colours.');
+      await t.enterText(find.widgetWithText(TextFormField, 'What you want delivered'), 'One logo');
+      await t.enterText(find.widgetWithText(TextFormField, 'How many'), '1');
+      await t.tapText('Posting on my own pages', waitAfter: false);
+      await t.pressButton('Continue');
+      expect(find.text('Files you get: choose at least one.'), findsOneWidget);
+      await t.tapText('Print-ready PDF', waitAfter: false);
+      await t.pressButton('Continue');
+      expect(find.text('Editable project file included: answer yes or no.'), findsOneWidget, reason: 'left unanswered is not the same as no');
+      await t.tapText('No', waitAfter: false);
+      await t.pressButton('Continue');
+      expect(find.text('Price and delivery'), findsOneWidget);
+    });
+
+    dtest('changing a sent-back post keeps its picks and its yes or no', (t) async {
+      final held = Job(
+        id: 'j9', title: 'Logo for a bakery', category: 'Design & creative', description: 'A simple logo for a small bakery in Yaba, two colours.', budget: 25000, clientId: 'c1', clientName: 'Me',
+        postedAt: DateTime.now(), skillKey: 'graphic-design', skillLabel: 'Graphic design', postStatus: 'rejected', rejection: const PostRejection(reasonCode: 'vague', note: 'Say how many files.'),
+        brief: const {'deliverables': 'One logo', 'quantity': 1, 'usageRights': 'organic', 'files': ['Transparent PNG'], 'projectFile': false}, deliveryDays: 7,
+      );
+      await t.pumpWidget(_app(Scaffold(body: PostJobFlow(editing: held)), role: 'client', extra: specs()));
+      await t.settle();
+      await t.pressButton('Continue');
+      expect(find.text('Price and delivery'), findsOneWidget, reason: 'every answer came back, so nothing is missing');
+      await t.pressButton('Continue');
+      await t.pressButton('Continue');
+      await t.pressButton('Send it again');
+      expect(_Actions.calls, ['edit j9']);
+      expect(_Actions.lastPost!['brief']['files'], ['Transparent PNG']);
+      expect(_Actions.lastPost!['brief']['projectFile'], false, reason: 'a saved "no" stays a no, not unanswered');
+    });
+
     dtest('the server naming a field takes the client back to the step that has it', (t) async {
       await t.pumpWidget(_app(const Scaffold(body: PostJobFlow()), role: 'client', extra: specs()));
       await t.settle();
@@ -619,6 +703,8 @@ void main() {
       await t.enterText(find.widgetWithText(TextFormField, 'What you want delivered'), 'One logo');
       await t.enterText(find.widgetWithText(TextFormField, 'How many'), '1');
       await t.tapText('Posting on my own pages', waitAfter: false);
+      await t.tapText('Print-ready PDF', waitAfter: false);
+      await t.tapText('No', waitAfter: false);
       await t.pressButton('Continue');
       await t.enterText(find.widgetWithText(TextFormField, 'Price'), '25000');
       await t.pressButton('Continue');

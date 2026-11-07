@@ -16,6 +16,7 @@ import '../../providers/discovery_provider.dart';
 import '../../providers/skills_provider.dart';
 import '../../widgets/contract/contract_parts.dart';
 import '../../widgets/kit/kd_auth.dart';
+import '../../widgets/brief/brief_form.dart';
 import '../../widgets/kit/kd_button.dart';
 import '../../widgets/kit/kd_card.dart';
 import '../../widgets/kit/kd_chip.dart';
@@ -62,8 +63,7 @@ class _PostJobFlowState extends ConsumerState<PostJobFlow> {
   final _description = TextEditingController();
   final _price = TextEditingController();
   final _days = TextEditingController(text: '7');
-  final Map<String, TextEditingController> _fields = {};
-  final Map<String, String> _chosen = {};
+  late final BriefAnswers _answers;
   final List<_MilestoneRow> _milestones = [_MilestoneRow(), _MilestoneRow()];
   final List<TextEditingController> _questions = [];
   String? _error;
@@ -76,6 +76,7 @@ class _PostJobFlowState extends ConsumerState<PostJobFlow> {
   void initState() {
     super.initState();
     final e = widget.editing;
+    _answers = BriefAnswers(e == null ? null : {for (final entry in e.brief.entries) if (entry.key != 'milestones') entry.key: entry.value});
     if (e != null) {
       _type = e.jobType;
       _skillKey = e.skillKey;
@@ -88,31 +89,25 @@ class _PostJobFlowState extends ConsumerState<PostJobFlow> {
       for (final q in e.screeningQuestions) {
         _questions.add(TextEditingController(text: q));
       }
-      for (final entry in e.brief.entries) {
-        if (entry.key == 'milestones') {
-          _milestones.clear();
-          for (final m in (entry.value as List).cast<Map<String, dynamic>>()) {
-            _milestones.add(_MilestoneRow()
-              ..title.text = '${m['title']}'
-              ..amount.text = '${m['amount']}'
-              ..days.text = '${m['days']}');
-          }
-        } else if (entry.value is String && _isChoiceKey(entry.key)) {
-          _chosen[entry.key] = entry.value as String;
-        } else {
-          _fields[entry.key] = TextEditingController(text: '${entry.value}');
+      final saved = e.brief['milestones'];
+      if (saved is List) {
+        _milestones.clear();
+        for (final m in saved.cast<Map<String, dynamic>>()) {
+          _milestones.add(_MilestoneRow()
+            ..title.text = '${m['title']}'
+            ..amount.text = '${m['amount']}'
+            ..days.text = '${m['days']}');
         }
       }
       _step = _Step.brief;
     }
   }
 
-  static bool _isChoiceKey(String k) => k == 'usageRights' || k == 'aspectRatio';
-
   @override
   void dispose() {
     _scroll.dispose();
-    for (final c in [_title, _description, _price, _days, ..._fields.values, ..._questions]) {
+    _answers.dispose();
+    for (final c in [_title, _description, _price, _days, ..._questions]) {
       c.dispose();
     }
     for (final m in _milestones) {
@@ -121,13 +116,15 @@ class _PostJobFlowState extends ConsumerState<PostJobFlow> {
     super.dispose();
   }
 
-  TextEditingController _field(String key) => _fields.putIfAbsent(key, TextEditingController.new);
+  TextEditingController _field(String key) => _answers.controller(key);
 
   /// Shows a problem at the top, under the step's heading, and scrolls there: the button that raised it is often
   /// at the bottom of the screen, and a message down there would be missed.
   void _fail(String message) {
     setState(() => _error = message);
-    if (_scroll.hasClients) unawaited(_scroll.animateTo(0, duration: const Duration(milliseconds: 250), curve: Curves.easeOutCubic));
+    // A jump, not an animation: on a long brief the animated scroll did not reach the top in a test of this screen, which would
+    // leave the person at the foot of the form with the problem out of sight. The brief grew with each skill's own questions.
+    if (_scroll.hasClients) _scroll.jumpTo(0);
   }
 
   void _go(_Step s) => setState(() {
@@ -148,25 +145,15 @@ class _PostJobFlowState extends ConsumerState<PostJobFlow> {
   String? _validBrief(BriefSpec spec) {
     if (_title.text.trim().length < 5) return 'Give the job a title of at least 5 characters.';
     if (_description.text.trim().length < 20) return 'Describe the job in at least 20 characters.';
-    for (final f in spec.fields) {
-      switch (f.kind) {
-        case BriefKind.text:
-          if (f.required && _field(f.key).text.trim().isEmpty) return '${f.label}: fill this in.';
-        case BriefKind.int:
-          final raw = _field(f.key).text.trim();
-          if (raw.isEmpty && !f.required) break;
-          final n = int.tryParse(raw);
-          if (n == null || n < (f.min ?? 0) || n > (f.max ?? 1 << 30)) return '${f.label}: a whole number from ${f.min ?? 0} to ${f.max}.';
-        case BriefKind.choice:
-          if (f.required && !_chosen.containsKey(f.key)) return '${f.label}: choose one.';
-        case BriefKind.milestones:
-          if (_milestones.length < 2) return 'Add at least 2 milestones.';
-          for (final m in _milestones) {
-            if (m.title.text.trim().isEmpty) return 'Each milestone needs a title.';
-            if ((double.tryParse(m.amount.text.trim()) ?? 0) <= 0) return 'Each milestone needs an amount.';
-            final d = int.tryParse(m.days.text.trim());
-            if (d == null || d < 1 || d > 60) return 'Each milestone takes 1 to 60 days.';
-          }
+    final problem = _answers.validate(spec.fields);
+    if (problem != null) return problem;
+    if (spec.fields.any((f) => f.kind == BriefKind.milestones)) {
+      if (_milestones.length < 2) return 'Add at least 2 milestones.';
+      for (final m in _milestones) {
+        if (m.title.text.trim().isEmpty) return 'Each milestone needs a title.';
+        if ((double.tryParse(m.amount.text.trim()) ?? 0) <= 0) return 'Each milestone needs an amount.';
+        final d = int.tryParse(m.days.text.trim());
+        if (d == null || d < 1 || d > 60) return 'Each milestone takes 1 to 60 days.';
       }
     }
     return null;
@@ -202,20 +189,9 @@ class _PostJobFlowState extends ConsumerState<PostJobFlow> {
   }
 
   Map<String, dynamic> _body(BriefSpec spec) {
-    final brief = <String, dynamic>{};
-    for (final f in spec.fields) {
-      switch (f.kind) {
-        case BriefKind.text:
-          final v = _field(f.key).text.trim();
-          if (v.isNotEmpty) brief[f.key] = v;
-        case BriefKind.int:
-          final n = int.tryParse(_field(f.key).text.trim());
-          if (n != null) brief[f.key] = n;
-        case BriefKind.choice:
-          if (_chosen[f.key] != null) brief[f.key] = _chosen[f.key];
-        case BriefKind.milestones:
-          brief['milestones'] = [for (final m in _milestones) {'title': m.title.text.trim(), 'amount': double.parse(m.amount.text.trim()), 'days': int.parse(m.days.text.trim())}];
-      }
+    final brief = _answers.toJson(spec.fields);
+    if (spec.fields.any((f) => f.kind == BriefKind.milestones)) {
+      brief['milestones'] = [for (final m in _milestones) {'title': m.title.text.trim(), 'amount': double.parse(m.amount.text.trim()), 'days': int.parse(m.days.text.trim())}];
     }
     return {
       'title': _title.text.trim(),
@@ -525,17 +501,12 @@ class _PostJobFlowState extends ConsumerState<PostJobFlow> {
   Widget _fieldWidget(BriefField f) {
     switch (f.kind) {
       case BriefKind.text:
-        return KdTextField(controller: _field(f.key), label: f.required ? f.label : '${f.label} (optional)', maxLines: (f.max ?? 0) > 200 ? 3 : 1);
       case BriefKind.int:
-        return KdTextField(controller: _field(f.key), label: f.required ? f.label : '${f.label} (optional)', keyboardType: TextInputType.number);
       case BriefKind.choice:
-        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(f.label, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            for (final o in f.options) KdChoiceChip(label: f.key == 'usageRights' ? usageRightsLabel(o) : o, selected: _chosen[f.key] == o, onTap: () => setState(() => _chosen[f.key] = o)),
-          ]),
-        ]);
+      case BriefKind.choices:
+      case BriefKind.yesno:
+      case BriefKind.note:
+        return BriefFieldInput(field: f, answers: _answers, onChanged: () => setState(() {}));
       case BriefKind.milestones:
         return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Milestones (2 to 5)', style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w600)),

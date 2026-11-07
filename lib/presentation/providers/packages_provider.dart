@@ -46,8 +46,9 @@ class PackageActions {
 
   ApiClient get _api => ApiClient.instance;
 
-  Future<void> save(String skillKey, String tier, {required String title, required String summary, required String included, required String formats, required num price, required int deliveryDays, required int quantity, required int revisions}) async {
-    await _api.put('/users/me/packages/$skillKey/$tier', body: {'title': title, 'summary': summary, 'included': included, 'formats': formats, 'price': price, 'deliveryDays': deliveryDays, 'quantity': quantity, 'revisions': revisions});
+  /// [scope] answers the skill's own package fields (pages and features for a website, platforms for social media).
+  Future<void> save(String skillKey, String tier, {required String title, required String summary, required String included, required Map<String, dynamic> scope, required num price, required int deliveryDays, required int revisions}) async {
+    await _api.put('/users/me/packages/$skillKey/$tier', body: {'title': title, 'summary': summary, 'included': included, 'scope': scope, 'price': price, 'deliveryDays': deliveryDays, 'revisions': revisions});
     _ref.invalidate(myPackagesProvider);
   }
 

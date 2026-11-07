@@ -110,7 +110,7 @@ class _KdTextFieldState extends State<KdTextField> {
       controller: widget.controller,
       obscureText: _obscure,
       maxLines: widget.isPassword ? 1 : widget.maxLines,
-      minLines: widget.isPassword ? 1 : (widget.maxLines > 1 ? 3 : 1),
+      minLines: widget.isPassword ? 1 : (widget.maxLines > 1 ? (widget.maxLines < 3 ? widget.maxLines : 3) : 1),
       keyboardType: widget.maxLines > 1 ? TextInputType.multiline : widget.keyboardType,
       autofillHints: widget.autofillHints,
       textInputAction: widget.textInputAction,

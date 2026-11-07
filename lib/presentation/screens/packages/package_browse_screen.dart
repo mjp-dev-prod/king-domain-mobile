@@ -6,10 +6,10 @@ import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/formatting/currency.dart';
 import '../../../data/api_client.dart';
-import '../../../data/models/discovery.dart';
 import '../../../data/models/packages.dart';
 import '../../providers/packages_provider.dart';
 import '../../providers/skills_provider.dart';
+import '../../widgets/brief/brief_form.dart';
 import '../../widgets/contract/contract_parts.dart';
 import '../../widgets/kit/kd_button.dart';
 import '../../widgets/kit/kd_card.dart';
@@ -128,52 +128,26 @@ class PackageDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _PackageDetailScreenState extends ConsumerState<PackageDetailScreen> {
-  final Map<String, TextEditingController> _text = {};
-  final Map<String, String> _choice = {};
+  final _answers = BriefAnswers();
   final _note = TextEditingController();
   String? _error;
 
   @override
   void dispose() {
-    for (final c in _text.values) {
-      c.dispose();
-    }
+    _answers.dispose();
     _note.dispose();
     super.dispose();
   }
 
-  TextEditingController _c(String key) => _text.putIfAbsent(key, TextEditingController.new);
-
-  Map<String, dynamic> _brief(List<BriefField> fields) {
-    final out = <String, dynamic>{};
-    for (final f in fields) {
-      switch (f.kind) {
-        case BriefKind.text:
-          final v = _c(f.key).text.trim();
-          if (v.isNotEmpty) out[f.key] = v;
-        case BriefKind.int:
-          final n = int.tryParse(_c(f.key).text.trim());
-          if (n != null) out[f.key] = n;
-        case BriefKind.choice:
-          if (_choice[f.key] != null) out[f.key] = _choice[f.key];
-        case BriefKind.milestones:
-          break;
-      }
-    }
-    return out;
-  }
-
   Future<void> _order(PackageDetail d) async {
-    for (final f in d.formFields.where((f) => f.required)) {
-      final empty = f.kind == BriefKind.choice ? _choice[f.key] == null : _c(f.key).text.trim().isEmpty;
-      if (empty) {
-        setState(() => _error = 'Fill in: ${f.label}');
-        throw const ShownError();
-      }
+    final problem = _answers.validate(d.formFields);
+    if (problem != null) {
+      setState(() => _error = problem);
+      throw const ShownError();
     }
     setState(() => _error = null);
     try {
-      await ref.read(packageActionsProvider).order(d.package.id, brief: _brief(d.formFields), note: _note.text.trim().isEmpty ? null : _note.text.trim());
+      await ref.read(packageActionsProvider).order(d.package.id, brief: _answers.toJson(d.formFields), note: _note.text.trim().isEmpty ? null : _note.text.trim());
     } on ApiException catch (e) {
       setState(() => _error = e.message);
       throw const ShownError();
@@ -212,10 +186,20 @@ class _PackageDetailScreenState extends ConsumerState<PackageDetailScreen> {
                   Text(p.summary, style: AppTextStyles.bodyMedium),
                   const SizedBox(height: 12),
                   _fact('Included', p.included),
-                  _fact('How many', '${p.quantity}'),
-                  _fact('Formats', p.formats),
                   _fact('Delivered in', '${p.deliveryDays} days'),
                   _fact('Changes', '${p.revisions} round${p.revisions == 1 ? '' : 's'} included'),
+                  if (p.scopeLines.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    // The skill's own terms, e.g. pages and features for a website. Labels can be long, so each sits above its answer.
+                    for (final l in p.scopeLines)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(l.label, style: AppTextStyles.hint),
+                          Text(l.value, style: AppTextStyles.bodySmall.copyWith(color: AppColors.text)),
+                        ]),
+                      ),
+                  ],
                 ]),
               ),
               const SizedBox(height: 12),
@@ -227,7 +211,7 @@ class _PackageDetailScreenState extends ConsumerState<PackageDetailScreen> {
               const SizedBox(height: 4),
               Text('The package already covers what is included. Tell them the rest.', style: AppTextStyles.hint),
               const SizedBox(height: 10),
-              for (final f in d.formFields) ...[_field(f), const SizedBox(height: 10)],
+              for (final f in d.formFields) ...[BriefFieldInput(field: f, answers: _answers, onChanged: () => setState(() {})), const SizedBox(height: 10)],
               KdTextField(controller: _note, label: 'Anything else? (optional)', maxLines: 3),
               const SizedBox(height: 14),
               NoticeCard(
@@ -253,19 +237,4 @@ class _PackageDetailScreenState extends ConsumerState<PackageDetailScreen> {
       Expanded(child: Text(value, style: AppTextStyles.bodySmall)),
     ]),
   );
-
-  Widget _field(BriefField f) {
-    switch (f.kind) {
-      case BriefKind.choice:
-        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(f.label, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 6),
-          Wrap(spacing: 8, runSpacing: 8, children: [for (final o in f.options) KdChoiceChip(label: f.key == 'usageRights' ? usageRightsLabel(o) : o, selected: _choice[f.key] == o, onTap: () => setState(() => _choice[f.key] = o))]),
-        ]);
-      case BriefKind.int:
-        return KdTextField(controller: _c(f.key), label: f.label, keyboardType: TextInputType.number);
-      default:
-        return KdTextField(controller: _c(f.key), label: f.required ? f.label : '${f.label} (optional)', maxLines: 2);
-    }
-  }
 }

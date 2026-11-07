@@ -82,8 +82,11 @@ Rules that apply everywhere:
 1. **Sign up**: "I'm here to hire"; individual or business.
 2. **Identity**: NIN and selfie, CAC for a business, passport for international (D16, D37).
 3. **Find talent**, one of five ways (discovery §1): post a job; browse talents (recently active first,
-   region filter) and invite; buy a package; ask "find someone for me" (a shortlist of 3–5 within the
-   published time, D24).
+   region filter) and invite; buy a package; ask "find someone for me" (a person on the team picks 3–5
+   verified talents, asks each first, and sends only those who said yes, within the published time, D24). It is
+   called "find someone for me" on screen, never "shortlist": that word is the client's own marking of applicants.
+   It is **not free** (Victor, 2026-11-07): the screen shows no price until the monetisation decision is made. Later,
+   an AI intake like LinkedIn's will ask the client plain-language questions and fill the brief in for them; not built.
 4. **Post a job**: type (one delivery, milestones, monthly, hourly), skill, the skill's structured brief,
    price and currency, delivery days, screening questions, public or invite-only. A new client's first post
    is screened before it goes live (D17).
@@ -122,8 +125,23 @@ No contests (D1). The agreed timers (24 h to pay, delivery dates, 2 extensions w
 review, 2 change rounds, overdue at +3 days) apply per unit: per job, milestone, month or week. The numbers
 for hourly reports and monthly notice are to be confirmed (§7).
 
-**The structured brief**, per skill and type: deliverables, quantity, formats, revisions included, usage
-rights, files the client provides, references, deadline. It is what reviews and disputes are judged against.
+**The structured brief**, per skill and type. It is what reviews and disputes are judged against. Four questions
+hold for every skill: what you want done, rounds of changes (0 to 2), files or logins the client provides, and
+examples. Everything else belongs to the skill, because "how many", "formats or sizes" and ad-usage terms mean
+nothing for a website (Victor, 2026-11-07):
+
+| Skill | Its own questions |
+|---|---|
+| Graphic design | kind of design, how many, size or where it is used, first ideas to choose from, files delivered, brand notes, what the design may be used for |
+| Short-form video | how many, length, shape, where the footage is, what is included (captions, music, colour, motion), editable project file, what the videos may be used for |
+| Social media | platforms, posts a week, who makes the posts, does the talent post for the client (needs account access), replying to comments, monthly report, brand voice |
+| Writing | kind, how many, words each, tone, keywords, sources, whose name goes on it, delivered as |
+| Web development | what is needed (new site, changes, landing page, shop, web app), pages, features, products, built with, who supplies words and pictures, domain and hosting, and a fixed term: at the end the client gets the admin login, the code and every account in their own name |
+
+A ready-made package answers its skill's own questions itself (the fields marked as the package's in
+`briefs.packageFields`); its buyer fills in the rest. Packages saved before 2026-11-07 are hidden from clients until
+their talent answers the new questions. Days of bug fixes after launch are deliberately **not** part of a web brief
+(Victor, 2026-11-07): that would be an obligation after payment, which the dispute rules do not cover.
 
 ### 4.2 Start proof (D2, D8, D35)
 | Skill | Start proof |

@@ -17,6 +17,9 @@ class PackageTalent {
   String get lastActiveText => switch (lastActive) { 'today' => 'Active today', 'this_week' => 'Active this week', 'this_month' => 'Active this month', _ => 'Active a while ago' };
 }
 
+/// One line of what a package states, already in words ("How many pages or screens" / "5").
+typedef ScopeLine = ({String label, String value});
+
 class PackageItem {
   final String id;
   final String skillKey;
@@ -29,8 +32,15 @@ class PackageItem {
   final int deliveryDays;
   final int revisions;
   final String included;
-  final int quantity;
-  final String formats;
+
+  /// The package's answers to its skill's own fields (pages and features for a website, platforms for social media).
+  final Map<String, dynamic> scope;
+
+  /// The same, in words, in the order the skill asks them.
+  final List<ScopeLine> scopeLines;
+
+  /// Saved before each skill had its own fields: hidden from clients until the talent answers them.
+  final bool needsUpdate;
   final String status;
   final PackageTalent? talent;
   const PackageItem({
@@ -45,8 +55,9 @@ class PackageItem {
     required this.deliveryDays,
     required this.revisions,
     required this.included,
-    required this.quantity,
-    required this.formats,
+    this.scope = const {},
+    this.scopeLines = const [],
+    this.needsUpdate = false,
     required this.status,
     this.talent,
   });
@@ -66,8 +77,9 @@ class PackageItem {
     deliveryDays: (j['deliveryDays'] as num).toInt(),
     revisions: (j['revisions'] as num).toInt(),
     included: j['included'] as String? ?? '',
-    quantity: (j['quantity'] as num).toInt(),
-    formats: j['formats'] as String? ?? '',
+    scope: (j['scope'] as Map?)?.cast<String, dynamic>() ?? const {},
+    scopeLines: [for (final l in _maps(j['scopeLines'])) (label: l['label'] as String, value: l['value'] as String)],
+    needsUpdate: j['needsUpdate'] as bool? ?? false,
     status: j['status'] as String? ?? 'active',
     talent: j['talent'] == null ? null : PackageTalent.fromJson(j['talent'] as Map<String, dynamic>),
   );
@@ -76,13 +88,14 @@ class PackageItem {
 /// A talent's own packages, and the skills they may publish in (those they are verified in).
 class MyPackages {
   final List<PackageItem> packages;
-  final List<({String skillKey, String label})> skills;
+  /// The skills they may publish in, each with the fields its packages answer.
+  final List<({String skillKey, String label, List<BriefField> fields})> skills;
   final List<String> tiers;
   const MyPackages({required this.packages, required this.skills, required this.tiers});
 
   factory MyPackages.fromJson(Map<String, dynamic> j) => MyPackages(
     packages: [for (final p in _maps(j['packages'])) PackageItem.fromJson(p)],
-    skills: [for (final s in _maps(j['skills'])) (skillKey: s['skillKey'] as String, label: s['label'] as String)],
+    skills: [for (final s in _maps(j['skills'])) (skillKey: s['skillKey'] as String, label: s['label'] as String, fields: [for (final f in _maps(s['fields'])) BriefField.fromJson(f)])],
     tiers: [for (final t in (j['tiers'] as List? ?? const ['basic', 'standard', 'premium'])) t as String],
   );
 

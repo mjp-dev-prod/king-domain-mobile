@@ -14,6 +14,7 @@ import '../../providers/discovery_provider.dart';
 import '../../providers/jobs_provider.dart';
 import '../../providers/skill_submissions_provider.dart';
 import '../../providers/talent_profile_provider.dart';
+import '../../widgets/brief/brief_form.dart';
 import '../../widgets/contract/contract_parts.dart';
 import '../../widgets/kit/kd_button.dart';
 import '../../widgets/kit/kd_card.dart';
@@ -380,28 +381,49 @@ class _BriefCard extends StatelessWidget {
   final Job job;
   const _BriefCard({required this.job});
 
+  // In the order the forms ask. Keys from briefs written before 2026-11-07 are kept so older jobs still read.
   static const _labels = {
     'deliverables': 'Wanted',
+    'designKind': 'Kind of design',
+    'writingKind': 'Kind of writing',
+    'siteKind': 'What is needed',
     'quantity': 'How many',
     'formats': 'Formats',
-    'revisionsIncluded': 'Rounds of changes included',
-    'usageRights': 'Use of the work',
-    'clientFiles': 'Client provides',
-    'references': 'Examples',
+    'dimensions': 'Size or where it is used',
+    'concepts': 'First ideas to choose from',
+    'files': 'Files delivered',
     'durationSeconds': 'Length (seconds)',
     'aspectRatio': 'Shape',
     'rawFootage': 'Footage',
-    'dimensions': 'Dimensions',
-    'brandNotes': 'Brand notes',
+    'extras': 'Included',
+    'projectFile': 'Editable project file',
     'platforms': 'Platforms',
     'postsPerWeek': 'Posts a week',
-    'brandVoice': 'Brand voice',
+    'contentBy': 'Who makes the content',
+    'postsForYou': 'Talent posts for the client',
+    'replies': 'Replying to comments and messages',
+    'report': 'Monthly report',
     'wordCount': 'Words each',
     'tone': 'Tone',
-    'sources': 'Sources',
+    'keywords': 'Keywords',
+    'byline': 'Whose name goes on it',
+    'deliveredAs': 'Delivered as',
     'pages': 'Pages or screens',
+    'pageList': 'Which pages',
+    'features': 'Features',
+    'products': 'Products to add',
+    'builtWith': 'Built with',
+    'hosting': 'Domain and hosting',
     'stack': 'Technology',
-    'designFiles': 'Design files',
+    'designFiles': 'Design files or a site to follow',
+    'handover': 'At the end the client gets',
+    'brandNotes': 'Brand notes',
+    'brandVoice': 'Brand voice',
+    'sources': 'Sources',
+    'usageRights': 'Use of the work',
+    'revisionsIncluded': 'Rounds of changes included',
+    'clientFiles': 'Client provides',
+    'references': 'Examples',
     'months': 'Months',
     'monthlyScope': 'Each month',
     'hourlyRate': 'Rate per hour',
@@ -410,21 +432,21 @@ class _BriefCard extends StatelessWidget {
   };
 
   String _value(String key, Object? v) {
-    if (key == 'usageRights') return usageRightsLabel('$v');
     if (key == 'hourlyRate') return formatMoney(num.tryParse('$v') ?? 0, job.currency);
-    return '$v';
+    return briefValueText(key, v);
   }
 
   @override
   Widget build(BuildContext context) {
     final rows = <Widget>[
-      for (final e in job.brief.entries)
-        if (e.key != 'milestones' && '${e.value}'.isNotEmpty && _labels.containsKey(e.key))
+      // In the form's order (the labels list), not the order the server happened to store them.
+      for (final key in _labels.keys)
+        if (job.brief[key] != null && briefValueText(key, job.brief[key]).isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(_labels[e.key]!, style: AppTextStyles.hint),
-              Text(_value(e.key, e.value), style: AppTextStyles.bodyMedium),
+              Text(_labels[key]!, style: AppTextStyles.hint),
+              Text(_value(key, job.brief[key]), style: AppTextStyles.bodyMedium),
             ]),
           ),
     ];
