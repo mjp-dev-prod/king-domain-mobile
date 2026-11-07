@@ -51,6 +51,7 @@ live here regardless of which sibling repo (backend, web, admin) they end up aff
   tab or the contract screens.
 - [Work gaps implementation plan](./features/work-gaps-implementation-plan.md) — the task-by-task
   build plan for the design above (backend and app), each task test-first.
+- [Polish pass, due Tuesday 10 Nov](./features/polish-pass-2026-11-07.md) — sign-out bug, no admin email on skill review, robotic wording, info tips, contrast.
 - [Profile photos](./features/profile-photos.md) — public photos: where they show, what is stored, the
   rules the server enforces, and why they are public while proofs stay private.
 - [Account deletion and privacy](./features/account-deletion-and-privacy.md) — what deleting an account removes
