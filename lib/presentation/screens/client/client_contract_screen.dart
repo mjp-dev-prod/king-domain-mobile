@@ -1,3 +1,4 @@
+import '../../../core/constants/glossary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_brand.dart';
@@ -182,6 +183,7 @@ class _ClientContract extends ConsumerWidget {
             tone: KdTone.warn,
             icon: Icons.flag_outlined,
             title: 'The start proof is ready for you',
+            tip: Glossary.startProof,
             body: 'Accept it to pay the talent $amount (20%). If you say nothing it is accepted for you after 24 hours.',
             waiting: due == null ? null : (timeLeft(due) == null ? 'The 24 hours are up' : 'Decide within ${timeLeft(due)}'),
             actions: [KdButton(label: 'Look at it', variant: KdButtonVariant.soft, height: AppDimensions.buttonHeightSm, onPressed: open)],
@@ -194,7 +196,8 @@ class _ClientContract extends ConsumerWidget {
             tone: KdTone.warn,
             icon: Icons.fact_check_outlined,
             title: 'A person is checking the start proof',
-            body: 'You raised a point. We check it against the format, usually within the day, and tell you both.',
+            tip: Glossary.startProof,
+            body: 'You raised a point. A person checks it against the format, usually within a day, and tells you both what they decide.',
             actions: [KdButton(label: 'See it', variant: KdButtonVariant.soft, height: AppDimensions.buttonHeightSm, onPressed: open)],
           ),
           false,
@@ -205,6 +208,7 @@ class _ClientContract extends ConsumerWidget {
             tone: KdTone.plain,
             icon: Icons.replay_rounded,
             title: 'The talent is sending the start proof again',
+            tip: Glossary.startProof,
             body: 'We agreed with your point. You\'ll have 24 hours again when it arrives.',
           ),
           false,
@@ -217,6 +221,7 @@ class _ClientContract extends ConsumerWidget {
             tone: KdTone.plain,
             icon: Icons.flag_outlined,
             title: 'Waiting for the start proof',
+            tip: Glossary.startProof,
             body: 'The talent will show you they\'ve started. Then you can accept it, which pays them $amount (20%) now.',
           ),
           false,

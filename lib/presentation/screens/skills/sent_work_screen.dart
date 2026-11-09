@@ -27,7 +27,7 @@ class SeeEverythingButton extends StatelessWidget {
   const SeeEverythingButton({super.key, required this.submissionId});
 
   @override
-  Widget build(BuildContext context) => KdButton.secondary(label: 'See everything you sent', icon: Icons.visibility_outlined, height: AppDimensions.buttonHeightSm, onPressed: () => openSentWork(context, submissionId));
+  Widget build(BuildContext context) => KdButton.secondary(label: 'See your submission', icon: Icons.visibility_outlined, height: AppDimensions.buttonHeightSm, onPressed: () => openSentWork(context, submissionId));
 }
 
 /// Everything a person sent for a skill, laid out to be looked at (PRD §4.3): what was asked and whether it is all there, then
@@ -82,9 +82,9 @@ class _SentWorkScreenState extends ConsumerState<SentWorkScreen> {
               padding: EdgeInsets.fromLTRB(AppDimensions.gutter, MediaQuery.paddingOf(context).top + 8, AppDimensions.gutter, 60),
               children: [
                 ContractHeader(
-                  title: 'What you sent',
+                  title: 'Your submission',
                   sub: '${w.skillLabel}${w.submittedAt == null ? '' : ' · sent ${formatAgo(w.submittedAt!)}'}',
-                  pill: StatusPill(w.verdict == 'gaps' ? 'Gaps' : 'All there', tone: w.verdict == 'gaps' ? KdTone.warn : KdTone.ok, icon: w.verdict == 'gaps' ? Icons.error_outline_rounded : Icons.check_rounded),
+                  pill: StatusPill(w.verdict == 'gaps' ? 'Something is missing' : 'Complete', tone: w.verdict == 'gaps' ? KdTone.warn : KdTone.ok, icon: w.verdict == 'gaps' ? Icons.error_outline_rounded : Icons.check_rounded),
                 ),
                 const SizedBox(height: 12),
                 RiseIn(child: _Summary(w: w)),
@@ -99,7 +99,7 @@ class _SentWorkScreenState extends ConsumerState<SentWorkScreen> {
                 const SizedBox(height: 12),
                 RiseIn(delay: const Duration(milliseconds: 240), child: _Declaration(w: w)),
                 const SizedBox(height: 14),
-                Text('Your files are opened through private links that stop working after about an hour. If one stops, pull down to refresh.', textAlign: TextAlign.center, style: AppTextStyles.hint),
+                Text('Your files open through private links that expire after about an hour. If one stops working, pull down to refresh.', textAlign: TextAlign.center, style: AppTextStyles.hint),
               ],
             ),
           );
@@ -137,7 +137,7 @@ class _Requirements extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('What was asked, and why', style: AppTextStyles.title),
         const SizedBox(height: 4),
-        Text('Each line is something the checker needs. Here is whether it is there, and what it is for.', style: AppTextStyles.hint),
+        Text('The person who checks your work looks for each of these. You can see whether it is there, and why we ask.', style: AppTextStyles.hint),
         const SizedBox(height: 12),
         for (final r in w.requirements)
           Padding(
@@ -361,8 +361,8 @@ class _WalkthroughCard extends ConsumerWidget {
   /// 2 to 3 minutes was asked for. Shorter or longer is advice, not a failure: it is already sent.
   static (String, KdTone) _verdict(Duration d) {
     final s = d.inSeconds;
-    if (s < 100) return ('Shorter than the 2 to 3 minutes asked for. Reviewers may not get enough from it.', KdTone.warn);
-    if (s > 200) return ('Longer than the 3 minutes asked for. Reviewers may stop watching before the end.', KdTone.warn);
+    if (s < 100) return ('Shorter than the 2 to 3 minutes we asked for. Reviewers may not have enough to go on.', KdTone.warn);
+    if (s > 200) return ('Longer than the 3 minutes we asked for. Reviewers may stop watching before the end.', KdTone.warn);
     return ('Within the 2 to 3 minutes asked for.', KdTone.ok);
   }
 

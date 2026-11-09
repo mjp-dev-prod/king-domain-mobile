@@ -1,3 +1,5 @@
+import '../../../core/constants/glossary.dart';
+import '../../widgets/kit/info_tip.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
@@ -158,22 +160,22 @@ class SkillIntroScreen extends ConsumerWidget {
                 tone: KdTone.bad,
                 icon: Icons.pause_circle_outline_rounded,
                 title: r.permanent ? "You can't submit in ${entry.label}" : 'Paused until ${formatDeadline(r.until!).split(',').first}',
-                body: r.permanent ? 'This follows work that was not yours.' : 'This follows sending work again that had already been turned down, unchanged.',
+                body: r.permanent ? 'You sent work that was not yours, so you cannot be verified in this skill.' : 'You sent the same work again after a "Not yet", without changing it.',
                 quote: r.reason.isEmpty ? null : r.reason,
-                footnote: 'You can still prove your other skills. If you think this is wrong, contact support from your profile.',
+                footnote: 'Your other skills are not affected. If you think this is a mistake, contact support from your profile.',
               ),
             )
           else ...[
             RiseIn(
               child: KdCard(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('How it works', style: AppTextStyles.title),
+                  const TitleWithTip('How it works', Glossary.verifiedSkill),
                   const SizedBox(height: 12),
                   const KdStepper(
                     steps: [
-                      KdStep(label: 'Send 2 or 3 pieces of real work', subtitle: 'With something that shows how you made it, and a short walkthrough video', state: KdStepState.current),
-                      KdStep(label: 'A person checks it is yours', state: KdStepState.later),
-                      KdStep(label: 'Two reviewers score it', subtitle: 'Without knowing who you are', state: KdStepState.later),
+                      KdStep(label: 'Send 2 or 3 pieces of real work', subtitle: 'Add something that shows how you made it, and a short video of you explaining it', state: KdStepState.current),
+                      KdStep(label: 'A person checks it is yours', subtitle: 'This keeps it fair for people who did their own work', state: KdStepState.later),
+                      KdStep(label: 'Two reviewers judge it', subtitle: 'They do not know who you are', state: KdStepState.later),
                       KdStep(label: 'You get the result, with reasons', state: KdStepState.later),
                     ],
                   ),
@@ -184,15 +186,16 @@ class SkillIntroScreen extends ConsumerWidget {
             const NoticeCard(
               tone: KdTone.plain,
               icon: Icons.schedule_rounded,
-              title: 'We aim to reply within $replyDays days',
-              body: 'From the moment you send it. If it takes longer we will tell you why.',
+              title: 'You will usually hear back within $replyDays days',
+              body: 'We count from the moment you send it. If it takes longer, we will tell you why.',
             ),
             const SizedBox(height: 12),
             const NoticeCard(
               tone: KdTone.warn,
-              icon: Icons.gavel_rounded,
-              title: 'Send only your own work',
-              body: 'If it is not yours you are banned from this skill. If you are told Not yet, fix it before sending again: sending the same files unchanged means 2 months out of this skill, then 3.',
+              icon: Icons.verified_user_outlined,
+              title: 'Only send work you made',
+              body: 'Work that is not yours means you cannot be verified in this skill. If a reviewer says "Not yet", change the work before you send it again. Sending the same files again locks you out of this skill for 2 months, then 3.',
+              tip: Glossary.notYet,
             ),
             const SizedBox(height: 16),
             KdButton(label: entry.state == SkillState.notYet ? 'Fix it and send again' : 'Start', busyLabel: 'Opening', onPressed: () => _start(context, ref)),

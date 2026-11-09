@@ -9,12 +9,14 @@ import 'pressable.dart';
 /// [brand] something you can act on.
 enum KdTone { plain, ok, warn, bad, brand }
 
+/// A tinted card is its tint laid over a card surface, not over the page: laid over the page (as it was until
+/// 2026-11-09) it came out DARKER than a plain card beside it and almost vanished against the ground.
 Color toneSurface(KdTone tone) => switch (tone) {
   KdTone.plain => AppColors.surface1,
-  KdTone.ok => AppColors.okSoft,
-  KdTone.warn => AppColors.warnSoft,
-  KdTone.bad => AppColors.badSoft,
-  KdTone.brand => AppColors.primarySoft,
+  KdTone.ok => Color.alphaBlend(AppColors.okSoft, AppColors.surface1),
+  KdTone.warn => Color.alphaBlend(AppColors.warnSoft, AppColors.surface1),
+  KdTone.bad => Color.alphaBlend(AppColors.badSoft, AppColors.surface1),
+  KdTone.brand => Color.alphaBlend(AppColors.primarySoft, AppColors.surface1),
 };
 
 Color toneInk(KdTone tone) => switch (tone) {

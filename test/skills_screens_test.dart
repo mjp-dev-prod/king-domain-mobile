@@ -224,7 +224,7 @@ void main() {
       expect(find.text('How it works'), findsOneWidget);
       expect(find.textContaining('within $replyDays days'), findsOneWidget);
       await tester.scrollUntilVisible(find.text('Start'), 300, scrollable: find.byType(Scrollable).first);
-      expect(find.text('Send only your own work'), findsOneWidget);
+      expect(find.text('Only send work you made'), findsOneWidget);
       await tester.tap(find.text('Start'));
       await tester.settle();
       expect(_acts(tester).calls, ['start short-form-video']);
@@ -400,11 +400,11 @@ void main() {
       expect(find.text('Reel'), findsOneWidget);
     });
 
-    skillTest('at review: says two reviewers are scoring, blind, with a third if they differ', (tester) async {
+    skillTest('at review: says two reviewers are judging, blind, with a third if they differ', (tester) async {
       await tester.pumpWidget(_app(const SubmissionScreen(submissionId: 's1'), submissions: {'s1': _d(_detail(status: 'review'))}));
       await tester.settle();
-      expect(find.text('Two reviewers are scoring it'), findsOneWidget);
-      expect(find.textContaining('a third decides'), findsOneWidget);
+      expect(find.text('Two reviewers are judging it'), findsOneWidget);
+      expect(find.textContaining('a third reviewer decides'), findsOneWidget);
     });
   });
 
@@ -413,7 +413,7 @@ void main() {
       await tester.pumpWidget(_app(const SubmissionScreen(submissionId: 's1'), submissions: {'s1': _d(_detail(status: 'verified', result: {'outcome': 'verified'}))}));
       await tester.settle();
       expect(find.text('You are verified in Short-form video editing'), findsOneWidget);
-      expect(find.textContaining('apply for Short-form video editing jobs'), findsOneWidget);
+      expect(find.textContaining('apply to Short-form video editing jobs'), findsOneWidget);
       expect(find.text('Done'), findsOneWidget);
     });
 
@@ -457,7 +457,7 @@ void main() {
         's1': _d(_detail(status: 'notYet', result: {'outcome': 'notYet', 'kind': 'authenticity', 'note': 'The walkthrough does not show you explaining the work.'})),
       }));
       await tester.settle();
-      expect(find.text("We couldn't confirm it is yours yet"), findsOneWidget);
+      expect(find.text('We could not tell yet that this is your work'), findsOneWidget);
       expect(find.textContaining('does not show you explaining the work'), findsOneWidget);
       expect(find.text('Fix it and send again'), findsOneWidget);
     });

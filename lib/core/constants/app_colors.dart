@@ -9,15 +9,17 @@ class AppColors {
 
   // Surfaces, darkest to lightest.
   static const Color ground = Color(0xFF0D0A16);
-  static const Color surface1 = Color(0xFF151121); // cards, list groups, inputs
-  static const Color surface2 = Color(0xFF1D182E); // raised: tiles in cards, sheets, tab bar
-  static const Color surface3 = Color(0xFF27203D); // toasts, pressed/selected, shimmer
+  static const Color surface1 = Color(0xFF191428); // cards, list groups, inputs
+  static const Color surface2 = Color(0xFF241D38); // raised: tiles in cards, sheets, tab bar
+  static const Color surface3 = Color(0xFF30284A); // toasts, pressed/selected, shimmer
   /// Dividers inside a surface only, never card outlines.
   static const Color line = Color(0x0FFFFFFF);
 
   static const Color text = Color(0xFFF2EFFA);
   static const Color text2 = Color(0xFFABA4C3);
-  static const Color text3 = Color(0xFF716A8B);
+  /// Hints and timestamps. Raised on 2026-11-09 from #716A8B, which measured 3.0 to 3.9:1 and failed AA (4.5) on every
+  /// surface; this one is 4.7 or better on all of them, and on the tinted cards.
+  static const Color text3 = Color(0xFF9A93B5);
 
   /// "You can act": primary button fill, active tab, progress.
   static const Color primary = Color(0xFF7451F2);

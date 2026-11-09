@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_brand.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/constants/glossary.dart';
 import '../../../core/formatting/currency.dart';
+import 'info_tip.dart';
 import 'kd_card.dart';
 
 class ProtectionLine {
   final IconData icon;
   final String title;
   final String body;
-  const ProtectionLine({required this.icon, required this.title, required this.body});
+  final Tip? tip;
+  const ProtectionLine({required this.icon, required this.title, required this.body, this.tip});
 }
 
 /// Every rule a client agrees to before paying for a one-delivery job (PRD §3.2 step 6,
@@ -18,27 +21,30 @@ List<ProtectionLine> oneDeliveryProtection({required num price, required num fee
   ProtectionLine(
     icon: Icons.lock_outline_rounded,
     title: 'Your money is held',
-    body: '${formatNaira(price)} stays with ${AppBrand.name} until you approve the work. The ${formatNaira(fee)} fee is ours and is not refunded.',
+    body: '${formatNaira(price)} stays with ${AppBrand.name} until you approve the work. The ${formatNaira(fee)} fee is ${AppBrand.name}\'s, and it is not refunded.',
+    tip: Glossary.heldPayment,
   ),
   ProtectionLine(
     icon: Icons.flag_outlined,
     title: 'Proof the work has started',
-    body: "Early on, the talent sends a start proof in a fixed format. You have 24 hours to accept it or say it isn't a real start. Once accepted, $startSharePercent% is paid to them.",
+    body: "Early on, the talent sends a first sample, called a start proof. You have 24 hours to accept it, or to say it is not a real start. When you accept, $startSharePercent% is paid to the talent.",
+    tip: Glossary.startProof,
   ),
   ProtectionLine(
     icon: Icons.replay_rounded,
     title: 'Changes included',
-    body: "Up to $changeRounds rounds of changes after delivery. If you don't respond within 3 days of a delivery, it is approved.",
+    body: "You can ask for changes up to $changeRounds times after delivery. If you do not answer within 3 days of a delivery, it is approved.",
+    tip: Glossary.changeRounds,
   ),
   const ProtectionLine(
     icon: Icons.event_busy_outlined,
     title: "If the work doesn't come",
-    body: 'Three days past the delivery date with nothing delivered and no extension, you can cancel for a full refund of the price. If the talent stops after the start proof, you keep that work and get the rest back; the start share is not refunded.',
+    body: 'If the delivery date passes by 3 days with nothing delivered and no extension, you can cancel and get the full price back. If the talent stops after the start proof, you keep the work done and get the rest back. The start share is not refunded.',
   ),
   const ProtectionLine(
     icon: Icons.gavel_outlined,
     title: 'If you disagree',
-    body: 'Use "Something\'s wrong" to agree a way out. If that fails, the team decides within 5 days, free, with written reasons. The decision is final.',
+    body: 'Tap "Something\'s wrong" to agree a way out with the talent. If that does not work, our team decides within 5 days, for free, and writes down the reasons. Their decision is final.',
   ),
 ];
 
@@ -67,7 +73,7 @@ class ProtectionSummary extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(l.title, style: AppTextStyles.title),
+                    l.tip == null ? Text(l.title, style: AppTextStyles.title) : TitleWithTip(l.title, l.tip!),
                     const SizedBox(height: 2),
                     Text(l.body, style: AppTextStyles.bodySmall.copyWith(height: 1.45)),
                   ]),

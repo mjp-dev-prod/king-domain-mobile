@@ -10,8 +10,8 @@ void main() {
     final text = lines.map((l) => '${l.title} ${l.body}').join(' ');
     expect(text, contains('held'));
     expect(text, contains('20%'));
-    expect(text, contains('2 rounds'));
-    expect(text, contains('full refund'));
+    expect(text, contains('changes up to 2 times'));
+    expect(text, contains('full price back'));
     expect(text, contains('5 days'));
   });
 

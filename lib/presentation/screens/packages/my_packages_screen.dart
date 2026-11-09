@@ -1,3 +1,5 @@
+import '../../widgets/kit/info_tip.dart';
+import '../../../core/constants/glossary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
@@ -239,7 +241,7 @@ class _EditorSheetState extends ConsumerState<_EditorSheet> {
         const SizedBox(height: 6),
         DayStepper(value: _days, min: 1, max: 60, onChanged: (v) => setState(() => _days = v)),
         const SizedBox(height: 12),
-        Text('Rounds of changes included', style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w600)),
+        TitleWithTip('Rounds of changes included', Glossary.changeRounds, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
         Wrap(spacing: 8, children: [for (final r in [0, 1, 2]) KdChoiceChip(label: '$r', selected: _revisions == r, onTap: () => setState(() => _revisions = r))]),
         if (_error != null) ...[const SizedBox(height: 10), Text(_error!, style: AppTextStyles.bodySmall.copyWith(color: AppColors.bad))],

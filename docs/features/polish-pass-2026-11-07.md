@@ -1,6 +1,6 @@
 # Polish pass: bugs and wording from Victor's phone walk-through
 
-Status: **planned, due Tuesday 2026-11-10 at the latest.** Raised by Victor, 2026-11-07, from the KD Staging build.
+Status: **built 2026-11-09 (earlier than the Tuesday due date), awaiting Victor's phone check.** Raised by Victor, 2026-11-07, from the KD Staging build. What was done, and what is still open, is at the bottom.
 
 ## Bugs
 
@@ -34,3 +34,23 @@ The rule: say it the way a person would, and give the reason. No rule-book phras
 ## Not decided
 
 - Whether the skill-review email is urgent or digest.
+
+## Done 2026-11-09
+
+| Item | What was done |
+|---|---|
+| 1 Sign-out | Signing out closes every pushed screen. Test: sign out from Settings lands on the first screen, and fails with the fix removed. |
+| 2 Admin email | Admins are emailed (and Slacked) the moment a skill is sent; reviewers who hold the skill when it passes the first check; reminders at the target and at twice the target (`skillNotices.js`, run on the existing ops sweep). |
+| 3 Verified badge | Only skills earned through a passed submission show, by name, and open that submission. |
+| 4 Skill pushes | Talent is pushed at first check passed, verified, not yet, needs a change. App refreshes skills on a skill push and when it returns to the foreground. |
+| 5 Old proof flow | Retired in the app, the backend (no upload route, no fallback when applying or in discovery) and the admin (no Proof review page, route, queue or badge). The `proof_items` table is kept only so old files are cleaned up when an account is deleted. |
+| Wording | The skills flow rewritten in plain English: "Only send work you made", "Your submission" (was "What you sent"), "Complete" / "Something is missing" (were "All there" / "Gaps"), the "2 months, then 3" line says what happens and why, "judge" instead of "score", job-type descriptions say what each type is. |
+| Tips | A small "i" that explains a term in plain words, from one glossary (`glossary.dart`): verified, first check, walkthrough, Not yet, start proof, rounds of changes, held payment, the 10%, Proven, usage rights, milestones. A test keeps the glossary free of rule-book words. |
+| Contrast | Measured, not guessed. Surfaces lightened one step; Text-3 raised from 3.0-3.9:1 (failed AA) to 4.7:1 or better; tinted cards drawn over Surface-1 (they were darker than plain cards). `test/colors_contrast_test.dart` holds the line. CLAUDE.md and the prototypes carry the new values. |
+
+## Still open
+
+- **Auto-approval copy.** The protection screen says a delivery is approved automatically after 3 days if the client does not answer. Auto-release is switched off on staging, so the text promises something that is not on. Either switch it on or soften the copy (Victor's call).
+- **The remaining screens** (identity, applicants, messages, reviews) were read and are mostly plain already; only the lines listed above were changed. A second pair of eyes on the phone is the real test.
+- **Tips not yet placed:** the service fee (10%) has a glossary entry but its tip sits only in the protection summary's held-money line; usage-rights tip appears in the brief form but not on the read-only job brief.
+- **Drop the `proof_items` table** (after old files are cleaned up): a later, deliberate migration.

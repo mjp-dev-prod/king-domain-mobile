@@ -1,3 +1,5 @@
+import '../kit/info_tip.dart';
+import '../../../core/constants/glossary.dart';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../data/models/discovery.dart';
@@ -142,12 +144,21 @@ class BriefFieldInput extends StatelessWidget {
 
   const BriefFieldInput({super.key, required this.field, required this.answers, required this.onChanged});
 
+  static Tip? _tipFor(String key) => switch (key) {
+    'usageRights' => Glossary.usageRights,
+    'revisionsIncluded' => Glossary.changeRounds,
+    _ => null,
+  };
+
   String get _label => field.required || field.kind == BriefKind.yesno ? field.label : '${field.label} (optional)';
 
+  /// A question's heading, with its plain-English tip beside it for the two terms people stumble on.
   Widget _heading(String text, {String? sub}) => Padding(
     padding: const EdgeInsets.only(bottom: 8),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(text, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w600)),
+      _tipFor(field.key) == null
+          ? Text(text, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w600))
+          : TitleWithTip(text, _tipFor(field.key)!, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w600)),
       if (sub != null) Text(sub, style: AppTextStyles.hint),
     ]),
   );

@@ -93,7 +93,7 @@ class TalentProfileScreen extends ConsumerWidget {
               const SizedBox(height: 20),
               Text('Verified work', style: AppTextStyles.title),
               const SizedBox(height: 4),
-              Text('Each skill was checked by a person and scored by two reviewers.', style: AppTextStyles.hint),
+              Text('Each skill was checked by a person and judged by two reviewers.', style: AppTextStyles.hint),
               const SizedBox(height: 10),
               if (p.work.isEmpty) const EmptyState(icon: Icons.inventory_2_outlined, title: 'No verified work to show yet', body: 'Older proof is not shown here. Verified skills appear with their pieces.'),
               for (final w in p.work) ...[

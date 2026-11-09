@@ -1,3 +1,4 @@
+import '../../../core/constants/glossary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -70,7 +71,7 @@ class MyReputationScreen extends ConsumerWidget {
     return [
       for (final p in t.proven) Padding(padding: const EdgeInsets.only(bottom: 10), child: RiseIn(child: _ProvenCard(p: p))),
       if (t.proven.isEmpty)
-        const NoticeCard(tone: KdTone.plain, icon: Icons.workspace_premium_outlined, title: 'Proven comes after Verified', body: 'Get a skill verified first. Then three finished jobs in it, on time, with every client recommending you, make you Proven in that skill.'),
+        const NoticeCard(tone: KdTone.plain, icon: Icons.workspace_premium_outlined, title: 'Proven comes after Verified', tip: Glossary.proven, body: 'Get a skill verified first. Then three finished jobs in it, on time, with every client recommending you, make you Proven in that skill.'),
       const SizedBox(height: 6),
       Text('Your track record', style: AppTextStyles.title),
       const SizedBox(height: 8),
@@ -105,7 +106,7 @@ class _ProvenCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (p.proven) {
-      return NoticeCard(tone: KdTone.ok, icon: Icons.workspace_premium_outlined, title: 'Proven: ${p.skillLabel}', body: '${p.completed} finished jobs, on time, with every client recommending you. If a dispute is lost or a client stops recommending, this is re-checked.');
+      return NoticeCard(tone: KdTone.ok, icon: Icons.workspace_premium_outlined, title: 'Proven: ${p.skillLabel}', tip: Glossary.proven, body: '${p.completed} finished jobs, on time, with every client recommending you. If a dispute is lost or a client stops recommending, this is re-checked.');
     }
     return NoticeCard(
       tone: KdTone.plain,

@@ -1,3 +1,5 @@
+import '../../../core/constants/glossary.dart';
+import '../../widgets/kit/info_tip.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -509,9 +511,9 @@ class _PostJobFlowState extends ConsumerState<PostJobFlow> {
         return BriefFieldInput(field: f, answers: _answers, onChanged: () => setState(() {}));
       case BriefKind.milestones:
         return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Milestones (2 to 5)', style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w600)),
+          TitleWithTip('Milestones (2 to 5)', Glossary.milestones, style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
-          Text('Each one is funded before it starts and released when you approve it. You can stop after any approved milestone.', style: AppTextStyles.hint),
+          Text('You pay for each stage before it starts, and release it when you approve it. You can stop after any approved stage.', style: AppTextStyles.hint),
           const SizedBox(height: 8),
           for (var i = 0; i < _milestones.length; i++)
             Padding(

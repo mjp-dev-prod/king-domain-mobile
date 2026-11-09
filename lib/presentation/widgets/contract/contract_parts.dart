@@ -1,3 +1,5 @@
+import '../../../core/constants/glossary.dart';
+import '../kit/info_tip.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -59,7 +61,10 @@ class ContractHeader extends StatelessWidget {
   final StatusPill pill;
   /// Optional control after the pill (the applicants screen's "manage" menu).
   final Widget? action;
-  const ContractHeader({super.key, required this.title, required this.sub, required this.pill, this.action});
+
+  /// A plain-English explanation of the title's term, behind a small "i" beside it.
+  final Tip? tip;
+  const ContractHeader({super.key, required this.title, required this.sub, required this.pill, this.action, this.tip});
 
   @override
   Widget build(BuildContext context) {
@@ -86,7 +91,7 @@ class ContractHeader extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 14),
-        Text(title, style: AppTextStyles.h2),
+        tip == null ? Text(title, style: AppTextStyles.h2) : TitleWithTip(title, tip!, style: AppTextStyles.h2),
         const SizedBox(height: 2),
         Text(sub, style: AppTextStyles.bodySmall.copyWith(fontSize: 13)),
       ],
@@ -191,6 +196,9 @@ class NoticeCard extends StatelessWidget {
   final Widget? extra;
   final List<Widget> actions;
 
+  /// A plain-English explanation of the term in the title, behind a small "i".
+  final Tip? tip;
+
   const NoticeCard({
     super.key,
     required this.tone,
@@ -203,6 +211,7 @@ class NoticeCard extends StatelessWidget {
     this.footnote,
     this.extra,
     this.actions = const [],
+    this.tip,
   });
 
   @override
@@ -218,6 +227,7 @@ class NoticeCard extends StatelessWidget {
               Icon(icon, size: 20, color: tone == KdTone.plain ? AppColors.text2 : ink),
               const SizedBox(width: 8),
               Expanded(child: Text(title, style: AppTextStyles.title)),
+              if (tip != null) InfoTip(tip!),
               if (trailing != null) StatusPill(trailing!, tone: tone),
             ],
           ),

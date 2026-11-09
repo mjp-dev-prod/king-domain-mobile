@@ -87,7 +87,7 @@ Future<void> _show(WidgetTester tester, {SentWork? work, Duration? length = cons
 void main() {
   testWidgets('says what was asked and why, and whether each part is there', (tester) async {
     await _show(tester);
-    expect(find.text('What you sent'), findsOneWidget);
+    expect(find.text('Your submission'), findsOneWidget);
     expect(find.text('Everything asked for is there'), findsOneWidget);
     expect(find.text('3 pieces of work'), findsOneWidget);
     expect(find.text('Reviewers judge a pattern, not a single lucky piece.'), findsOneWidget);
@@ -139,7 +139,7 @@ void main() {
   testWidgets('a missing walkthrough is said plainly', (tester) async {
     await _show(tester, work: _work(verdict: 'gaps', walkthrough: const []));
     expect(find.text('No walkthrough was sent.'), findsOneWidget);
-    expect(find.text('Gaps'), findsOneWidget);
+    expect(find.text('Something is missing'), findsOneWidget);
   });
 
   testWidgets('when it can\'t load there is a way to retry', (tester) async {

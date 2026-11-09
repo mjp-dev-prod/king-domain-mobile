@@ -68,7 +68,7 @@ class _PieceEditorScreenState extends ConsumerState<PieceEditorScreen> {
       throw const ShownError();
     }
     if (processLink.isNotEmpty && !linkOk.hasMatch(processLink)) {
-      setState(() => _error = 'The link that shows how you made it must start with http:// or https://.');
+      setState(() => _error = 'That link needs to start with http:// or https://.');
       throw const ShownError();
     }
     setState(() => _error = null);

@@ -21,7 +21,7 @@ class SkillHistory extends ConsumerWidget {
 
   static String statusText(HistoryEntry e) => switch (e.status) {
     SubmissionStatus.verified => 'Verified',
-    SubmissionStatus.notYet => e.result?.kind == 'authenticity' ? 'Stopped at the check' : 'Not yet',
+    SubmissionStatus.notYet => e.result?.kind == 'authenticity' ? 'Stopped at the first check' : 'Not yet',
     SubmissionStatus.removed => 'Removed',
     SubmissionStatus.authenticity => 'Being checked',
     SubmissionStatus.review => 'With reviewers',

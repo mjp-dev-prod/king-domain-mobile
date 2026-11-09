@@ -36,13 +36,13 @@ look broken in dark mode.
 | Token | Hex | Role |
 |---|---|---|
 | Ground | `#0D0A16` | Page background |
-| Surface-1 | `#151121` | Cards, list groups, inputs |
-| Surface-2 | `#1D182E` | Raised: tiles inside cards, floating tab bar, sheets |
-| Surface-3 | `#27203D` | Highest: toasts, pressed/selected, skeleton shimmer |
+| Surface-1 | `#191428` | Cards, list groups, inputs |
+| Surface-2 | `#241D38` | Raised: tiles inside cards, floating tab bar, sheets |
+| Surface-3 | `#30284A` | Highest: toasts, pressed/selected, skeleton shimmer |
 | Line | `rgba(255,255,255,.06)` | Dividers inside a surface only; never card outlines |
 | Text | `#F2EFFA` | Primary text (off-white, never pure white) |
 | Text-2 | `#ABA4C3` | Secondary text |
-| Text-3 | `#716A8B` | Hints, timestamps, disabled |
+| Text-3 | `#9A93B5` | Hints, timestamps, disabled |
 | **Violet** | `#7451F2` | **The** action colour: primary button fill, active tab, progress |
 | Violet-text | `#A991FF` | Violet used as text or icons on dark (fill violet is too dark for text) |
 | Violet-soft | `rgba(140,108,255,.16)` | Selected chips, active tab pill, brand tags |
@@ -51,7 +51,11 @@ look broken in dark mode.
 | Amber | `#F5A55B` | Waiting on someone: pending, extension requested, deadline near |
 | Red | `#F87171` | Errors, destructive actions, missed deadlines |
 
-On-violet text is white (5.0:1). Every pairing above passes WCAG AA; the palette explorer
+On-violet text is white (5.0:1). **Adjusted 2026-11-09** after Victor's phone walk-through (areas didn't read as
+separate sections, hints were hard to read): the three surfaces were lightened one step (neighbouring surfaces are now
+1.09 to 1.17 times apart, up from 1.06 to 1.11), Text-3 was raised from `#716A8B` (3.0 to 3.9:1, which failed AA) to
+`#9A93B5` (4.7:1 or better on every surface), and tinted cards are drawn over Surface-1 so they are never darker than a
+plain card. Every pairing above passes WCAG AA; the palette explorer
 measures them live.
 
 **Each colour has one job.** Violet means "you can act", gold means "money", green means

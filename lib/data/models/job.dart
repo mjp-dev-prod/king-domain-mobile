@@ -322,10 +322,10 @@ extension JobTypeText on JobType {
   };
 
   String get hint => switch (this) {
-    JobType.oneDelivery => 'A logo, a flyer, one video edit, an article. The whole price is held after award.',
-    JobType.milestones => 'A website or a batch of work in stages. Each milestone is funded before it starts.',
-    JobType.monthly => 'Ongoing work like social media. Each month is funded before it starts.',
-    JobType.hourly => 'Open-ended work by the hour, with a weekly cap you fund up front.',
+    JobType.oneDelivery => 'One thing, done once: a logo, a flyer, a video edit, an article. The whole price is held when you pick someone, and released when you approve the work.',
+    JobType.milestones => 'Bigger work split into 2 to 5 stages, like a website: design first, then build. You pay for each stage before it starts and release it when you approve it. You can stop after any approved stage.',
+    JobType.monthly => 'Ongoing work, like running a social media page. You pay for each month before it starts.',
+    JobType.hourly => 'Open-ended work paid by the hour, with a limit per week. You pay that weekly limit up front.',
   };
 
   /// What the price on the card means for this type.

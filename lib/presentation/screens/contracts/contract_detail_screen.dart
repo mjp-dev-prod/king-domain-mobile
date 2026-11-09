@@ -1,3 +1,4 @@
+import '../../../core/constants/glossary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_brand.dart';
@@ -141,6 +142,7 @@ class _TalentContract extends ConsumerWidget {
           tone: KdTone.brand,
           icon: Icons.schedule_rounded,
           title: 'Start proof is with ${job.clientName}',
+            tip: Glossary.startProof,
           body: '${job.clientName} has 24 hours to accept it or raise a point. If they say nothing it counts as accepted, and $amount is paid to you.',
           waiting: due == null ? null : (timeLeft(due) == null ? 'The 24 hours are up' : '${timeLeft(due)} left'),
           actions: [KdButton(label: 'See what you sent', variant: KdButtonVariant.soft, height: AppDimensions.buttonHeightSm, onPressed: open)],
@@ -150,7 +152,8 @@ class _TalentContract extends ConsumerWidget {
           tone: KdTone.warn,
           icon: Icons.fact_check_outlined,
           title: 'A person is checking your start proof',
-          body: '${job.clientName} raised a point. We check it against the format and tell you, usually within the day.',
+            tip: Glossary.startProof,
+          body: '${job.clientName} raised a point. A person checks it against the format and tells you, usually within a day.',
           actions: [KdButton(label: 'See the point raised', variant: KdButtonVariant.soft, height: AppDimensions.buttonHeightSm, onPressed: open)],
         );
       case 'redo':
@@ -158,6 +161,7 @@ class _TalentContract extends ConsumerWidget {
           tone: KdTone.warn,
           icon: Icons.replay_rounded,
           title: 'Your start proof needs another go',
+            tip: Glossary.startProof,
           body: 'Add what is missing and send it again. $amount is paid when it is accepted.',
           actions: [KdButton(label: 'Fix and send again', variant: KdButtonVariant.soft, height: AppDimensions.buttonHeightSm, onPressed: open)],
         );
@@ -168,6 +172,7 @@ class _TalentContract extends ConsumerWidget {
           tone: KdTone.brand,
           icon: Icons.flag_outlined,
           title: 'Send your start proof first',
+            tip: Glossary.startProof,
           body: 'Show ${job.clientName} you\'ve started, in the format this skill asks for. When they accept it, $amount (20%) is paid to you straight away. You can deliver the work after that.',
           extra: AboutAmountText(amount: money, currency: job.currency),
           actions: [KdButton(label: 'Add your start proof', variant: KdButtonVariant.soft, height: AppDimensions.buttonHeightSm, onPressed: open)],

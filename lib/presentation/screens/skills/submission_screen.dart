@@ -100,7 +100,7 @@ class _BuilderState extends ConsumerState<_Builder> {
       context,
       builder: (sheet) => KdSheetBody(
         title: 'Throw this draft away?',
-        lead: 'Everything you added to it is deleted. It does not count as an attempt.',
+        lead: 'Everything you added is deleted. It will not count as an attempt.',
         children: [
           const SizedBox(height: 12),
           KdButton(label: 'Throw it away', onPressed: () => Navigator.of(sheet).pop(true)),
@@ -133,7 +133,7 @@ class _BuilderState extends ConsumerState<_Builder> {
       context,
       builder: (sheet) => KdSheetBody(
         title: 'Send it for checking?',
-        lead: 'Once sent you can\'t change it. A person checks the work is yours, then two reviewers score it. We aim to reply within $replyDays days.',
+        lead: 'After you send it, you can\'t change it. A person checks the work is yours, then two reviewers judge it. You will usually hear back within $replyDays days.',
         children: [
           const SizedBox(height: 12),
           KdButton(label: 'Send it', onPressed: () => Navigator.of(sheet).pop(true)),
@@ -167,7 +167,7 @@ class _BuilderState extends ConsumerState<_Builder> {
         const SizedBox(height: 20),
         Text('Your pieces of work', style: AppTextStyles.title),
         const SizedBox(height: 4),
-        Text('Send ${d.minPieces} or ${d.maxPieces} pieces you really made. Real work for real people is best.', style: AppTextStyles.hint),
+        Text('Send ${d.minPieces} or ${d.maxPieces} pieces you made yourself. Work you did for real people is best.', style: AppTextStyles.hint),
         const SizedBox(height: 10),
         for (final p in d.pieces) ...[_PieceCard(detail: d, piece: p), const SizedBox(height: 10)],
         if (d.pieces.length < d.maxPieces) KdButton.secondary(label: d.pieces.isEmpty ? 'Add your first piece' : 'Add another piece', icon: Icons.add_rounded, onPressed: _addPiece),
@@ -294,7 +294,7 @@ class _Rubric extends StatelessWidget {
           childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
           expandedCrossAxisAlignment: CrossAxisAlignment.start,
           title: Text('What the reviewers look for', style: AppTextStyles.title),
-          subtitle: Text('${detail.rubric.length} things, each scored 1 to 4', style: AppTextStyles.hint),
+          subtitle: Text('Reviewers rate ${detail.rubric.length} things, 1 to 4 each', style: AppTextStyles.hint),
           children: [
             for (final l in detail.rubric)
               Padding(
@@ -366,11 +366,11 @@ class _Waiting extends StatelessWidget {
           child: NoticeCard(
             tone: KdTone.warn,
             icon: Icons.hourglass_top_rounded,
-            title: inReview ? 'Two reviewers are scoring it' : 'A person is checking it is yours',
+            title: inReview ? 'Two reviewers are judging it' : 'A person is checking it is yours',
             body: inReview
-                ? 'They each score it against the list you saw, without knowing who you are or what the other said. If they disagree, a third decides.'
-                : 'They look at the walkthrough and at what shows how you made it. Then it goes to two reviewers.',
-            footnote: 'We aim to reply within $replyDays days of you sending it, and we will tell you by notification and email. There is nothing you need to do.',
+                ? 'Two reviewers rate it on the list you saw. They do not know who you are, and they do not see each other\'s answers. If they disagree, a third reviewer decides.'
+                : 'A person watches your walkthrough and looks at how you made it, to be sure it is your work. Then it goes to two reviewers.',
+            footnote: 'You will usually hear back within $replyDays days, by notification and email. There is nothing you need to do.',
           ),
         ),
         const SizedBox(height: 16),
@@ -385,7 +385,7 @@ class _Waiting extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        Text('What you sent', style: AppTextStyles.title),
+        Text('Your work', style: AppTextStyles.title),
         const SizedBox(height: 8),
         ListGroup(
           rows: [
@@ -459,7 +459,7 @@ class _ResultView extends ConsumerWidget {
         tone: KdTone.ok,
         icon: Icons.verified_rounded,
         title: 'You are verified in ${detail.skillLabel}',
-        body: 'Two reviewers looked at your work and agreed. You can now apply for ${detail.skillLabel} jobs, and clients will see that you are verified.',
+        body: 'Two reviewers looked at your work and agreed it is good. You can now apply to ${detail.skillLabel} jobs, and clients can see that you are verified.',
         actions: [KdButton(label: 'Done', height: AppDimensions.buttonHeightSm, onPressed: () => Navigator.of(context).pop())],
       ));
     } else if (detail.status == SubmissionStatus.removed) {
@@ -468,9 +468,9 @@ class _ResultView extends ConsumerWidget {
         tone: KdTone.bad,
         icon: Icons.block_rounded,
         title: "You can't submit in ${detail.skillLabel}",
-        body: 'We found the work was not yours, which breaks the terms you accepted.',
+        body: 'We found that this work was not yours, so you cannot be verified in this skill.',
         quote: r?.note,
-        footnote: 'If you think this is wrong, contact support from your profile and we will look again.',
+        footnote: 'If you think we got this wrong, contact support from your profile and we will look again.',
       ));
     } else if (r?.kind == 'authenticity') {
       final until = r?.restrictedUntil;
@@ -478,10 +478,10 @@ class _ResultView extends ConsumerWidget {
       children.add(NoticeCard(
         tone: until != null ? KdTone.bad : KdTone.warn,
         icon: until != null ? Icons.pause_circle_outline_rounded : Icons.refresh_rounded,
-        title: until != null ? "You can't submit until ${formatDeadline(until).split(',').first}" : "We couldn't confirm it is yours yet",
+        title: until != null ? "You can't submit until ${formatDeadline(until).split(',').first}" : "We could not tell yet that this is your work",
         body: until != null
-            ? 'You sent work again that had already been turned down, without changing it. That is against the terms.'
-            : 'It did not go to the reviewers. Nothing counts against you: fix what is said below and send it again.',
+            ? 'You sent the same work again after it was turned down, without changing it. So you are locked out of this skill for now.'
+            : 'It did not go to the reviewers, and nothing counts against you. Fix what is listed below and send it again.',
         quote: r?.note,
         actions: until != null ? const [] : [KdButton(label: 'Fix it and send again', height: AppDimensions.buttonHeightSm, busyLabel: 'Opening', onPressed: () => _again(context, ref))],
       ));
@@ -491,8 +491,8 @@ class _ResultView extends ConsumerWidget {
         tone: KdTone.warn,
         icon: Icons.refresh_rounded,
         title: 'Not yet',
-        body: 'Two reviewers scored your work. This is not a no for good: fix what is listed and send it again.',
-        footnote: 'Send it again changed. Sending the same files unchanged costs you time out of this skill: 2 months, then 3.',
+        body: 'Two reviewers rated your work. It is not a no for good. Fix what is listed and send it again.',
+        footnote: 'Change the work before you send it again. Sending the same files again locks you out of this skill for 2 months, then 3.',
         actions: [KdButton(label: 'Fix it and send again', height: AppDimensions.buttonHeightSm, busyLabel: 'Opening', onPressed: () => _again(context, ref))],
       ));
       if ((r?.lines ?? const []).isNotEmpty) {

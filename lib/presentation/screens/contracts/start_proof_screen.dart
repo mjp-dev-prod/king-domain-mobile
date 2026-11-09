@@ -1,3 +1,4 @@
+import '../../../core/constants/glossary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
@@ -94,7 +95,7 @@ class _Body extends ConsumerWidget {
           child: ListView(
             padding: EdgeInsets.fromLTRB(AppDimensions.gutter, MediaQuery.paddingOf(context).top + 8, AppDimensions.gutter, 220),
             children: [
-              ContractHeader(title: 'Start proof', sub: '${job?.title ?? 'Your job'} · first 20% is $_money', pill: _pill(proof)),
+              ContractHeader(title: 'Start proof', sub: '${job?.title ?? 'Your job'} · first 20% is $_money', pill: _pill(proof), tip: Glossary.startProof),
               for (var i = 0; i < cards.length; i++)
                 Padding(padding: const EdgeInsets.only(top: 12), child: RiseIn(delay: Duration(milliseconds: 50 * i), child: cards[i])),
             ],
