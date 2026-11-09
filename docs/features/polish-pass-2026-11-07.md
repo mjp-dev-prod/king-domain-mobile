@@ -9,6 +9,12 @@ Status: **planned, due Tuesday 2026-11-10 at the latest.** Raised by Victor, 202
 | 1 | Signing out doesn't go home; he has to press Back to see onboarding. | Sign out now lives on the Settings page, which is a pushed screen. Clearing the sign-in swaps the screen underneath, but Settings stays on top. `logout()` in `auth_provider.dart` never pops it. | After sign-out, pop every pushed screen back to the root. Same for delete account. A test that signs out from Settings and expects onboarding with no Back. |
 | 2 | Admins get no email when someone sends a skill for review. | Sending a submission (`user/submissionRoutes.js`, "authenticity") records it and raises **no alert at all**. Alerts exist (`alerts.js`: Slack plus email to whoever is on call, else the owners) but this queue never calls them. | Raise an alert when a submission is sent. Open question for Victor: urgent (at once) or digest (one message at 08:00 Lagos). Check on staging that mail actually leaves (Brevo key is set there). |
 
+| 3 | The "verified" badge on his own profile opens a strange three-step screen that looks like the old flow. Verified skills shouldn't just pile up under the profile. | The Profile tab (`shell/profile_tabs.dart`) draws a pill for every **category** the talent picked at sign-up, and turns it green "verified" from the **old proof-of-work flow** (`isVerifiedIn`, backed by `ProofItem`). The "Finish your profile, 1 of 3" card and the Proof of work section open `ProfileOverviewScreen` and `ProofUploadScreen`: the old flow, from before skill verification existed. The backend still honours old proof as a fallback (`jobsRoutes.js:275`, `discovery.js:34`), so the two systems run side by side. | Show a green badge only for a **skill** the person was verified in through the new flow (a verified skill submission), with the skill's name, never a sign-up category. Tapping it opens that skill (what was sent, its history), not the old stepper. Not-yet-verified skills show as "Get verified", not as a plain pill. Replace the three-step "Finish your profile" card with the real next step (verify a skill, add payout). |
+
+## Decision for Victor
+
+Retire the old proof-of-work flow for good, or keep it as a fallback while people migrate? The app and the backend both still accept it. Retiring it is cleaner and matches the PRD (skills are verified by submission), but anyone verified only the old way would lose their badge.
+
 ## Wording
 
 The rule: say it the way a person would, and give the reason. No rule-book phrasing.
