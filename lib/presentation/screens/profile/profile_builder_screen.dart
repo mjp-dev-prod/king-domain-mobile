@@ -4,7 +4,9 @@ import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/constants/skill_categories.dart';
 import '../../../data/api_client.dart';
+import '../../../data/models/skill_submission.dart';
 import '../../../data/models/talent_profile.dart';
+import '../../providers/skill_submissions_provider.dart';
 import '../../providers/talent_profile_provider.dart';
 import '../../widgets/contract/contract_parts.dart';
 import '../../widgets/kit/kd_button.dart';
@@ -82,9 +84,10 @@ class _ProfileBuilderScreenState extends ConsumerState<ProfileBuilderScreen> {
       if (!_initialised && next.hasValue) setState(() => _hydrate(next.value));
     });
     final profile = ref.watch(talentProfileProvider).valueOrNull;
+    // Kinds of work the person is verified in through a skill: those stay on the profile.
     final verifiedIn = {
-      for (final p in profile?.proofItems ?? const <ProofItem>[])
-        if (p.status == ProofReviewStatus.verified) p.category,
+      for (final s in ref.watch(skillHubProvider).valueOrNull?.skills ?? const <SkillHubEntry>[])
+        if (s.state == SkillState.verified) s.category,
     };
 
     return Scaffold(
@@ -123,7 +126,7 @@ class _ProfileBuilderScreenState extends ConsumerState<ProfileBuilderScreen> {
               const SizedBox(height: 8),
               Text('Categories you work in', style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
-              Text('Pick every one you can back with a work sample. A person checks each before you can apply in it.', style: AppTextStyles.hint),
+              Text('Pick the kinds of work you do. To apply to jobs you get verified in a skill, which is separate from this.', style: AppTextStyles.hint),
               const SizedBox(height: 10),
               Wrap(
                 spacing: 8,

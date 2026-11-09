@@ -6,10 +6,8 @@ import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/formatting/currency.dart';
 import '../../../core/formatting/deadline.dart';
-import '../../../data/api_client.dart';
 import '../../../data/models/discovery.dart';
 import '../../../data/models/job.dart';
-import '../../../data/models/talent_profile.dart';
 import '../../providers/discovery_provider.dart';
 import '../../providers/jobs_provider.dart';
 import '../../providers/skill_submissions_provider.dart';
@@ -21,15 +19,12 @@ import '../../widgets/kit/kd_card.dart';
 import '../packages/job_questions_section.dart';
 import '../../widgets/kit/reputation_widgets.dart';
 import '../../widgets/kit/kd_layout.dart';
-import '../../widgets/kit/kd_sheet.dart';
-import '../../widgets/kit/kd_toast.dart';
 import '../../widgets/kit/motion.dart';
 import '../../widgets/kit/status_pill.dart';
 import '../discovery/apply_screen.dart';
 import '../skills/skills_hub_screen.dart';
 import '../payments/payout_account_screen.dart';
 import 'job_feed_screen.dart' show canApplyTo;
-import '../profile/profile_overview_screen.dart';
 
 /// T5 — Job detail (prototypes/palette-explorer.html, screen 02). What the
 /// job is, what it pays and by when, and whether this talent can apply,
@@ -80,7 +75,7 @@ class JobDetailScreen extends ConsumerWidget {
       );
     }
 
-    final verified = canApplyTo(job, hub: hub, legacyVerifiedIn: (c) => profile?.isVerifiedIn(c) ?? false);
+    final verified = canApplyTo(job, hub: hub);
     final hasPayout = profile?.payoutAccount != null;
     final applied = job.applicationStatus != JobApplicationStatus.notApplied;
     final filled = job.awardedApplicationId != null;
@@ -160,21 +155,17 @@ class JobDetailScreen extends ConsumerWidget {
               children: [
                 if (!applied && !filled && !closed)
                   KdButton(
-                    label: !verified
-                        ? (job.isStructured ? 'Verify this skill to apply' : 'Verified proof needed to apply')
+                    label: !job.isStructured
+                        ? 'Not open for applications'
+                        : !verified
+                        ? 'Verify this skill to apply'
                         : !hasPayout
                             ? 'Add a payout account to apply'
                             : (job.paused && detail?.invitation == null)
                                 ? 'Applications are paused'
                                 : 'Apply for this job',
-                    onPressed: verified && hasPayout && (!job.paused || detail?.invitation != null)
-                        ? () {
-                            if (job.isStructured) {
-                              Navigator.of(context).push(MaterialPageRoute(builder: (_) => ApplyScreen(job: job)));
-                            } else {
-                              _confirmApply(context, ref, job, profile!);
-                            }
-                          }
+                    onPressed: job.isStructured && verified && hasPayout && (!job.paused || detail?.invitation != null)
+                        ? () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ApplyScreen(job: job)))
                         : null,
                   ),
                 if (job.applicationStatus == JobApplicationStatus.pending)
@@ -220,20 +211,26 @@ class JobDetailScreen extends ConsumerWidget {
       );
     }
     if (applied) return null;
+    if (!job.isStructured) {
+      return const NoticeCard(
+        tone: KdTone.plain,
+        icon: Icons.history_toggle_off_rounded,
+        title: 'This job can\'t take applications',
+        body: 'It was posted before jobs asked for a skill, so you can\'t apply to it. Other jobs in the list are open.',
+      );
+    }
     if (!verified) {
       return NoticeCard(
         tone: KdTone.plain,
         icon: Icons.lock_outline_rounded,
-        title: job.isStructured ? 'Verify ${job.skillOrCategory} to apply' : 'Verified proof in ${job.category} needed',
-        body: job.isStructured
-            ? 'Send two or three pieces of real work. Two reviewers score it, and a person checks it is yours. Then you can apply.'
-            : 'Add a real piece of work in this category. A ${AppBrand.name} reviewer checks it, then you can apply.',
+        title: 'Verify ${job.skillOrCategory} to apply',
+        body: 'Send two or three pieces of real work. Two reviewers score it, and a person checks it is yours. Then you can apply.',
         actions: [
           KdButton(
-            label: job.isStructured ? 'Your skills' : 'Add proof',
+            label: 'Your skills',
             variant: KdButtonVariant.soft,
             height: AppDimensions.buttonHeightSm,
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => job.isStructured ? const SkillsHubScreen() : const ProfileOverviewScreen())),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SkillsHubScreen())),
           ),
         ],
       );
@@ -258,65 +255,10 @@ class JobDetailScreen extends ConsumerWidget {
       tone: KdTone.ok,
       icon: Icons.verified_outlined,
       title: 'You can apply',
-      body: 'Your proof in ${job.category} is verified. The client sees it with your application.',
+      body: 'You\'re verified in ${job.skillOrCategory}. The client sees the work you choose with your application.',
     );
   }
 
-  void _confirmApply(BuildContext context, WidgetRef ref, Job job, TalentProfile profile) {
-    final proof = profile.proofItems.where((p) => p.category == job.category && p.status == ProofReviewStatus.verified).toList();
-    showKdSheet(
-      context,
-      builder: (sheet) => KdSheetBody(
-        title: 'Apply for this job?',
-        lead: '${job.clientName} will see your name, your profile and your verified proof in ${job.category}. '
-            'If they pick you, they pay the ${formatNaira(job.budget)} budget into ${AppBrand.name} before you start.',
-        children: [
-          const SizedBox(height: 14),
-          for (final p in proof)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: KdCard(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                child: Row(
-                  children: [
-                    const Icon(Icons.verified_outlined, size: 18, color: AppColors.ok),
-                    const SizedBox(width: 10),
-                    Expanded(child: Text(p.title, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600))),
-                  ],
-                ),
-              ),
-            ),
-          const SizedBox(height: 10),
-          KdButton(
-            label: 'Send application',
-            busyLabel: 'Sending',
-            onPressed: () async {
-              try {
-                // The revision of the job as read: the server refuses it if the client
-                // edited the job since, so nobody applies to terms they never saw.
-                await ref.read(jobsProvider.notifier).applyTo(job.id, revision: job.revision);
-              } on ApiException catch (e) {
-                if (e.code == 'terms_changed') {
-                  await ref.read(jobsProvider.notifier).refresh();
-                  if (!sheet.mounted) return;
-                  Navigator.of(sheet).pop();
-                  KdToast.show(sheet, 'This job was just edited. Check the new details, then apply again.');
-                  return;
-                }
-                if (sheet.mounted) KdToast.show(sheet, e.message, kind: ToastKind.error);
-                throw const ShownError();
-              }
-              if (!sheet.mounted) return;
-              Navigator.of(sheet).pop();
-              KdToast.show(sheet, 'Application sent to ${job.clientName}');
-            },
-          ),
-          const SizedBox(height: 8),
-          KdButton.secondary(label: 'Not now', onPressed: () => Navigator.of(sheet).pop()),
-        ],
-      ),
-    );
-  }
 }
 
 /// The budget (in gold: money's one colour), delivery time, applicants and

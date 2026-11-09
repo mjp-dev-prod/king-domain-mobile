@@ -19,6 +19,7 @@ import 'package:king_domain/presentation/providers/talent_profile_provider.dart'
 import 'package:king_domain/presentation/screens/client/client_contract_screen.dart';
 import 'package:king_domain/presentation/screens/contracts/contract_detail_screen.dart';
 import 'package:king_domain/presentation/screens/shell/app_shell.dart';
+import 'package:king_domain/presentation/screens/skills/skills_hub_screen.dart';
 
 import 'push_fakes.dart';
 
@@ -58,15 +59,17 @@ class _Jobs extends JobsNotifier {
 
 class _Profile extends TalentProfileNotifier {
   @override
-  Future<TalentProfile> build() async => const TalentProfile(headline: 'h', bio: 'b', skillCategories: ['Design & creative'], proofItems: []);
+  Future<TalentProfile> build() async => const TalentProfile(headline: 'h', bio: 'b', skillCategories: ['Design & creative']);
 }
 
+int _hubLoads = 0;
 late FakeGateway _gateway;
 late FakeServer _server;
 
 Future<void> _shell(WidgetTester tester, {String role = 'talent', List<Job>? jobs, PushPermission permission = PushPermission.notAsked}) async {
   _gateway = FakeGateway()..permissionNow = permission;
   _server = FakeServer();
+  _hubLoads = 0;
   tester.view.physicalSize = const Size(1080, 2600);
   tester.view.devicePixelRatio = 3.0;
   addTearDown(tester.view.reset);
@@ -78,7 +81,10 @@ Future<void> _shell(WidgetTester tester, {String role = 'talent', List<Job>? job
       talentProfileProvider.overrideWith(_Profile.new),
       identityProvider.overrideWith((ref) async => const IdentitySummary(status: IdentityStatus.notStarted, minor: false, guardianNeeded: false, canTransact: false, requiredForPaidActions: false)),
       aboutYouProvider.overrideWith((ref) async => const AboutYou()),
-      skillHubProvider.overrideWith((ref) async => const SkillHub(skills: [], uploadsAvailable: true)),
+      skillHubProvider.overrideWith((ref) async {
+        _hubLoads++;
+        return const SkillHub(skills: [], uploadsAvailable: true);
+      }),
       pushGatewayProvider.overrideWithValue(_gateway),
       pushServerProvider.overrideWithValue(_server),
       contractHistoryProvider('j1').overrideWith((ref) async => const ContractHistory()),
@@ -174,6 +180,9 @@ void main() {
           authProvider.overrideWith(() => _Auth('client')),
           jobsProvider.overrideWith(() => _Jobs([_job('j1', contract: ContractStatus.submitted)])),
           ...discoveryStubs(),
+          identityProvider.overrideWith((ref) async => const IdentitySummary(status: IdentityStatus.notStarted, minor: false, guardianNeeded: false, canTransact: false, requiredForPaidActions: false)),
+          aboutYouProvider.overrideWith((ref) async => const AboutYou()),
+          contractHistoryProvider('j1').overrideWith((ref) async => const ContractHistory()),
           pushGatewayProvider.overrideWithValue(_gateway),
           pushServerProvider.overrideWithValue(_server),
         ],
@@ -181,6 +190,49 @@ void main() {
       ));
       await tester.pumpAndSettle();
       expect(find.byType(ClientContractScreen), findsOneWidget);
+    });
+
+    testWidgets('about a skill result, tapped from the background, opens the skills screen with fresh data', (tester) async {
+      await _shell(tester, permission: PushPermission.granted);
+      final before = _hubLoads;
+      _gateway.openedMessages.add(const PushMessage(title: "You're verified in Web development", body: 'b', data: {'type': 'skill_verified', 'skillKey': 'web-development'}));
+      await tester.pumpAndSettle();
+      expect(find.byType(SkillsHubScreen), findsOneWidget, reason: 'a skill push has no job, but it still goes somewhere');
+      expect(_hubLoads, greaterThan(before), reason: 'the skills were fetched again, not shown from before the result');
+    });
+
+    testWidgets('about a skill result, arriving while the app is open, refreshes the skills and says so', (tester) async {
+      await _shell(tester, permission: PushPermission.granted);
+      final before = _hubLoads;
+      _gateway.foregroundMessages.add(const PushMessage(title: "You're verified in Web development", body: 'Clients can see it.', data: {'type': 'skill_verified', 'skillKey': 'web-development'}));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.textContaining("You're verified in Web development"), findsOneWidget);
+      expect(_hubLoads, greaterThan(before), reason: 'no manual refresh needed');
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('a job push does not refetch skills', (tester) async {
+      await _shell(tester, permission: PushPermission.granted);
+      final before = _hubLoads;
+      _gateway.foregroundMessages.add(const PushMessage(title: 'Payment received', body: 'b', data: {'type': 'funded', 'jobId': 'j1'}));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(_hubLoads, before);
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('coming back to the app refreshes the skills, so a result decided meanwhile shows', (tester) async {
+      await _shell(tester, permission: PushPermission.granted);
+      final before = _hubLoads;
+      // The order Android really reports: it cannot jump from paused straight to resumed.
+      for (final state in [AppLifecycleState.inactive, AppLifecycleState.hidden, AppLifecycleState.paused, AppLifecycleState.hidden, AppLifecycleState.inactive, AppLifecycleState.resumed]) {
+        tester.binding.handleAppLifecycleStateChanged(state);
+      }
+      await tester.pumpAndSettle();
+      expect(_hubLoads, greaterThan(before));
     });
 
     testWidgets('for a job the person cannot see (gone, or not theirs) just stays where they are', (tester) async {

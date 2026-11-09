@@ -6,7 +6,10 @@ import 'package:king_domain/presentation/widgets/kit/kd_button.dart';
 import 'package:king_domain/core/formatting/currency.dart';
 import 'package:king_domain/data/api_client.dart';
 import 'package:king_domain/data/models/job.dart';
+import 'package:king_domain/data/models/discovery.dart';
+import 'package:king_domain/data/models/skill_submission.dart';
 import 'package:king_domain/data/models/talent_profile.dart';
+import 'package:king_domain/presentation/providers/discovery_provider.dart';
 import 'package:king_domain/presentation/providers/jobs_provider.dart';
 import 'package:king_domain/presentation/providers/talent_profile_provider.dart';
 import 'package:king_domain/presentation/screens/jobs/job_detail_screen.dart';
@@ -233,22 +236,34 @@ void main() {
       clientId: 'c1',
       clientName: 'Client',
       postedAt: DateTime(2026, 10, 1),
+      skillKey: 'graphic-design',
+      skillLabel: 'Graphic design',
     );
-    const verifiedProof = [ProofItem(id: 'p1', category: 'Design & creative', title: 'Portfolio', status: ProofReviewStatus.verified)];
+    // Verified in the job's skill through a passed submission: the only way to apply since the old proof flow was retired.
+    const verifiedHub = SkillHub(
+      uploadsAvailable: true,
+      skills: [SkillHubEntry(skillKey: 'graphic-design', label: 'Graphic design', category: 'Design & creative', state: SkillState.verified, currentSubmissionId: 's1', attempts: 1, restriction: null, rubricDraft: false)],
+    );
 
     /// The screen's main action (the last KdButton, in the sticky bar).
     Future<KdButton> applyButton(WidgetTester tester, TalentProfile profile) async {
       await tester.pumpWidget(_host(const JobDetailScreen(jobId: 'j2'), [
         jobsProvider.overrideWith(() => _StaticJobs([openJob])),
         talentProfileProvider.overrideWith(() => _StaticProfile(profile)),
-        ...discoveryStubs(),
+        ...discoveryStubs(hub: verifiedHub),
+        // A job with a skill also fetches the client's record, so it is stubbed rather than reaching for the server.
+        jobDetailProvider('j2').overrideWith((ref) async => JobDetailData(
+          job: openJob,
+          clientRecord: const ClientRecord(identityVerified: false, jobsPosted: 0, jobsHired: 0, jobsCompleted: 0, paidOut: []),
+          invitation: null,
+        )),
       ]));
       await _open(tester);
       return tester.widget<KdButton>(find.byType(KdButton).last);
     }
 
     testWidgets('verified talent without a payout account cannot apply', (tester) async {
-      final button = await applyButton(tester, const TalentProfile(proofItems: verifiedProof));
+      final button = await applyButton(tester, const TalentProfile());
       expect(button.onPressed, isNull);
       expect(button.label, 'Add a payout account to apply');
       expect(find.text('Add bank account'), findsOneWidget, reason: 'the gate offers the way through');
@@ -258,7 +273,6 @@ void main() {
       final button = await applyButton(
         tester,
         const TalentProfile(
-          proofItems: verifiedProof,
           payoutAccount: PayoutAccount(accountName: 'ADA OBI', accountNumberLast4: '6789'),
         ),
       );

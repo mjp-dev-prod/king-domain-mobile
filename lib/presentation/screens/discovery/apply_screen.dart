@@ -8,10 +8,8 @@ import '../../../core/formatting/currency.dart';
 import '../../../data/api_client.dart';
 import '../../../data/models/job.dart';
 import '../../../data/models/skill_submission.dart';
-import '../../../data/models/talent_profile.dart';
 import '../../providers/discovery_provider.dart';
 import '../../providers/skill_submissions_provider.dart';
-import '../../providers/talent_profile_provider.dart';
 import '../../widgets/contract/contract_parts.dart';
 import '../../widgets/kit/kd_auth.dart';
 import '../../widgets/kit/kd_button.dart';
@@ -70,12 +68,6 @@ class _ApplyScreenState extends ConsumerState<ApplyScreen> {
       final sub = ref.watch(submissionProvider(subId)).valueOrNull;
       for (final p in sub?.pieces ?? const <SubmissionPiece>[]) {
         out.add(_Choice('piece', p.id, p.displayTitle, [p.role, p.madeOn].where((x) => x.isNotEmpty).join(' · ')));
-      }
-    }
-    final profile = ref.watch(talentProfileProvider).valueOrNull;
-    for (final p in profile?.proofItems ?? const <ProofItem>[]) {
-      if (p.category == job.category && p.status == ProofReviewStatus.verified && !p.title.endsWith('(verified)')) {
-        out.add(_Choice('proof', p.id, p.title, 'Earlier proof'));
       }
     }
     return out;

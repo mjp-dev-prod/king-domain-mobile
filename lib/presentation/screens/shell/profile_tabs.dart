@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/constants/app_brand.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../data/models/skill_submission.dart';
 import '../../../data/models/talent_profile.dart';
+import '../../providers/skill_submissions_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/talent_profile_provider.dart';
 import '../../widgets/kit/kd_button.dart';
@@ -16,17 +17,19 @@ import '../../widgets/kit/pressable.dart';
 import '../../widgets/kit/status_pill.dart';
 import '../payments/payout_account_screen.dart';
 import '../identity/identity_rows.dart';
+import '../skills/sent_work_screen.dart';
+import '../skills/skills_hub_screen.dart';
 import '../skills/skills_row.dart';
+import '../profile/profile_builder_screen.dart';
 import '../profile/my_reputation_screen.dart';
 import '../packages/my_packages_screen.dart';
 import '../packages/package_browse_screen.dart';
 import '../packages/package_orders_screen.dart';
 import '../profile/settings_screen.dart';
-import '../profile/profile_overview_screen.dart';
 import '../profile/profile_photo_button.dart';
 
 /// Sign out asks first (it's easy to tap by accident, and it ends every
-/// in-progress screen). RootRouter takes the user back to Welcome.
+/// in-progress screen). Signing out clears the login, and every pushed screen is then closed so the person is back on Welcome.
 void confirmSignOut(BuildContext context, WidgetRef ref) {
   showKdSheet(
     context,
@@ -40,8 +43,12 @@ void confirmSignOut(BuildContext context, WidgetRef ref) {
           variant: KdButtonVariant.danger,
           busyLabel: 'Signing out',
           onPressed: () async {
-            Navigator.of(sheet).pop();
+            final nav = Navigator.of(sheet, rootNavigator: true);
+            nav.pop();
             await ref.read(authProvider.notifier).logout();
+            // Signing out only swaps what is underneath. A screen pushed on top (Settings, where this button now lives)
+            // would stay up until Back; close them all so the person lands on Welcome.
+            nav.popUntil((route) => route.isFirst);
           },
         ),
         const SizedBox(height: 8),
@@ -85,6 +92,43 @@ class _AccountGroup extends ConsumerWidget {
 
 void _open(BuildContext context, Widget screen) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
 
+/// The one thing to do next, in the order that unlocks the most: finish the profile, get verified in a skill (what lets
+/// you apply), add a payout account. Nothing once all three are done. Replaces the old three-step stepper.
+List<Widget> _nextStep(BuildContext context, TalentProfile p, bool hasVerifiedSkill) {
+  final (IconData, String, String, Widget)? next = !p.isProfileComplete
+      ? (Icons.badge_outlined, 'Finish your profile', 'Add a headline and a bio, and say what work you do.', const ProfileBuilderScreen())
+      : !hasVerifiedSkill
+          ? (Icons.verified_outlined, 'Get verified in a skill', 'Send two or three pieces of real work. It is what lets you apply to jobs.', const SkillsHubScreen())
+          : p.payoutAccount == null
+              ? (Icons.account_balance_outlined, 'Add a payout account', 'It is where you are paid when a client approves your work.', const PayoutAccountScreen())
+              : null;
+  if (next == null) return const [];
+  return [
+    const SizedBox(height: 18),
+    KdCard(
+      tone: KdTone.brand,
+      onTap: () => _open(context, next.$4),
+      child: Row(
+        children: [
+          Icon(next.$1, color: AppColors.primaryText),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(next.$2, style: AppTextStyles.title),
+                const SizedBox(height: 2),
+                Text(next.$3, style: AppTextStyles.bodySmall),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right_rounded, color: AppColors.primaryText),
+        ],
+      ),
+    ),
+  ];
+}
+
 /// Talent's profile tab (prototypes/palette-explorer.html, screen 04). Only
 /// real data: no "jobs done" or "earned" figures until the backend has them.
 class TalentProfileTab extends ConsumerWidget {
@@ -108,8 +152,10 @@ class TalentProfileTab extends ConsumerWidget {
       );
     }
     final p = profileAsync.value!;
-    final verified = p.skillCategories.where(p.isVerifiedIn).toList();
-    final steps = [p.isProfileComplete, p.proofItems.isNotEmpty, p.payoutAccount != null];
+    // Verified means verified in a skill through a submission two reviewers passed. Nothing else earns a badge.
+    final hub = ref.watch(skillHubProvider).valueOrNull;
+    final verifiedSkills = [for (final s in hub?.skills ?? const <SkillHubEntry>[]) if (s.state == SkillState.verified && s.currentSubmissionId != null) s];
+    final steps = [p.isProfileComplete, verifiedSkills.isNotEmpty, p.payoutAccount != null];
     final done = steps.where((s) => s).length;
 
     return RefreshIndicator(
@@ -124,71 +170,24 @@ class TalentProfileTab extends ConsumerWidget {
             const SizedBox(height: 2),
             Text(p.headline, textAlign: TextAlign.center, style: AppTextStyles.bodySmall.copyWith(fontSize: 13.5)),
           ],
-          if (p.skillCategories.isNotEmpty) ...[
+          if (verifiedSkills.isNotEmpty) ...[
             const SizedBox(height: 12),
             Wrap(
               alignment: WrapAlignment.center,
               spacing: 6,
               runSpacing: 6,
               children: [
-                for (final c in p.skillCategories)
-                  p.isVerifiedIn(c) ? StatusPill('$c verified', tone: KdTone.ok, icon: Icons.verified_outlined) : StatusPill(c),
+                // Only skills earned through a passed submission. Tapping one shows what was verified.
+                for (final s in verifiedSkills)
+                  Pressable(
+                    onTap: () => openSentWork(context, s.currentSubmissionId!),
+                    semanticLabel: 'Verified in ${s.label}. See what was verified',
+                    child: StatusPill('${s.label} verified', tone: KdTone.ok, icon: Icons.verified_outlined),
+                  ),
               ],
             ),
           ],
-          if (done < steps.length) ...[
-            const SizedBox(height: 18),
-            KdCard(
-              tone: KdTone.brand,
-              onTap: () => _open(context, const ProfileOverviewScreen()),
-              child: Row(
-                children: [
-                  const Icon(Icons.auto_awesome_outlined, color: AppColors.primaryText),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Finish your profile · $done of ${steps.length}', style: AppTextStyles.title),
-                        const SizedBox(height: 2),
-                        Text(
-                          verified.isEmpty
-                              ? 'Verified proof of work is what lets you apply to jobs.'
-                              : 'Add proof in more categories to open more jobs.',
-                          style: AppTextStyles.bodySmall,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.chevron_right_rounded, color: AppColors.primaryText),
-                ],
-              ),
-            ),
-          ],
-          SectionHeader('Proof of work', action: 'Manage', onAction: () => _open(context, const ProfileOverviewScreen())),
-          if (p.proofItems.isEmpty)
-            KdCard(
-              onTap: () => _open(context, const ProfileOverviewScreen()),
-              child: Text(
-                'No proof yet. Add a real piece of work for each skill; a ${AppBrand.name} reviewer checks it before you can apply in that category.',
-                style: AppTextStyles.bodySmall.copyWith(fontSize: 13),
-              ),
-            )
-          else ...[
-            // Sized by content (a grid's fixed cell height left a gap under short titles).
-            LayoutBuilder(
-              builder: (context, box) {
-                final w = (box.maxWidth - 16) / 3;
-                return Wrap(
-                  spacing: 8,
-                  runSpacing: 12,
-                  children: [for (final item in p.proofItems) SizedBox(width: w, child: _ProofThumb(item: item))],
-                );
-              },
-            ),
-            const SizedBox(height: 8),
-            Text('Verified means a ${AppBrand.name} reviewer checked the work is yours. The picture alone isn\'t the proof.', style: AppTextStyles.hint),
-          ],
+          ..._nextStep(context, p, verifiedSkills.isNotEmpty),
           const SizedBox(height: 20),
           const SkillsRow(),
           const SizedBox(height: 12),
@@ -205,7 +204,7 @@ class TalentProfileTab extends ConsumerWidget {
                 subTone: p.payoutAccount == null ? KdTone.warn : KdTone.plain,
                 onTap: () => _open(context, const PayoutAccountScreen()),
               ),
-              ListRow(icon: Icons.badge_outlined, title: 'Profile and skills', sub: 'Headline, bio, categories', onTap: () => _open(context, const ProfileOverviewScreen())),
+              ListRow(icon: Icons.badge_outlined, title: 'Profile', sub: 'Headline, bio, the work you do', onTap: () => _open(context, const ProfileBuilderScreen())),
             ],
           ),
           const SizedBox(height: 12),
@@ -216,53 +215,6 @@ class TalentProfileTab extends ConsumerWidget {
   }
 }
 
-class _ProofThumb extends StatelessWidget {
-  final ProofItem item;
-  const _ProofThumb({required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    final verified = item.status == ProofReviewStatus.verified;
-    final fallback = Container(
-      color: AppColors.surface2,
-      alignment: Alignment.center,
-      child: const Icon(Icons.description_outlined, color: AppColors.text3),
-    );
-    return Pressable(
-      onTap: () => _open(context, const ProfileOverviewScreen()),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AspectRatio(
-            aspectRatio: 1,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-              child: item.fileUrl == null
-                  ? fallback
-                  : Image.network(
-                      item.fileUrl!,
-                      fit: BoxFit.cover,
-                      cacheWidth: 300,
-                      // Fade in over a surface colour; a non-image file (PDF) shows the file icon.
-                      frameBuilder: (_, child, frame, sync) => sync
-                          ? child
-                          : AnimatedOpacity(opacity: frame == null ? 0 : 1, duration: const Duration(milliseconds: 400), child: child),
-                      loadingBuilder: (_, child, progress) => progress == null ? child : Container(color: AppColors.surface2),
-                      errorBuilder: (_, _, _) => fallback,
-                    ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          verified
-              ? const StatusPill('Verified', tone: KdTone.ok, icon: Icons.check_rounded)
-              : const StatusPill('In review', tone: KdTone.warn),
-          const SizedBox(height: 4),
-          Text(item.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: AppTextStyles.bodySmall.copyWith(fontSize: 11.5, height: 1.3)),
-        ],
-      ),
-    );
-  }
-}
 
 /// Client's profile tab.
 class ClientProfileTab extends ConsumerWidget {

@@ -51,9 +51,11 @@ class _DeleteAccountBodyState extends ConsumerState<_DeleteAccountBody> {
       throw const ShownError();
     }
     if (!mounted) return;
-    Navigator.of(context).pop();
+    final nav = Navigator.of(context, rootNavigator: true);
+    nav.pop();
     KdToast.show(context, 'Your account has been deleted.');
     await ref.read(authProvider.notifier).logout();
+    nav.popUntil((route) => route.isFirst); // Settings is still on top of the shell otherwise
   }
 
   @override

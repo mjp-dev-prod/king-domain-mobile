@@ -12,14 +12,18 @@ import 'package:king_domain/presentation/providers/skill_submissions_provider.da
 import 'package:king_domain/data/models/identity.dart';
 import 'package:king_domain/presentation/providers/jobs_provider.dart';
 import 'package:king_domain/presentation/providers/talent_profile_provider.dart';
+import 'package:king_domain/presentation/providers/sent_work_provider.dart';
 import 'package:king_domain/presentation/screens/shell/app_shell.dart';
+import 'package:king_domain/presentation/screens/skills/sent_work_screen.dart';
 
 final _now = DateTime.now();
 
-Job _job(String id, {String category = 'Design & creative', ContractStatus? contract, JobApplicationStatus app = JobApplicationStatus.notApplied, String? awarded}) => Job(
+Job _job(String id, {String category = 'Design & creative', String? skillKey = 'graphic-design', ContractStatus? contract, JobApplicationStatus app = JobApplicationStatus.notApplied, String? awarded}) => Job(
   id: id,
   title: 'Job $id',
   category: category,
+  skillKey: skillKey,
+  skillLabel: skillKey,
   description: 'd',
   budget: 45000,
   clientId: 'c1',
@@ -50,18 +54,26 @@ class _Jobs extends JobsNotifier {
   Future<List<Job>> build() async => jobs;
 }
 
+const _fullProfile = TalentProfile(
+  headline: 'Brand designer',
+  bio: 'b',
+  skillCategories: ['Design & creative'],
+  payoutAccount: PayoutAccount(accountName: 'ADA OBI', accountNumberLast4: '6789'),
+);
+
+const _verifiedGraphic = SkillHub(
+  uploadsAvailable: true,
+  skills: [SkillHubEntry(skillKey: 'graphic-design', label: 'Graphic design', category: 'Design & creative', state: SkillState.verified, currentSubmissionId: 's1', attempts: 1, restriction: null, rubricDraft: false)],
+);
+
 class _Profile extends TalentProfileNotifier {
+  _Profile([this.profile = _fullProfile]);
+  final TalentProfile profile;
   @override
-  Future<TalentProfile> build() async => const TalentProfile(
-    headline: 'Brand designer',
-    bio: 'b',
-    skillCategories: ['Design & creative'],
-    proofItems: [ProofItem(id: 'p1', category: 'Design & creative', title: 'Campus café logo', status: ProofReviewStatus.verified)],
-    payoutAccount: PayoutAccount(accountName: 'ADA OBI', accountNumberLast4: '6789'),
-  );
+  Future<TalentProfile> build() async => profile;
 }
 
-Future<_Auth> _shell(WidgetTester tester, List<Job> jobs) async {
+Future<_Auth> _shell(WidgetTester tester, List<Job> jobs, {SkillHub hub = _verifiedGraphic, TalentProfile profile = _fullProfile}) async {
   // 360 x 866 logical: the narrowest common Android width.
   tester.view.physicalSize = const Size(1080, 2600);
   tester.view.devicePixelRatio = 3.0;
@@ -72,10 +84,11 @@ Future<_Auth> _shell(WidgetTester tester, List<Job> jobs) async {
       authProvider.overrideWith(() => auth),
       jobsProvider.overrideWith(() => _Jobs(jobs)),
       ...discoveryStubs(feed: [for (final j in jobs) if (j.awardedApplicationId == null || j.applicationStatus != JobApplicationStatus.notApplied) j]),
-      talentProfileProvider.overrideWith(_Profile.new),
+      talentProfileProvider.overrideWith(() => _Profile(profile)),
       identityProvider.overrideWith((ref) async => const IdentitySummary(status: IdentityStatus.notStarted, minor: false, guardianNeeded: false, canTransact: false, requiredForPaidActions: false)),
       aboutYouProvider.overrideWith((ref) async => const AboutYou()),
-      skillHubProvider.overrideWith((ref) async => const SkillHub(skills: [], uploadsAvailable: true)),
+      skillHubProvider.overrideWith((ref) async => hub),
+      sentWorkProvider('s1').overrideWith((ref) async => throw Exception('not needed here')),
     ],
     child: MaterialApp(
       theme: AppTheme.theme,
@@ -91,13 +104,13 @@ void main() {
   testWidgets('feed: says plainly whether you can apply, for each job the server sends', (tester) async {
     await _shell(tester, [
       _job('a'),
-      _job('b', category: 'Software & tech'),
+      _job('b', category: 'Software & tech', skillKey: 'web-development'),
       _job('c', awarded: 'someone-else'),
     ]);
 
     expect(find.text('Job a'), findsOneWidget);
-    expect(find.text('You qualify'), findsOneWidget, reason: 'verified in Design & creative');
-    expect(find.text('Needs verified proof'), findsOneWidget, reason: 'not verified in Software & tech');
+    expect(find.text('You qualify'), findsOneWidget, reason: 'verified in Graphic design');
+    expect(find.text('Needs verified proof'), findsOneWidget, reason: 'not verified in Web development');
     expect(find.text('Job b'), findsOneWidget);
     // Which jobs appear is the server's call now (filters, paging, jobs filled by someone else): see the backend suite.
   });
@@ -134,7 +147,6 @@ void main() {
     final auth = await _shell(tester, [_job('a')]);
     await tester.tap(find.text('Profile'));
     await tester.pumpAndSettle();
-    expect(find.text('Campus café logo'), findsOneWidget);
 
     await tester.scrollUntilVisible(find.text('Settings'), 200, scrollable: find.byType(Scrollable).last);
     await tester.ensureVisible(find.text('Settings'));
@@ -150,5 +162,61 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     await tester.pumpAndSettle();
     expect(auth.signedOut, isTrue);
+  });
+
+  group('the verified badge on the profile', () {
+    testWidgets('names the skill that was verified, and is not a work category picked at sign-up', (tester) async {
+      await _shell(tester, [_job('a')]);
+      await tester.tap(find.text('Profile'));
+      await tester.pumpAndSettle();
+      expect(find.text('Graphic design verified'), findsOneWidget);
+      expect(find.text('Design & creative verified'), findsNothing, reason: 'a category is not a verification');
+    });
+
+    testWidgets('someone with no verified skill gets no badge, even with categories picked, and is told to get verified', (tester) async {
+      await _shell(tester, [_job('a')], hub: const SkillHub(skills: [], uploadsAvailable: true));
+      await tester.tap(find.text('Profile'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining(RegExp(r' verified$')), findsNothing, reason: 'no "<skill> verified" badge: nothing was earned');
+      expect(find.text('Get verified in a skill'), findsOneWidget);
+    });
+
+    testWidgets('a skill that is only in review is not a badge', (tester) async {
+      const inReview = SkillHub(
+        uploadsAvailable: true,
+        skills: [SkillHubEntry(skillKey: 'web-development', label: 'Web development', category: 'Software & tech', state: SkillState.inReview, currentSubmissionId: 's2', attempts: 1, restriction: null, rubricDraft: false)],
+      );
+      await _shell(tester, [_job('a')], hub: inReview);
+      await tester.tap(find.text('Profile'));
+      await tester.pumpAndSettle();
+      expect(find.text('Web development verified'), findsNothing);
+    });
+
+    testWidgets('tapping it shows what was verified, not a setup stepper', (tester) async {
+      await _shell(tester, [_job('a')]);
+      await tester.tap(find.text('Profile'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Graphic design verified'));
+      await tester.pumpAndSettle();
+      expect(find.byType(SentWorkScreen), findsOneWidget);
+      expect(find.textContaining('of 3 done'), findsNothing, reason: 'the old three-step screen is gone');
+    });
+
+    testWidgets('once profile, a verified skill and payout are all done there is no nag card', (tester) async {
+      await _shell(tester, [_job('a')]);
+      await tester.tap(find.text('Profile'));
+      await tester.pumpAndSettle();
+      expect(find.text('Get verified in a skill'), findsNothing);
+      expect(find.text('Finish your profile'), findsNothing);
+      expect(find.text('Add a payout account'), findsNothing);
+    });
+
+    testWidgets('the next step follows the order that unlocks the most: profile, then skill, then payout', (tester) async {
+      await _shell(tester, [_job('a')], hub: const SkillHub(skills: [], uploadsAvailable: true), profile: const TalentProfile());
+      await tester.tap(find.text('Profile'));
+      await tester.pumpAndSettle();
+      expect(find.text('Finish your profile'), findsOneWidget);
+      expect(find.text('Get verified in a skill'), findsNothing, reason: 'one thing at a time');
+    });
   });
 }

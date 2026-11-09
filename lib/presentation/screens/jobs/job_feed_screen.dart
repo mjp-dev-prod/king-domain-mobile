@@ -15,7 +15,6 @@ import '../../providers/auth_provider.dart';
 import '../../providers/discovery_provider.dart';
 import '../../providers/skill_submissions_provider.dart';
 import '../../providers/skills_provider.dart';
-import '../../providers/talent_profile_provider.dart';
 import '../../widgets/kit/kd_auth.dart';
 import '../../widgets/kit/kd_button.dart';
 import '../../widgets/kit/kd_card.dart';
@@ -32,12 +31,11 @@ import '../discovery/shortlist_asks_screen.dart';
 import '../skills/skills_hub_screen.dart';
 import 'job_detail_screen.dart';
 
-/// Whether this talent is verified for a job: in its skill (S2) or, for jobs from before skills, in its category.
-bool canApplyTo(Job job, {SkillHub? hub, bool Function(String category)? legacyVerifiedIn}) {
-  if (job.skillKey != null) {
-    return hub?.skills.any((s) => s.skillKey == job.skillKey && s.state == SkillState.verified) ?? false;
-  }
-  return legacyVerifiedIn?.call(job.category) ?? false;
+/// Whether this talent is verified in the job's skill. The old proof-of-work flow was retired on 2026-11-09 (Victor), so
+/// a job from before skills, which has no skill, cannot be applied to.
+bool canApplyTo(Job job, {SkillHub? hub}) {
+  if (job.skillKey == null) return false;
+  return hub?.skills.any((s) => s.skillKey == job.skillKey && s.state == SkillState.verified) ?? false;
 }
 
 /// Jobs for you (PRD §3.1 step 7): the talent's verified skills first, server-side filters, saved searches with
@@ -133,11 +131,10 @@ class _JobFeedScreenState extends ConsumerState<JobFeedScreen> {
     final feed = ref.watch(feedProvider);
     final filters = ref.watch(feedFiltersProvider);
     final hub = ref.watch(skillHubProvider).valueOrNull;
-    final profile = ref.watch(talentProfileProvider).valueOrNull;
     final catalog = ref.watch(skillCatalogProvider).valueOrNull;
     final invites = ref.watch(invitationsProvider).valueOrNull?.where((i) => i.open).length ?? 0;
     final asks = ref.watch(shortlistAsksProvider).valueOrNull?.where((a) => a.available == null).length ?? 0;
-    bool canApply(Job j) => canApplyTo(j, hub: hub, legacyVerifiedIn: (c) => profile?.isVerifiedIn(c) ?? false);
+    bool canApply(Job j) => canApplyTo(j, hub: hub);
 
     final Widget body;
     final state = feed.valueOrNull;

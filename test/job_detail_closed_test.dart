@@ -48,7 +48,6 @@ class _Profile extends TalentProfileNotifier {
     headline: 'Brand designer',
     bio: 'b',
     skillCategories: ['Design & creative'],
-    proofItems: [ProofItem(id: 'p1', category: 'Design & creative', title: 'Campus café logo', status: ProofReviewStatus.verified)],
     payoutAccount: PayoutAccount(accountName: 'ADA OBI', accountNumberLast4: '6789'),
   );
 }
@@ -93,18 +92,7 @@ Future<_Jobs> _show(WidgetTester tester, Widget screen, List<Job> jobs, {ApiExce
   return notifier;
 }
 
-Future<void> _drainToasts(WidgetTester tester) async {
-  await tester.pump(const Duration(seconds: 6));
-  await tester.pumpAndSettle();
-}
 
-Future<void> _applyThroughTheSheet(WidgetTester tester) async {
-  await tester.tap(find.text('Apply for this job'));
-  await tester.pumpAndSettle();
-  await tester.tap(find.text('Send application'));
-  await tester.pump(const Duration(seconds: 1)); // the button holds its busy state for 300 ms
-  await tester.pumpAndSettle();
-}
 
 void main() {
   group('a closed job', () {
@@ -124,39 +112,4 @@ void main() {
     });
   });
 
-  group('applying', () {
-    testWidgets('sends the revision of the job the talent read', (tester) async {
-      final jobs = await _show(tester, const JobDetailScreen(jobId: 'j1'), [_job(revision: 2)]);
-      await _applyThroughTheSheet(tester);
-      expect(jobs.calls, ['apply:j1:2']);
-      await _drainToasts(tester);
-    });
-
-    testWidgets('edited terms: the job is re-read, the sheet closes, and the talent is told, with no error shown', (tester) async {
-      final jobs = await _show(
-        tester,
-        const JobDetailScreen(jobId: 'j1'),
-        [_job(revision: 1)],
-        applyError: ApiException('This job was just edited. Read the new details, then apply again.', 409, code: 'terms_changed'),
-      );
-      await _applyThroughTheSheet(tester);
-      expect(jobs.refreshes, 1);
-      expect(find.text('Send application'), findsNothing);
-      expect(find.text('This job was just edited. Check the new details, then apply again.'), findsOneWidget);
-      await _drainToasts(tester);
-    });
-
-    testWidgets('any other refusal is shown in the sheet and the sheet stays', (tester) async {
-      await _show(
-        tester,
-        const JobDetailScreen(jobId: 'j1'),
-        [_job()],
-        applyError: ApiException('You\'ve already applied to this job.', 409, code: 'already_applied'),
-      );
-      await _applyThroughTheSheet(tester);
-      expect(find.text('You\'ve already applied to this job.'), findsOneWidget);
-      expect(find.text('Send application'), findsOneWidget);
-      await _drainToasts(tester);
-    });
-  });
 }

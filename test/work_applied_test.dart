@@ -51,7 +51,7 @@ class _Jobs extends JobsNotifier {
 class _Profile extends TalentProfileNotifier {
   @override
   Future<TalentProfile> build() async =>
-      const TalentProfile(headline: 'h', bio: 'b', skillCategories: ['Design & creative'], proofItems: []);
+      const TalentProfile(headline: 'h', bio: 'b', skillCategories: ['Design & creative']);
 }
 
 Future<void> _show(WidgetTester tester, JobsNotifier jobs, {VoidCallback? onBrowse}) async {

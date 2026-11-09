@@ -37,7 +37,7 @@ class _Auth extends AuthNotifier {
 
 class _Profile extends TalentProfileNotifier {
   @override
-  Future<TalentProfile> build() async => const TalentProfile(headline: 'Brand designer', bio: 'b', skillCategories: ['Design & creative'], proofItems: []);
+  Future<TalentProfile> build() async => const TalentProfile(headline: 'Brand designer', bio: 'b', skillCategories: ['Design & creative']);
 }
 
 Future<ProviderContainer> _show(WidgetTester tester, Widget screen, {String role = 'client'}) async {

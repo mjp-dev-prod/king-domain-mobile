@@ -32,27 +32,6 @@ class TalentProfileNotifier extends AsyncNotifier<TalentProfile> {
     state = AsyncData(TalentProfile.fromJson(data['profile'] as Map<String, dynamic>));
   }
 
-  Future<void> addProofItem({
-    required String category,
-    required String title,
-    List<int>? fileBytes,
-    String? fileName,
-  }) async {
-    await ApiClient.instance.postMultipart(
-      '/users/me/proof-items',
-      fields: {'category': category, 'title': title},
-      fileBytes: fileBytes,
-      fileField: 'file',
-      fileName: fileName,
-    );
-    await refresh();
-  }
-
-  Future<void> removeProofItem(String id) async {
-    await ApiClient.instance.delete('/users/me/proof-items/$id');
-    await refresh();
-  }
-
   /// Look-up only — returns the account holder's name for the talent to
   /// confirm. Nothing is saved until [savePayoutAccount].
   Future<String> resolvePayoutAccount({required String accountNumber, required String bankCode}) async {

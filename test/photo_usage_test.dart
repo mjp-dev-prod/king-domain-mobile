@@ -57,7 +57,7 @@ class _Jobs extends JobsNotifier {
 
 class _Profile extends TalentProfileNotifier {
   @override
-  Future<TalentProfile> build() async => const TalentProfile(headline: 'Brand designer', bio: 'b', skillCategories: ['Design & creative'], proofItems: []);
+  Future<TalentProfile> build() async => const TalentProfile(headline: 'Brand designer', bio: 'b', skillCategories: ['Design & creative']);
 }
 
 Future<void> _show(WidgetTester tester, Widget screen, {String role = 'talent', String? photoUrl, List<Job> jobs = const [], List<JobApplication> apps = const []}) async {

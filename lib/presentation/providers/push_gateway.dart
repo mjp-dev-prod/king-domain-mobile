@@ -22,6 +22,9 @@ class PushMessage {
 
   String? get jobId => data['jobId'];
 
+  /// A skill result or step (the server sends type skill_verified, skill_not_yet, skill_checked or skill_needs_change).
+  bool get isSkill => (data['type'] ?? '').startsWith('skill_');
+
   factory PushMessage.fromRemote(RemoteMessage m) => PushMessage(
         title: m.notification?.title ?? '',
         body: m.notification?.body ?? '',

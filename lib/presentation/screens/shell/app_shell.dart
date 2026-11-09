@@ -6,6 +6,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/jobs_provider.dart';
 import '../../providers/push_gateway.dart';
 import '../../providers/push_service.dart';
+import '../../providers/skill_submissions_provider.dart';
+import '../../providers/talent_profile_provider.dart';
 import '../../widgets/contract/contract_parts.dart';
 import '../../widgets/kit/kd_tab_bar.dart';
 import '../../widgets/kit/kd_toast.dart';
@@ -15,6 +17,7 @@ import '../messages/messages_screen.dart';
 import '../../providers/messaging_provider.dart';
 import '../jobs/job_feed_screen.dart';
 import '../profile/notifications_sheet.dart';
+import '../skills/skills_hub_screen.dart';
 import 'client_jobs_tab.dart';
 import 'profile_tabs.dart';
 import 'push_navigation.dart';
@@ -31,7 +34,7 @@ class AppShell extends ConsumerStatefulWidget {
   ConsumerState<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends ConsumerState<AppShell> {
+class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver {
   int _index = 0;
   final _pushSubscriptions = <StreamSubscription<PushMessage>>[];
 
@@ -40,11 +43,31 @@ class _AppShellState extends ConsumerState<AppShell> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _startPush());
+  }
+
+  /// Coming back to the app after it sat in the background: what the team decided meanwhile must show without a manual
+  /// refresh (a skill that was verified while the phone was in a pocket used to need one).
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !mounted) return;
+    unawaited(ref.read(jobsProvider.notifier).refresh());
+    _refreshSkills();
+  }
+
+  /// Everything a skill result changes: the skills list, each submission and its history, and the profile's badges.
+  void _refreshSkills() {
+    if (ref.read(authProvider).user?.role != 'talent') return;
+    ref.invalidate(skillHubProvider);
+    ref.invalidate(submissionProvider);
+    ref.invalidate(skillHistoryProvider);
+    ref.invalidate(talentProfileProvider);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     for (final s in _pushSubscriptions) {
       s.cancel();
     }
@@ -68,10 +91,17 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   /// Android shows nothing itself while the app is open, so the push appears as a toast.
   void _showForeground(PushMessage m) {
+    // A skill result changes screens that may already be open, so they are refreshed as the toast appears.
+    if (m.isSkill) _refreshSkills();
     if (mounted) KdToast.show(context, '${m.title}. ${m.body}');
   }
 
   Future<void> _openFromPush(PushMessage m) async {
+    if (m.isSkill) {
+      _refreshSkills();
+      if (mounted) unawaited(Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SkillsHubScreen())));
+      return;
+    }
     final jobId = m.jobId;
     if (jobId == null) return;
     // Refresh first: the push is about something that just changed, and the list may be older than that.

@@ -475,6 +475,19 @@ void main() {
       expect(_Actions.calls.single, 'apply j1 pieces=piece:p1,piece:p2,piece:p3 answers=Yes, twenty of them.');
     });
 
+    dtest('edited terms: the form closes and the talent is told to read the new details (nothing is sent as if nothing changed)', (t) async {
+      await t.pumpWidget(_app(ApplyScreen(job: _job()), extra: over()));
+      await t.settle();
+      await t.enterText(find.byType(TextFormField).at(0), 'I have edited reels for two salons and know this style well.');
+      await t.ensureVisible(find.text('Salon promo'));
+      await t.tap(find.text('Salon promo'));
+      await t.pump();
+      _Actions.failNext = ApiException('This job was just edited. Read the new details, then apply again.', 409, code: 'terms_changed');
+      await t.pressButton('Send application');
+      expect(find.text('Send application'), findsNothing, reason: 'the form closed');
+      expect(find.text('This job was just edited. Read the new details, then apply again.'), findsOneWidget);
+    });
+
     dtest('a cap or invitation refusal from the server is shown where the button is, and nothing is lost', (t) async {
       await t.pumpWidget(_app(ApplyScreen(job: _job()), extra: over()));
       await t.settle();
