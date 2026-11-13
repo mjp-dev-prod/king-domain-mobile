@@ -125,8 +125,19 @@ That is expected and not a bug.
 - The waitlist site (`king-domain-web`) stays on v0.
 - No new admin features, queues or permissions.
 
-## Open items to settle on Wednesday
+## What was built and decided (2026-11-13)
 
-- Whether a real light palette already exists in `prototypes/` (step 1).
-- Proof review and Start proofs list data (step 5).
-- Whether Identity should show anything beyond name and wait, such as the ID type.
+Branch `king-domain-admin` `admin-redesign`, not merged to `master` (Victor signs off first). Backend preview change is on
+`king-domain-backend` branch `admin-preview-fields`, not pushed to staging.
+
+- **Theme:** light and dark both, defaulting to the system setting; Light and Dark are manual overrides (Settings, sidebar,
+  phone header). No flash on load. The light palette was derived and measured (no v1 light palette existed); values in CLAUDE.md.
+- **Proof review no longer exists** (removed 2026-11-09), so three master-detail queues: Authenticity, Skill reviews, Identity.
+  List on the left, open item on the right, advance to the next after a decision; phones show one pane at a time.
+- **Previews:** Authenticity and Skill review rows show a look at the work. Identity shows none (private IDs). Start proofs
+  has none (multi-part data). Skill-review rows stay blind.
+- **Shared pieces** in `src/components/kd/` (QueueRow, MasterDetail, WorkPreview, StatusPill, StatTile, Money, states) and
+  `src/lib/` (queues, wait, useQueueList, hold, appearance).
+- **Restyled:** every page. Gold only for money; charts use violet. Failed loads show an error with Retry instead of looking empty.
+- **Split:** a second session restyled the 18 other pages and merged cleanly.
+- Known: two primary-glow buttons appear on App releases when empty (header and empty state); lint is unchanged at 13 old errors.

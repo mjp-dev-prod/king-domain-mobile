@@ -23,8 +23,12 @@ headlines). It replaces v0 because v0 ("flat fills, hairline borders, 3–6px co
 shadows") made the app look like a tutorial project. Evidence and references:
 [docs/research/ui-audit-2026-10-01.md](docs/research/ui-audit-2026-10-01.md).
 
-**Scope:** the Flutter app. The waitlist site (`king-domain-web`) and the admin dashboard still use
-v0 tokens; moving them is a separate decision, not implied by this one.
+**Scope:** the Flutter app and the admin dashboard (`king-domain-admin`, moved 2026-11-13). The waitlist site
+(`king-domain-web`) still uses v0 tokens; moving it is a separate decision. The admin follows the system theme by default,
+with Light and Dark as manual overrides; the dark palette is the table below. Its light palette (measured, AA in both
+themes by `npm run check:contrast` in the admin repo): ground `#F3F1F9`, surface-1 `#FFFFFF`, surface-2 `#F6F4FC`,
+surface-3 `#E6E1F4`, text `#1B1530`, text-2 `#4F4768`, text-3 `#675F82`, violet text `#5B3CD0`, money `#7D5A00`,
+ok `#086A49`, warn `#9A4F00`, bad `#B42323`; violet fill is unchanged.
 
 The concept is unchanged: **proof, credentials, earned trust.** What changed is how it is
 rendered. Depth comes from **tonal layering** (stacked dark surfaces, as Discord and Telegram do),
